@@ -80,17 +80,7 @@ export default function DashboardLayout({
     ] : []),
     ...(isTeacher ? [
       { name: "Overview", href: "/teacher", icon: LayoutDashboard },
-      { name: "Assigned Classes", href: "/teacher/classes", icon: BookOpen },
-      { name: "Announcements", href: "/teacher/announcements", icon: Megaphone },
-      { name: "Student List", href: "/teacher/students", icon: Users },
-      { name: "Schedule", href: "/teacher/schedule", icon: Calendar },
-      { name: "Attendance CMS", href: "/teacher/attendance", icon: CheckSquare },
-      { name: "Videos CMS", href: "/teacher/videos", icon: Video },
-      { name: "Materials CMS", href: "/teacher/materials", icon: FileText },
       { name: "Mock Tests CMS", href: "/teacher/mock-tests", icon: Award },
-      { name: "Salary Details", href: "/teacher/salary", icon: DollarSign },
-      { name: "Student Progress CMS", href: "/teacher/progress-cms", icon: Sliders },
-      { name: "Academic Report CMS", href: "/teacher/report-cms", icon: FileEdit },
     ] : []),
     ...(isAdmin ? [
       { name: "Overview", href: "/admin", icon: LayoutDashboard },

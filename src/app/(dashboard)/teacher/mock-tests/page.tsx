@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import MockTestClient from "../../student/mock-test/MockTestClient";
+import BulkUpload from "./BulkUpload";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +40,23 @@ export default async function TeacherMockTestsPage() {
 
   const courses = teacherAssignments.map((ta) => ta.course);
 
+  // Fetch all bank questions
+  const bankQuestions = await prisma.mockQuestion.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+
   return (
-    <MockTestClient
-      initialCourses={courses}
-      isUnlocked={true}
-      userRole="TEACHER"
-    />
+    <>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Manage Mock Tests</h1>
+        <BulkUpload courses={courses} />
+      </div>
+      <MockTestClient
+        initialCourses={courses}
+        isUnlocked={true}
+        userRole="TEACHER"
+        initialBankQuestions={bankQuestions}
+      />
+    </>
   );
 }

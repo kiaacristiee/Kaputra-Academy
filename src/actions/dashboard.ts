@@ -278,27 +278,17 @@ export async function createMockTest(data: {
   passingScore: number;
   isPublished: boolean;
   isTrial: boolean;
-  questions: {
-    questionText: string;
-    options: string[]; // will be JSON stringified
-    correctAnswer: string;
-    explanation?: string;
-  }[];
+  questionIds: string[];
 }) {
   try {
     await checkAuth(["ADMIN", "TEACHER"]);
-    const { questions, ...testData } = data;
+    const { questionIds, ...testData } = data;
 
     const test = await prisma.mockTest.create({
       data: {
         ...testData,
         questions: {
-          create: questions.map((q) => ({
-            questionText: q.questionText,
-            options: JSON.stringify(q.options),
-            correctAnswer: q.correctAnswer,
-            explanation: q.explanation,
-          })),
+          connect: questionIds.map((id) => ({ id })),
         },
       },
     });
@@ -318,37 +308,20 @@ export async function updateMockTest(
     passingScore: number;
     isPublished: boolean;
     isTrial: boolean;
-    questions?: {
-      questionText: string;
-      options: string[];
-      correctAnswer: string;
-      explanation?: string;
-    }[];
+    questionIds?: string[];
   }
 ) {
   try {
     await checkAuth(["ADMIN", "TEACHER"]);
-    const { questions, ...testData } = data;
-
-    // Delete existing questions
-    if (questions) {
-      await prisma.mockQuestion.deleteMany({
-        where: { mockTestId: id },
-      });
-    }
+    const { questionIds, ...testData } = data;
 
     const test = await prisma.mockTest.update({
       where: { id },
       data: {
         ...testData,
-        questions: questions
+        questions: questionIds
           ? {
-              create: questions.map((q) => ({
-                questionText: q.questionText,
-                options: JSON.stringify(q.options),
-                correctAnswer: q.correctAnswer,
-                explanation: q.explanation,
-              })),
+              set: questionIds.map((qid) => ({ id: qid })),
             }
           : undefined,
       },
@@ -356,6 +329,47 @@ export async function updateMockTest(
 
     revalidatePath("/student/trial");
     return { success: true, test };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// === QUESTION BANK ACTIONS ===
+export async function createBankQuestion(data: {
+  courseId?: string;
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  explanation?: string;
+  topic?: string;
+  difficulty?: string;
+  imageUrl?: string;
+}) {
+  try {
+    await checkAuth(["ADMIN", "TEACHER"]);
+    const q = await prisma.mockQuestion.create({
+      data: {
+        courseId: data.courseId,
+        questionText: data.questionText,
+        options: JSON.stringify(data.options),
+        correctAnswer: data.correctAnswer,
+        explanation: data.explanation,
+        topic: data.topic,
+        difficulty: data.difficulty,
+        imageUrl: data.imageUrl,
+      },
+    });
+    return { success: true, question: q };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteBankQuestion(id: string) {
+  try {
+    await checkAuth(["ADMIN", "TEACHER"]);
+    await prisma.mockQuestion.delete({ where: { id } });
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -372,9 +386,9 @@ export async function deleteMockTest(id: string) {
   }
 }
 
-export async function submitMockTest(testId: string, answers: Record<string, string>) {
+export async function submitMockTest(testId: string, answers: Record<string, string>, timeSpent?: Record<string, number>) {
   try {
-    const user = await checkAuth(["STUDENT"]);
+    const user = await checkAuth(["STUDENT", "TEACHER", "ADMIN"]);
     const test = await prisma.mockTest.findUnique({
       where: { id: testId },
       include: { questions: true },
@@ -382,20 +396,13 @@ export async function submitMockTest(testId: string, answers: Record<string, str
 
     if (!test) throw new Error("Mock test not found");
 
-    const existingSubmission = await prisma.mockSubmission.findFirst({
-      where: {
-        mockTestId: testId,
-        studentId: user.id,
-      },
-    });
-
-    if (existingSubmission) {
-      throw new Error("You have already submitted this mock test.");
-    }
+    // Removed existing submission check to allow multiple retakes
 
     let correctCount = 0;
     test.questions.forEach((q) => {
-      if (answers[q.id] === q.correctAnswer) {
+      const studentAns = answers[q.id]?.toLowerCase().trim();
+      const correctAns = q.correctAnswer?.toLowerCase().trim();
+      if (studentAns === correctAns) {
         correctCount++;
       }
     });
@@ -409,6 +416,7 @@ export async function submitMockTest(testId: string, answers: Record<string, str
         studentId: user.id,
         score,
         answers: JSON.stringify(answers),
+        timeSpent: timeSpent ? JSON.stringify(timeSpent) : null,
         isPassed,
       },
     });

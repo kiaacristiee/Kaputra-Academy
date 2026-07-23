@@ -92,11 +92,19 @@ export default async function MockTestPage() {
     });
   }
 
+  let bankQuestions: any[] = [];
+  if (role === "ADMIN" || role === "TEACHER") {
+    bankQuestions = await prisma.mockQuestion.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   return (
     <MockTestClient
       initialCourses={courses}
       isUnlocked={isUnlocked}
       userRole={role}
+      initialBankQuestions={bankQuestions}
     />
   );
 }

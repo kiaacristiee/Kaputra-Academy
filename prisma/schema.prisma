@@ -1,7 +1,6 @@
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -60,9 +59,9 @@ model Course {
   title            String
   slug             String   @unique
   shortDescription String
-  fullDescription  String   @db.Text
-  objectives       String   @db.Text
-  learningOutcomes String   @db.Text
+  fullDescription  String   
+  objectives       String   
+  learningOutcomes String   
   schedule         String
   price            Float
   registrationFee  Float    @default(0)
@@ -148,7 +147,7 @@ model PlacementTest {
   startedAt           DateTime?
   submittedAt         DateTime?
   score               Float?
-  answers             String?      @db.Text // JSON for multiple choice answers
+  answers             String?       // JSON for multiple choice answers
   qualificationStatus String?      // "QUALIFIED" or "NOT_QUALIFIED"
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -201,7 +200,7 @@ model PaymentVerification {
 model ContentBlock {
   id        String   @id @default(cuid())
   section   String   @unique // e.g., "hero_slider", "about_us", "contact_info"
-  content   String   @db.Text // JSON string payload for CMS content
+  content   String    // JSON string payload for CMS content
   updatedAt DateTime @updatedAt
 }
 
@@ -210,7 +209,7 @@ model TrialContent {
   type        String   // "VIDEO", "MATERIAL", "MOCK_TEST"
   title       String
   url         String?  // file or video link
-  description String?  @db.Text
+  description String?  
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -236,7 +235,7 @@ model Material {
   courseId    String
   title       String
   fileUrl     String
-  description String?  @db.Text
+  description String?  
   isPublished Boolean  @default(false)
   isTrial     Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -263,15 +262,18 @@ model MockTest {
 
 model MockQuestion {
   id           String   @id @default(cuid())
-  mockTestId   String
-  questionText String   @db.Text
+  courseId     String?  // Optional: ties question to a specific course's bank
+  questionText String   
   options      String   // JSON string of options Array
   correctAnswer String  // the correct answer index or text
-  explanation  String?  @db.Text
+  explanation  String?  
+  topic        String?
+  difficulty   String?
+  imageUrl     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  mockTest     MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  mockTests    MockTest[] // Implicit many-to-many
 }
 
 model MockSubmission {
@@ -279,7 +281,8 @@ model MockSubmission {
   mockTestId  String
   studentId   String
   score       Float
-  answers     String   @db.Text // JSON string of student answers
+  answers     String    // JSON string of student answers
+  timeSpent   String?   // JSON string of time spent per question in seconds
   isPassed    Boolean
   submittedAt DateTime @default(now())
 
@@ -293,9 +296,9 @@ model AcademicReport {
   courseId         String
   grade            String
   progress         Int      @default(0)
-  teacherNotes     String?  @db.Text
-  skillAssessment  String?  @db.Text
-  completedModules String?  @db.Text
+  teacherNotes     String?  
+  skillAssessment  String?  
+  completedModules String?  
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -309,7 +312,7 @@ model Attendance {
   courseId    String
   date        DateTime
   status      String   // "PRESENT", "LATE", "ABSENT", "EXCUSED"
-  notes       String?  @db.Text
+  notes       String?  
   markedById  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -345,7 +348,7 @@ model Salary {
   bonus          Float    @default(0)
   status         String   @default("PENDING") // PAID, PENDING
   receiptUrl     String?
-  paymentDetails String?  @db.Text
+  paymentDetails String?  
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -355,7 +358,7 @@ model Salary {
 model Announcement {
   id             String             @id @default(cuid())
   title          String
-  description    String             @db.Text
+  description    String             
   targetAudience String             // "STUDENTS", "PARENTS", "BOTH"
   courseId       String?            // Null for general announcements
   isPublished    Boolean            @default(false)
@@ -399,7 +402,7 @@ model TeacherAttendance {
 model Reminder {
   id          String   @id @default(cuid())
   title       String
-  description String?  @db.Text
+  description String?  
   type        String   // "CLASS_START", "HOMEWORK", "MOCK_TEST", "DEADLINE"
   dueDate     DateTime?
   courseId    String?
