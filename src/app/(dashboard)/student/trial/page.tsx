@@ -38,6 +38,11 @@ export default async function TrialPage() {
       isTrial: true,
       ...(isStaff ? {} : { isPublished: true }),
     },
+    include: {
+      quizzes: {
+        orderBy: { timestamp: "asc" },
+      },
+    },
     orderBy: { order: "asc" },
   });
 
@@ -59,6 +64,7 @@ export default async function TrialPage() {
       url: v.videoUrl,
       description: v.category || "Trial Lesson Video",
       isPublished: v.isPublished,
+      quizzes: v.quizzes || [],
     })),
     ...trialMaterials.map((m) => ({
       id: m.id,

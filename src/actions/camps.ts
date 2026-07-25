@@ -365,16 +365,19 @@ export async function uploadCampThumbnail(formData: FormData) {
     const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads", "camps");
 
+    let thumbnailUrl: string;
+
     try {
       await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // Ignore if exists
+      const filepath = path.join(uploadDir, filename);
+      await writeFile(filepath, buffer);
+      thumbnailUrl = `/uploads/camps/${filename}`;
+    } catch (fsError) {
+      console.warn("Serverless disk write fallback activated:", fsError);
+      const base64Data = buffer.toString("base64");
+      thumbnailUrl = `data:${file.type};base64,${base64Data}`;
     }
 
-    const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    const thumbnailUrl = `/uploads/camps/${filename}`;
     return { success: true, thumbnailUrl };
   } catch (error: any) {
     console.error("Failed to upload camp thumbnail:", error);

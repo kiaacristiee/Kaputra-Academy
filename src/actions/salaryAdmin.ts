@@ -145,16 +145,19 @@ export async function uploadSalaryReceipt(formData: FormData) {
     const filename = `${Date.now()}-${receiptFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads", "salaries");
 
+    let receiptUrl: string;
+
     try {
       await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // Ignore if directory exists
+      const filepath = path.join(uploadDir, filename);
+      await writeFile(filepath, buffer);
+      receiptUrl = `/uploads/salaries/${filename}`;
+    } catch (fsError) {
+      console.warn("Serverless disk write fallback activated:", fsError);
+      const base64Data = buffer.toString("base64");
+      receiptUrl = `data:${receiptFile.type};base64,${base64Data}`;
     }
 
-    const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    const receiptUrl = `/uploads/salaries/${filename}`;
     return { success: true, receiptUrl };
   } catch (error: any) {
     return { success: false, error: error.message };

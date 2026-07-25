@@ -30,13 +30,19 @@ export async function POST(req: Request) {
     const ext = path.extname(file.name).toLowerCase() || ".png";
     const newFileName = `${uuidv4()}${ext}`;
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "questions");
-    await fs.mkdir(uploadsDir, { recursive: true });
+    let imageUrl: string;
 
-    const savePath = path.join(uploadsDir, newFileName);
-    await fs.writeFile(savePath, buffer);
-
-    const imageUrl = `/uploads/questions/${newFileName}`;
+    try {
+      const uploadsDir = path.join(process.cwd(), "public", "uploads", "questions");
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const savePath = path.join(uploadsDir, newFileName);
+      await fs.writeFile(savePath, buffer);
+      imageUrl = `/uploads/questions/${newFileName}`;
+    } catch (fsError) {
+      console.warn("Serverless disk write fallback activated:", fsError);
+      const base64Data = buffer.toString("base64");
+      imageUrl = `data:${file.type};base64,${base64Data}`;
+    }
 
     return NextResponse.json({ success: true, url: imageUrl });
   } catch (error: any) {

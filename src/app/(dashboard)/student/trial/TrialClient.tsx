@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import InteractivePlayer from "@/components/InteractivePlayer";
 
 interface TrialItem {
   id: string;
@@ -25,6 +26,7 @@ interface TrialItem {
   url: string | null;
   description: string | null;
   isPublished: boolean;
+  quizzes?: any[];
 }
 
 interface MockQuestion {
@@ -607,12 +609,10 @@ export default function TrialClient({
             
             <div className="w-full aspect-video bg-slate-950 border border-slate-850 rounded-2xl overflow-hidden relative flex items-center justify-center">
               {selectedVideo.url ? (
-                <iframe
-                  src={getEmbedUrl(selectedVideo.url)}
+                <InteractivePlayer
+                  videoUrl={selectedVideo.url}
                   title={selectedVideo.title}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
+                  quizzes={selectedVideo.quizzes || []}
                 />
               ) : (
                 <p className="text-slate-500 text-sm">No video URL provided.</p>
