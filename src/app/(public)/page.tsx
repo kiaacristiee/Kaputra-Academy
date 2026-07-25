@@ -403,7 +403,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/Aldrin.png"
+                        src="/Aldrin.PNG"
                         alt=""
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -493,7 +493,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/David (1).png"
+                        src="/David (1).PNG"
                         alt="David Vincent Sugia - SASMO Gold Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -538,7 +538,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/Hugo 2.png"
+                        src="/Hugo 2.PNG"
                         alt="Hugo Levinson - SASMO Gold Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -582,7 +582,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/matthew.png"
+                        src="/matthew.PNG"
                         alt=""
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -626,7 +626,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/Roy.png"
+                        src="/Roy.PNG"
                         alt=""
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -670,7 +670,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/roy 2.png"
+                        src="/roy 2.PNG"
                         alt=""
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -714,7 +714,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/Hugo Levinson .png"
+                        src="/Hugo Levinson .PNG"
                         alt="Hugo - JISMO Ruby Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
