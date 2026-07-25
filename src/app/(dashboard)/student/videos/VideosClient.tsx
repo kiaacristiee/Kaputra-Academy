@@ -23,6 +23,8 @@ import {
   deleteVideo 
 } from "@/actions/dashboard";
 import Link from "next/link";
+import InteractivePlayer from "@/components/InteractivePlayer";
+import InteractiveQuizzesCMS from "@/components/InteractiveQuizzesCMS";
 
 interface VideoItem {
   id: string;
@@ -33,6 +35,7 @@ interface VideoItem {
   order: number;
   isPublished: boolean;
   isTrial: boolean;
+  quizzes?: any[];
 }
 
 interface Course {
@@ -347,15 +350,11 @@ export default function VideosClient({
           <div className="lg:col-span-8 space-y-4">
             {selectedVideo ? (
               <div className="space-y-4">
-                <div className="w-full aspect-video bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative flex items-center justify-center">
-                  <iframe
-                    src={selectedVideo.videoUrl}
-                    title={selectedVideo.title}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
+                <InteractivePlayer 
+                  videoUrl={selectedVideo.videoUrl} 
+                  title={selectedVideo.title} 
+                  quizzes={selectedVideo.quizzes || []} 
+                />
                 <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-2">
                   <div className="flex justify-between items-start gap-4">
                     <div>
@@ -386,98 +385,131 @@ export default function VideosClient({
       )}
 
       {/* CMS Modal */}
+      {/* CMS Modal */}
       {isCmsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-850 rounded-2xl p-6 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-lg">
-                {editingVideo ? "Edit Course Video" : "Upload Course Video"}
-              </h3>
-              <button onClick={() => setIsCmsOpen(false)} className="text-slate-450 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="text-xs text-slate-400 font-bold block mb-1">Video Title</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g. Session 1: Fractions and Ratios"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
-                />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-850 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] md:max-h-[85vh]">
+            <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
+              {/* Header */}
+              <div className="flex justify-between items-center border-b border-slate-800 px-6 py-4 shrink-0">
+                <h3 className="font-bold text-white text-lg">
+                  {editingVideo ? "Edit Course Video" : "Upload Course Video"}
+                </h3>
+                <button type="button" onClick={() => setIsCmsOpen(false)} className="text-slate-450 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div>
-                <label className="text-xs text-slate-400 font-bold block mb-1">Embedded Video URL (e.g. YouTube Embed, Vimeo Link)</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.videoUrl}
-                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                  placeholder="e.g. https://www.youtube.com/embed/xxx"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
-                />
-              </div>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold block mb-1">Video Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="e.g. Session 1: Fractions and Ratios"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                    />
+                  </div>
 
-              <div>
-                <label className="text-xs text-slate-400 font-bold block mb-1">Category / Topic Tag</label>
-                <input
-                  type="text"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="e.g. Algebra Prep"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
-                />
-              </div>
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold block mb-1">Embedded Video URL (e.g. YouTube Embed, Vimeo Link)</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.videoUrl}
+                      onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                      placeholder="e.g. https://www.youtube.com/embed/xxx"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                    />
+                  </div>
 
-              <div>
-                <label className="text-xs text-slate-400 font-bold block mb-1">Content Visibility</label>
-                <select
-                  value={formData.isTrial ? "TRIAL" : activeCourse.type === "COMPETITION" ? "COMPETITION" : "REGULAR"}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({
-                      ...formData,
-                      isTrial: val === "TRIAL",
-                    });
-                  }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
-                >
-                  <option value="REGULAR">Regular Class</option>
-                  <option value="COMPETITION">Competition Class</option>
-                  <option value="TRIAL">Trial Content</option>
-                </select>
-              </div>
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold block mb-1">Category / Topic Tag</label>
+                    <input
+                      type="text"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      placeholder="e.g. Algebra Prep"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-slate-400 font-bold block mb-1">Order Index</label>
-                  <input
-                    type="number"
-                    value={formData.order}
-                    onChange={(e) => setFormData({ ...formData, order: Number(e.target.value) })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
-                  />
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold block mb-1">Content Visibility</label>
+                    <select
+                      value={formData.isTrial ? "TRIAL" : activeCourse.type === "COMPETITION" ? "COMPETITION" : "REGULAR"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({
+                          ...formData,
+                          isTrial: val === "TRIAL",
+                        });
+                      }}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                    >
+                      <option value="REGULAR">Regular Class</option>
+                      <option value="COMPETITION">Competition Class</option>
+                      <option value="TRIAL">Trial Content</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-slate-400 font-bold block mb-1">Order Index</label>
+                      <input
+                        type="number"
+                        value={formData.order}
+                        onChange={(e) => setFormData({ ...formData, order: Number(e.target.value) })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-5">
+                      <input
+                        type="checkbox"
+                        id="isPublished"
+                        checked={formData.isPublished}
+                        onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                        className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-blue-600"
+                      />
+                      <label htmlFor="isPublished" className="text-xs text-slate-350 select-none cursor-pointer">
+                        Publish Video
+                      </label>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 pt-5">
-                  <input
-                    type="checkbox"
-                    id="isPublished"
-                    checked={formData.isPublished}
-                    onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                    className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-blue-600"
+
+                {/* Interactive Quizzes CMS Section */}
+                {editingVideo && (
+                  <InteractiveQuizzesCMS 
+                    videoId={editingVideo.id} 
+                    initialQuizzes={editingVideo.quizzes || []}
+                    onUpdate={(newQuizzes) => {
+                      const updatedVideo = { ...editingVideo, quizzes: newQuizzes };
+                      setEditingVideo(updatedVideo);
+                      
+                      // Update locally in course state
+                      const updatedVideos = activeCourse.videos.map(v => 
+                        v.id === editingVideo.id ? updatedVideo : v
+                      );
+                      setCourses(
+                        courses.map((c) =>
+                          c.id === activeCourse.id ? { ...c, videos: updatedVideos } : c
+                        )
+                      );
+                      if (selectedVideo?.id === editingVideo.id) {
+                        setSelectedVideo(updatedVideo);
+                      }
+                    }}
                   />
-                  <label htmlFor="isPublished" className="text-xs text-slate-350 select-none cursor-pointer">
-                    Publish Video
-                  </label>
-                </div>
+                )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              {/* Sticky Footer */}
+              <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800 bg-slate-950 shrink-0">
                 <Button 
                   type="button" 
                   variant="ghost" 
@@ -488,7 +520,7 @@ export default function VideosClient({
                 </Button>
                 <Button 
                   type="submit" 
-                  className="bg-blue-650 hover:bg-blue-600 text-white rounded-xl px-5 flex items-center gap-1"
+                  className="bg-blue-650 hover:bg-blue-600 text-white rounded-xl px-5 flex items-center gap-1 font-bold"
                 >
                   <Save className="w-4 h-4" /> Save Video
                 </Button>

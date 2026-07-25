@@ -58,12 +58,12 @@ export default function TermsModal({ onAccept, mode = "persist" }: TermsModalPro
         <div className="flex-1 overflow-y-auto pr-2 space-y-4 text-sm text-slate-350 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
           <p className="font-semibold text-white">1. Introduction</p>
           <p>
-            Welcome to Kaputra Academy. By enrolling, using our platform, accessing our trial videos, mock tests, or academic reports, you agree to comply with and be bound by the following terms and conditions.
+            Welcome to Kaputra Academy. By enrolling, using our platform, accessing our trial videos, quizzes, or academic reports, you agree to comply with and be bound by the following terms and conditions.
           </p>
 
           <p className="font-semibold text-white">2. Course Material & Academic Integrity</p>
           <p>
-            All learning materials, classroom videos, and mock tests are proprietary property of Kaputra Academy. You may not distribute, record, copy, download, or share any materials with third parties. Violation of this will result in immediate termination of access without refund.
+            All learning materials, classroom videos, and quizzes are proprietary property of Kaputra Academy. You may not distribute, record, copy, download, or share any materials with third parties. Violation of this will result in immediate termination of access without refund.
           </p>
 
           <p className="font-semibold text-white">3. Payments & Refund Policy</p>

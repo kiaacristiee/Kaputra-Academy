@@ -34,14 +34,20 @@ export default async function AdminPaymentsPage() {
   const courses = await prisma.course.findMany({
     select: { id: true, title: true },
   });
-  const courseMap = new Map(courses.map((c) => [c.id, c.title]));
+  const camps = await prisma.campProgram.findMany({
+    select: { id: true, name: true },
+  });
+  const nameMap = new Map<string, string>([
+    ...courses.map((c) => [c.id, c.title] as [string, string]),
+    ...camps.map((c) => [c.id, c.name] as [string, string]),
+  ]);
 
   const formatted = allInvoices.map((inv) => {
-    const courseTitle = courseMap.get(inv.itemId) || inv.itemId;
+    const itemTitle = nameMap.get(inv.itemId) || inv.itemId;
     return {
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,
-      itemId: courseTitle,
+      itemId: itemTitle,
       itemType: inv.itemType,
       amount: inv.amount,
       virtualAccountNumber: inv.virtualAccountNumber,

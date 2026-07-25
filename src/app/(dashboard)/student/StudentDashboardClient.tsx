@@ -16,7 +16,8 @@ import {
   CalendarDays,
   FileCheck,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Megaphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -37,7 +38,14 @@ interface CourseWithTeachers {
   teachers: Teacher[];
 }
 
-
+interface Announcement {
+  id: string;
+  title: string;
+  description: string;
+  publishDate: string;
+  teacherName: string;
+  courseName: string | null;
+}
 
 interface PlacementTest {
   id: string;
@@ -53,11 +61,13 @@ export default function StudentDashboardClient({
   studentIdStr,
   courses,
   placementTest,
+  announcements,
 }: {
   studentName: string;
   studentIdStr: string | null;
   courses: CourseWithTeachers[];
   placementTest: PlacementTest | null;
+  announcements: Announcement[];
 }) {
   const [activeTab, setActiveTab] = useState<"courses" | "report">("courses");
 
@@ -100,6 +110,55 @@ export default function StudentDashboardClient({
           </Link>
         </div>
       )}
+
+      {/* Latest Announcements */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          <Megaphone className="h-5 w-5 text-[#CA8E25]" />
+          Latest Announcements
+        </h3>
+        {announcements && announcements.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {announcements.map((ann) => (
+              <Link key={ann.id} href="/student/announcements" className="block group">
+                <div className="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 transition-all duration-200 hover:shadow-[0_0_20px_rgba(202,142,37,0.03)] h-full flex flex-col justify-between space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start gap-2">
+                      <h4 className="text-sm font-bold text-white group-hover:text-[#CA8E25] transition-colors line-clamp-1">
+                        {ann.title}
+                      </h4>
+                      {ann.courseName && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400 bg-blue-600/10 px-2 py-0.5 rounded border border-blue-500/20 shrink-0">
+                          {ann.courseName}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                      {ann.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-900 text-[10px] text-slate-500">
+                    <span>By {ann.teacherName}</span>
+                    <span>
+                      {new Date(ann.publishDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-slate-950 border border-slate-850 p-6 rounded-2xl text-center space-y-2">
+            <Megaphone className="h-8 w-8 text-slate-750 mx-auto" />
+            <p className="font-bold text-white text-sm">No announcements at the moment</p>
+            <p className="text-xs text-slate-500 font-medium">You are all caught up! When instructors publish updates, they will show up here.</p>
+          </div>
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="flex border-b border-slate-800 gap-2">

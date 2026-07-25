@@ -191,6 +191,8 @@ export async function enrollInClass(
       studentAge = currentYear - birthYear;
     }
 
+    const isRegular = course.type === "REGULAR";
+
     // Create the Registration record
     const registration = await prisma.registration.create({
       data: {
@@ -203,7 +205,7 @@ export async function enrollInClass(
         courseId: courseId,
         learningMethod: learningMethod,
         scheduleId: scheduleId || null,
-        status: "PENDING_PT_PAYMENT", // Both regular and competition require Placement Test first
+        status: isRegular ? "PENDING_ENROLLMENT_PAYMENT" : "PENDING_PT_PAYMENT",
       },
     });
 
@@ -218,18 +220,35 @@ export async function enrollInClass(
     const dueDate = new Date();
     dueDate.setHours(dueDate.getHours() + 24);
 
-    // Create placement test invoice (fee is fixed at IDR 300,000)
-    const invoice = await prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        studentId,
-        itemId: courseId,
-        itemType: "PLACEMENT_TEST",
-        amount: 300000,
-        virtualAccountNumber,
-        dueDate,
-      },
-    });
+    let invoice;
+    if (isRegular) {
+      // Create regular class tuition invoice (fee = price + registrationFee)
+      const amount = course.price + course.registrationFee;
+      invoice = await prisma.invoice.create({
+        data: {
+          invoiceNumber,
+          studentId,
+          itemId: courseId,
+          itemType: "CLASS",
+          amount,
+          virtualAccountNumber,
+          dueDate,
+        },
+      });
+    } else {
+      // Create placement test invoice (fee is fixed at IDR 300,000)
+      invoice = await prisma.invoice.create({
+        data: {
+          invoiceNumber,
+          studentId,
+          itemId: courseId,
+          itemType: "PLACEMENT_TEST",
+          amount: 300000,
+          virtualAccountNumber,
+          dueDate,
+        },
+      });
+    }
 
     revalidatePath("/student/invoices");
     revalidatePath("/parent/invoices");

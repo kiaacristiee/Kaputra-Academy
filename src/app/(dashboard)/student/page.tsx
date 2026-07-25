@@ -72,15 +72,32 @@ export default async function StudentDashboardPage() {
     (e) => !resolvedCourseIds.includes(e.itemId)
   );
 
-  const fallbackCourses = unresolvedEnrollments.map((e) => ({
-    id: e.id,
-    title: e.itemId, // e.g. "Regular Class - Private Class"
-    schedule: "Schedule to be arranged with your instructor",
-    price: 0,
-    type: e.itemType === "CLASS" ? "REGULAR" : "COMPETITION",
-    categoryName: e.itemType,
-    teachers: [],
-  }));
+  const campIds = unresolvedEnrollments
+    .filter((e) => e.itemType === "PROGRAM" || e.itemType === "CAMP")
+    .map((e) => e.itemId);
+
+  const camps = await prisma.campProgram.findMany({
+    where: { id: { in: campIds } },
+  });
+
+  const campMap = new Map(camps.map((c) => [c.id, c]));
+
+  const fallbackCourses = unresolvedEnrollments.map((e) => {
+    const isProgram = e.itemType === "PROGRAM" || e.itemType === "CAMP";
+    const camp = isProgram ? campMap.get(e.itemId) : null;
+    
+    return {
+      id: e.id,
+      title: camp ? camp.name : e.itemId,
+      schedule: camp
+        ? `Starts: ${new Date(camp.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+        : "Schedule to be arranged with your instructor",
+      price: camp ? camp.price : 0,
+      type: camp ? (camp as any).type : (isProgram ? "CAMP" : (e.itemType === "CLASS" ? "REGULAR" : "COMPETITION")),
+      categoryName: isProgram ? "Camp Program" : e.itemType,
+      teachers: [],
+    };
+  });
 
   const allCoursesWithDetails = [...coursesWithDetails, ...fallbackCourses];
 
@@ -91,6 +108,42 @@ export default async function StudentDashboardPage() {
       where: { studentIdStr: student.studentIdStr },
     });
   }
+
+  // Fetch student active announcements
+  const latestAnnouncements = await prisma.announcement.findMany({
+    where: {
+      isPublished: true,
+      publishDate: { lte: new Date() },
+      targetAudience: { in: ["STUDENTS", "BOTH"] },
+      OR: [
+        { courseId: null },
+        { courseId: { in: courseIds } },
+      ],
+      AND: [
+        {
+          OR: [
+            { targetStudents: { none: {} } }, // Send to everyone
+            { targetStudents: { some: { id: session.user.id } } }, // Specific targeted student
+          ],
+        },
+      ],
+    },
+    include: {
+      teacher: { select: { name: true } },
+      course: { select: { title: true } },
+    },
+    orderBy: { publishDate: "desc" },
+    take: 5,
+  });
+
+  const formattedAnnouncements = latestAnnouncements.map((a) => ({
+    id: a.id,
+    title: a.title,
+    description: a.description,
+    publishDate: a.publishDate.toISOString(),
+    teacherName: a.teacher.name,
+    courseName: a.course?.title || null,
+  }));
 
   return (
     <StudentDashboardClient
@@ -105,6 +158,7 @@ export default async function StudentDashboardPage() {
         qualificationStatus: placementTest.qualificationStatus,
         submittedAt: placementTest.submittedAt,
       } : null}
+      announcements={formattedAnnouncements}
     />
   );
 }

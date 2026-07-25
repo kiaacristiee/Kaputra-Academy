@@ -46,10 +46,15 @@ export default function LoginContent() {
             
             setLoading(false);
             
-            if (sessionData?.user?.role === "ADMIN") {
+            const role = sessionData?.user?.role;
+            if (role === "ADMIN") {
                 router.push("/admin");
-            } else if (sessionData?.user?.role === "TEACHER") {
+            } else if (role === "TEACHER") {
                 router.push("/teacher");
+            } else if (role === "PARENT") {
+                router.push("/parent");
+            } else if (role === "STUDENT") {
+                router.push("/student");
             } else {
                 router.push("/");
             }

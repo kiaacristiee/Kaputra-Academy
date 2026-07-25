@@ -36,7 +36,7 @@ interface Course {
 const REMINDER_TYPES = [
   { value: "CLASS_START", label: "Class Starts", color: "text-blue-400 bg-blue-600/10 border-blue-500/20" },
   { value: "HOMEWORK", label: "Homework", color: "text-amber-400 bg-amber-600/10 border-amber-500/20" },
-  { value: "MOCK_TEST", label: "Mock Test", color: "text-purple-400 bg-purple-600/10 border-purple-500/20" },
+  { value: "MOCK_TEST", label: "Quiz", color: "text-purple-400 bg-purple-600/10 border-purple-500/20" },
   { value: "DEADLINE", label: "Deadline", color: "text-red-400 bg-red-600/10 border-red-500/20" },
 ];
 
@@ -290,7 +290,7 @@ export default function ScheduleClient({
           <div className="bg-slate-950 border border-slate-800 p-8 rounded-2xl text-center text-slate-400">
             <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="font-semibold text-white">No reminders yet</p>
-            <p className="text-sm mt-1">Create reminders for homework, mock tests, or deadlines.</p>
+            <p className="text-sm mt-1">Create reminders for homework, quizzes, or deadlines.</p>
           </div>
         )}
       </div>

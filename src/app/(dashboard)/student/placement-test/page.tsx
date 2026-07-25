@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getPerformanceScale } from "@/lib/email";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Lock, Play, CheckCircle2, AlertTriangle, Clock, FileText, ChevronRight } from "lucide-react";
@@ -84,8 +85,8 @@ export default async function StudentPlacementTestPage() {
               <span className="font-bold text-white">1 / 1</span>
             </div>
             <div className="flex justify-between items-center p-4">
-              <span className="text-slate-500 font-bold uppercase">Score Achieved</span>
-              <span className="font-black text-emerald-400 font-mono text-sm">{placementTest.score}%</span>
+              <span className="text-slate-500 font-bold uppercase">Performance</span>
+              <span className="font-black text-emerald-400 font-mono text-sm">{getPerformanceScale(placementTest.score ?? 0)}</span>
             </div>
             <div className="flex justify-between items-center p-4">
               <span className="text-slate-500 font-bold uppercase">Assigned Path</span>

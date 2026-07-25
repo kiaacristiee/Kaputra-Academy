@@ -20,6 +20,11 @@ export default async function AdminVideosPage() {
     include: {
       videos: {
         orderBy: { order: "asc" },
+        include: {
+          quizzes: {
+            orderBy: { timestamp: "asc" },
+          },
+        },
       },
     },
   });

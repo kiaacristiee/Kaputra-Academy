@@ -62,7 +62,7 @@ export default function TrialClient({
   const [activeTab, setActiveTab] = useState<"all" | "videos" | "materials" | "tests">("all");
   const [selectedVideo, setSelectedVideo] = useState<TrialItem | null>(null);
 
-  // Mock test taking state
+  // Quiz taking state
   const [activeTest, setActiveTest] = useState<MockTest | null>(null);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [testAnswers, setTestAnswers] = useState<Record<string, string>>({});
@@ -112,7 +112,7 @@ export default function TrialClient({
         </div>
         <h1 className="text-3xl font-bold text-white">You Are Fully Enrolled!</h1>
         <p className="text-slate-400 max-w-md mx-auto">
-          Since you are already enrolled in our academic program, you have full access to all classroom videos, resources, and live mock tests.
+          Since you are already enrolled in our academic program, you have full access to all classroom videos, resources, and live quizzes.
         </p>
         <div className="flex justify-center gap-4 pt-4">
           <Link href="/student/videos">
@@ -220,14 +220,14 @@ export default function TrialClient({
     </div>
   );
 
-  // Render Mock Test Card Component
+  // Render Quiz Card Component
   const renderMockTestCard = (test: MockTest) => (
     <div key={test.id} className="bg-slate-950 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-700 transition">
       <div className="space-y-2">
         <h4 className="font-bold text-white text-base flex items-center gap-2">
           {test.title}
           <span className="bg-amber-500/10 border border-amber-500/20 text-[#CA8E25] text-[9px] font-bold px-1.5 py-0.5 rounded">
-            Trial Mock Test
+            Trial Quiz
           </span>
           {!test.isPublished && (
             <span className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded">
@@ -250,7 +250,7 @@ export default function TrialClient({
           onClick={() => handleStartTest(test)}
           className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-xl px-5 py-2 text-xs flex items-center gap-1 w-full md:w-auto justify-center"
         >
-          Start Mock Test <ChevronRight className="w-4 h-4" />
+          Start Quiz <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
     </div>
@@ -318,7 +318,7 @@ export default function TrialClient({
           }`}
         >
           <span className="flex items-center gap-2">
-            <Award className="w-4 h-4" /> Mock Tests
+            <Award className="w-4 h-4" /> Quizzes
           </span>
         </button>
       </div>
@@ -386,11 +386,11 @@ export default function TrialClient({
               )}
             </div>
 
-            {/* Mock Tests List */}
+            {/* Quizzes List */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Award className="w-5 h-5 text-[#CA8E25]" /> Trial Mock Tests
+                  <Award className="w-5 h-5 text-[#CA8E25]" /> Trial Quizzes
                 </h3>
               </div>
               {displayTests.length > 0 ? (
@@ -399,7 +399,7 @@ export default function TrialClient({
                 </div>
               ) : (
                 <div className="py-8 text-center text-slate-500 bg-slate-950/20 border border-slate-800/50 rounded-2xl text-sm">
-                  No trial mock tests available yet.
+                  No trial quizzes available yet.
                 </div>
               )}
               {displayTests.length > 3 && (
@@ -409,7 +409,7 @@ export default function TrialClient({
                     onClick={() => setActiveTab("tests")}
                     className="text-[#CA8E25] hover:text-[#D89A2B] text-xs font-semibold"
                   >
-                    View All Mock Tests ({displayTests.length}) →
+                    View All Quizzes ({displayTests.length}) →
                   </Button>
                 </div>
               )}
@@ -450,13 +450,13 @@ export default function TrialClient({
               displayTests.map(renderMockTestCard)
             ) : (
               <div className="py-12 text-center text-slate-500 bg-slate-950/20 border border-slate-800/50 rounded-2xl">
-                No trial mock tests registered.
+                No trial quizzes registered.
               </div>
             )}
           </div>
         )}
 
-        {/* Live Mock Test Session UI */}
+        {/* Live Quiz Session UI */}
         {activeTab === "tests" && activeTest && (
           <div className="bg-slate-950 border border-slate-800 p-6 md:p-8 rounded-3xl space-y-6 shadow-xl max-w-3xl mx-auto">
             <div className="flex justify-between items-center border-b border-slate-800 pb-4">
@@ -565,7 +565,7 @@ export default function TrialClient({
 
                 <div className="pt-4 border-t border-slate-850 space-y-3">
                   <p className="text-xs text-slate-450">
-                    Want to unlock full mock tests and receive complete review logs? Register for a premium course to get full credentials!
+                    Want to unlock full quizzes and receive complete review logs? Register for a premium course to get full credentials!
                   </p>
                   <div className="flex gap-2 justify-center">
                     <Button 

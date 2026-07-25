@@ -31,7 +31,7 @@ export async function selectRegularCourse(studentId: string, courseId: string) {
 
     if (!course) throw new Error("Course not found");
 
-    // Create Registration for Placement Test
+    // Create Registration for Course Enrollment directly (no Placement Test)
     const registration = await prisma.registration.create({
       data: {
         studentName: student.name,
@@ -40,15 +40,16 @@ export async function selectRegularCourse(studentId: string, courseId: string) {
         parentPhone: student.parent.phone || "",
         parentEmail: student.parent.email,
         courseId: course.id,
-        status: "PENDING_PT_PAYMENT",
+        status: "PENDING_ENROLLMENT_PAYMENT",
       },
     });
 
-    // Placement Test fee is fixed at IDR 300,000
+    // Payment fee = price + registration fee
+    const amount = course.price + course.registrationFee;
     const payment = await prisma.payment.create({
       data: {
         registrationId: registration.id,
-        amount: 300000,
+        amount: amount,
         status: "PENDING",
       },
     });

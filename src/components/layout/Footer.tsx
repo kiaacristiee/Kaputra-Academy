@@ -3,9 +3,14 @@ import { FaFacebookF, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import prisma from "@/lib/db";
 
 export async function Footer() {
-  const block = await prisma.contentBlock.findUnique({
-    where: { section: "contact_info" },
-  });
+  let block = null;
+  try {
+    block = await prisma.contentBlock.findUnique({
+      where: { section: "contact_info" },
+    });
+  } catch (error) {
+    console.error("Database connection failed in Footer:", error);
+  }
 
   let contact = null;
   if (block) {

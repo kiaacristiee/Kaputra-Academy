@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { getUserTermsStatus } from "@/actions/dashboard";
 import TermsModal from "@/components/TermsModal";
 import {
@@ -44,11 +45,22 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
+  const { data: session, update } = useSession();
+  const router = useRouter();
+
   // Determine user role from pathname
   const isTeacher = pathname.startsWith("/teacher");
   const isAdmin = pathname.startsWith("/admin");
   const isStudent = pathname.startsWith("/student");
   const isParent = pathname.startsWith("/parent");
+
+  const isViewingAsStudent = !!session?.user?.viewingAsStudentId;
+
+  const handleReturnToParent = async () => {
+    await update({ action: "SWITCH_TO_PARENT" });
+    router.push("/parent");
+    router.refresh();
+  };
 
   useEffect(() => {
     async function checkTerms() {
@@ -65,31 +77,42 @@ export default function DashboardLayout({
   const menuItems = [
     ...(isStudent ? [
       { name: "Overview", href: "/student", icon: LayoutDashboard },
+      { name: "Announcements", href: "/student/announcements", icon: Megaphone },
       { name: "Register Class", href: "/student/enroll", icon: Plus },
       { name: "Placement Test", href: "/student/placement-test", icon: ClipboardList },
       { name: "Trial Content", href: "/student/trial", icon: Play },
       { name: "Class Videos", href: "/student/videos", icon: Video },
       { name: "Learning Materials", href: "/student/materials", icon: FileText },
-      { name: "Mock Tests", href: "/student/mock-test", icon: Award },
+      { name: "Quizzes", href: "/student/mock-test", icon: Award },
       { name: "Academic Report", href: "/student/report", icon: BarChart2 },
       { name: "Attendance", href: "/student/attendance", icon: CheckSquare },
       { name: "Schedule", href: "/student/schedule", icon: Clock },
-      { name: "Announcements", href: "/student/announcements", icon: Megaphone },
       { name: "Invoices", href: "/student/invoices", icon: CreditCard },
       { name: "Profile", href: "/student/profile", icon: Settings },
     ] : []),
     ...(isTeacher ? [
       { name: "Overview", href: "/teacher", icon: LayoutDashboard },
+      { name: "Assigned Classes", href: "/teacher/classes", icon: BookOpen },
+      { name: "Announcements", href: "/teacher/announcements", icon: Megaphone },
+      { name: "Student List", href: "/teacher/students", icon: Users },
+      { name: "Schedule", href: "/teacher/schedule", icon: Calendar },
+      { name: "Attendance CMS", href: "/teacher/attendance", icon: CheckSquare },
+      { name: "Videos CMS", href: "/teacher/videos", icon: Video },
+      { name: "Materials CMS", href: "/teacher/materials", icon: FileText },
       { name: "Mock Tests CMS", href: "/teacher/mock-tests", icon: Award },
+      { name: "Salary Details", href: "/teacher/salary", icon: DollarSign },
+      { name: "Student Progress CMS", href: "/teacher/progress-cms", icon: Sliders },
+      { name: "Academic Report CMS", href: "/teacher/report-cms", icon: FileEdit },
     ] : []),
     ...(isAdmin ? [
       { name: "Overview", href: "/admin", icon: LayoutDashboard },
       { name: "Teacher Management", href: "/admin/teachers", icon: Users },
       { name: "Teacher Assignment", href: "/admin/teacher-assignments", icon: UserCheck },
       { name: "Course CMS", href: "/admin/courses", icon: BookOpen },
+      { name: "Camp Programs", href: "/admin/camps", icon: Calendar },
       { name: "Videos CMS", href: "/admin/videos", icon: Video },
       { name: "Materials CMS", href: "/admin/materials", icon: FileText },
-      { name: "Mock Tests CMS", href: "/admin/mock-tests", icon: Award },
+      { name: "Quizzes CMS", href: "/admin/mock-tests", icon: Award },
       { name: "Salary CMS", href: "/admin/salary", icon: DollarSign },
       { name: "Student Management", href: "/admin/students", icon: GraduationCap },
       { name: "Parent Management", href: "/admin/parents", icon: Users },
@@ -100,6 +123,7 @@ export default function DashboardLayout({
     ] : []),
     ...(isParent ? [
       { name: "Overview", href: "/parent", icon: LayoutDashboard },
+      { name: "Announcements", href: "/parent/announcements", icon: Megaphone },
       { name: "Register Class", href: "/parent/enroll", icon: Plus },
       { name: "Children List", href: "/parent/children", icon: Users },
       { name: "Progress Track", href: "/parent/progress", icon: TrendingUp },
@@ -173,6 +197,22 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
+
+        {isViewingAsStudent && (
+          <div className="bg-amber-600/10 border-b border-amber-500/20 px-6 py-3 flex items-center justify-between text-sm shadow-sm z-10 relative backdrop-blur-md">
+            <div>
+              <span className="font-semibold text-amber-500">Viewing Student Dashboard:</span>
+              <span className="text-white ml-2 font-bold">{session?.user?.name}</span>
+            </div>
+            <Button
+              onClick={handleReturnToParent}
+              size="sm"
+              className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-lg text-xs"
+            >
+              &larr; Back to Parent Dashboard
+            </Button>
+          </div>
+        )}
 
         {/* Content Body */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-900">

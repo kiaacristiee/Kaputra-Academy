@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import ParentDashboardClient from "./ParentDashboardClient";
+import ViewAsStudentButton from "./ViewAsStudentButton";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,13 @@ export default async function ParentDashboardPage() {
   const allCourses = await prisma.course.findMany({
     select: { id: true, title: true, type: true },
   });
-  const courseMap = new Map(allCourses.map(c => [c.id, c]));
+  const allCamps = await prisma.campProgram.findMany({
+    select: { id: true, name: true, type: true },
+  } as any);
+  const courseMap = new Map<string, { title: string; type: string }>([
+    ...allCourses.map((c) => [c.id, { title: c.title, type: c.type === "COMPETITION" ? "COMPETITION" : "REGULAR" }] as [string, { title: string; type: string }]),
+    ...allCamps.map((c) => [c.id, { title: c.name, type: (c as any).type || "CAMP" }] as [string, { title: string; type: string }]),
+  ]);
 
   // Get all active course IDs for all children
   const childIds = children.map((c: any) => c.id);
@@ -149,9 +156,12 @@ export default async function ParentDashboardPage() {
                         <h3 className="text-lg font-bold text-white">{child.name}</h3>
                         <p className="text-xs text-slate-500">Student ID: <span className="font-mono text-[#CA8E25] font-semibold">{child.studentIdStr || "—"}</span></p>
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        Active
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <ViewAsStudentButton studentId={child.id} />
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          Active
+                        </span>
+                      </div>
                     </div>
 
                     {/* Attendance & Stats grid */}
@@ -184,9 +194,7 @@ export default async function ParentDashboardPage() {
                         child.enrollments.map((enrollment: any) => {
                           const courseInfo = courseMap.get(enrollment.itemId);
                           const title = courseInfo ? courseInfo.title : enrollment.itemId;
-                          const courseType = courseInfo 
-                            ? (courseInfo.type === "COMPETITION" ? "Competition Class" : "Regular Class") 
-                            : enrollment.itemType;
+                          const courseType = courseInfo ? courseInfo.type : enrollment.itemType;
 
                           return (
                             <div key={enrollment.id} className="bg-slate-900/50 p-4 rounded-xl border border-slate-900 flex justify-between items-center text-sm">

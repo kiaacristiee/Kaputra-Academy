@@ -142,6 +142,57 @@ export async function approvePayment(invoiceId: string) {
         },
       });
     }
+  } else if (invoice.itemType === "CAMP") {
+    const campReg = await prisma.campRegistration.findFirst({
+      where: {
+        studentId: invoice.studentId,
+        campProgramId: invoice.itemId,
+        status: { not: "APPROVED" },
+      },
+      include: { campProgram: true },
+    });
+
+    if (campReg) {
+      await prisma.campRegistration.update({
+        where: { id: campReg.id },
+        data: { status: "APPROVED" },
+      });
+
+      try {
+        const { sendCampEnrollmentConfirmationEmail } = await import("@/lib/email");
+        await sendCampEnrollmentConfirmationEmail({
+          parentEmail: campReg.parentEmail,
+          studentName: campReg.studentName,
+          campName: campReg.campProgram.name,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send camp enrollment confirmation email:", emailErr);
+      }
+    }
+
+    const existingEnrollment = await prisma.enrollment.findFirst({
+      where: {
+        studentId: invoice.studentId,
+        itemId: invoice.itemId,
+        itemType: "CAMP",
+      },
+    });
+
+    if (existingEnrollment) {
+      await prisma.enrollment.update({
+        where: { id: existingEnrollment.id },
+        data: { status: "ACTIVE" },
+      });
+    } else {
+      await prisma.enrollment.create({
+        data: {
+          studentId: invoice.studentId,
+          itemId: invoice.itemId,
+          itemType: "CAMP",
+          status: "ACTIVE",
+        },
+      });
+    }
   }
 
   revalidatePath("/admin/payments");

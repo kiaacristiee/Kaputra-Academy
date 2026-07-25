@@ -8,7 +8,7 @@ import BulkUpload from "./BulkUpload";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Manage Mock Tests | Kaputra Academy",
+  title: "Manage Quizzes | Kaputra Academy",
 };
 
 export default async function TeacherMockTestsPage() {

@@ -44,6 +44,7 @@ model User {
   teacherAttendances  TeacherAttendance[] @relation("TeacherAttendance")
   targetedAnnouncements Announcement[]    @relation("AnnouncementTargets")
   reminders           Reminder[]          @relation("ReminderTeacher")
+  campRegistrations   CampRegistration[]
 }
 
 model Category {
@@ -228,6 +229,25 @@ model Video {
   updatedAt   DateTime @updatedAt
 
   course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  quizzes     InteractiveVideoQuiz[]
+}
+
+model InteractiveVideoQuiz {
+  id             String   @id @default(cuid())
+  videoId        String
+  timestamp      Int      // Stored in seconds for easy playback comparison
+  question       String
+  optionA        String
+  optionB        String
+  optionC        String
+  optionD        String
+  correctAnswer  String
+  explanation    String?  @db.Text
+  requireCorrect Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  video          Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 }
 
 model Material {
@@ -412,4 +432,41 @@ model Reminder {
 
   course      Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   teacher     User     @relation("ReminderTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+}
+
+model CampProgram {
+  id                   String             @id @default(cuid())
+  name                 String
+  slug                 String             @unique
+  description          String             @db.Text
+  thumbnailUrl         String?
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime
+  price                Float
+  capacity             Int?
+  status               String             @default("OPEN") // "OPEN" or "CLOSED"
+  visibility           String             @default("DRAFT") // "PUBLISHED" or "DRAFT"
+  type                 String             @default("CAMP")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  registrations        CampRegistration[]
+}
+
+model CampRegistration {
+  id                String             @id @default(cuid())
+  studentId         String
+  studentName       String
+  studentAge        Int
+  parentName        String
+  parentPhone       String
+  parentEmail       String
+  campProgramId     String
+  status            String             @default("PENDING_PAYMENT") // PENDING_PAYMENT, VERIFYING_PAYMENT, APPROVED
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  campProgram       CampProgram        @relation(fields: [campProgramId], references: [id], onDelete: Cascade)
+  student           User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }

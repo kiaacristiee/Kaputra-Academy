@@ -90,24 +90,40 @@ export async function uploadReceipt(formData: FormData) {
   });
 
   // Sync state with Registration
-  const reg = await prisma.registration.findFirst({
-    where: {
-      studentId: invoice.studentId,
-      courseId: invoice.itemId,
-    },
-  });
-
-  if (reg) {
-    let nextStatus = reg.status;
-    if (invoice.itemType === "PLACEMENT_TEST") {
-      nextStatus = "VERIFYING_PT_PAYMENT";
-    } else if (invoice.itemType === "CLASS") {
-      nextStatus = "VERIFYING_ENROLLMENT_PAYMENT";
-    }
-    await prisma.registration.update({
-      where: { id: reg.id },
-      data: { status: nextStatus },
+  if (invoice.itemType === "CAMP") {
+    const campReg = await prisma.campRegistration.findFirst({
+      where: {
+        studentId: invoice.studentId,
+        campProgramId: invoice.itemId,
+      },
     });
+
+    if (campReg) {
+      await prisma.campRegistration.update({
+        where: { id: campReg.id },
+        data: { status: "VERIFYING_PAYMENT" },
+      });
+    }
+  } else {
+    const reg = await prisma.registration.findFirst({
+      where: {
+        studentId: invoice.studentId,
+        courseId: invoice.itemId,
+      },
+    });
+
+    if (reg) {
+      let nextStatus = reg.status;
+      if (invoice.itemType === "PLACEMENT_TEST") {
+        nextStatus = "VERIFYING_PT_PAYMENT";
+      } else if (invoice.itemType === "CLASS") {
+        nextStatus = "VERIFYING_ENROLLMENT_PAYMENT";
+      }
+      await prisma.registration.update({
+        where: { id: reg.id },
+        data: { status: nextStatus },
+      });
+    }
   }
 
   return { success: true, invoice };

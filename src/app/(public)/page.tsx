@@ -8,8 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Star, Quote, Award, Users, Sparkles, ArrowRight, BookOpen, Clock3, FlaskConical, Trophy, ChevronLeft, ChevronRight, Medal } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { getContentBlocks } from "@/actions/cms";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "start",
@@ -398,15 +403,11 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/achievement1.png"
-                        alt="Bryan Tjandra - SASMO Gold Medalist"
+                        src="/Aldrin.png"
+                        alt=""
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-
-                      <span className="absolute top-4 left-4 inline-block text-xs font-bold uppercase tracking-wider text-[#F4B218] bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-[#F4B218]/30 shadow-lg">
-                        SASMO 2025 • Gold Medal
-                      </span>
                     </div>
                   </div>
 
@@ -418,22 +419,19 @@ export default function Home() {
                           <Trophy className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Perfect Score & Gold Award
+                          Silver Medalist
                         </h3>
                       </div>
 
                       <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                        Bryan achieved an outstanding perfect score, competing against thousands of students across Asia in the Singapore and Asian Schools Math Olympiad.
+                        Aldrin achieved an outstanding Silver award, competing in Singapore and Asian School Math Olympiad.
                       </p>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">Bryan Tjandra</p>
-                        <p className="text-xs text-slate-500">Primary 5 Student</p>
-                      </div>
-                      <div className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">
-                        East Java
+                        <p className="font-bold text-slate-900 text-sm">Aldrin Avery Adipratomo</p>
+                        <p className="text-xs text-slate-500">Grade 1 Student</p>
                       </div>
                     </div>
                   </div>
@@ -450,15 +448,11 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/achievement2.png"
-                        alt="Bryan Tjandra - SASMO Gold Medalist"
+                        src="/david.png"
+                        alt="David Wijaya - SASMO Silver Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-
-                      <span className="absolute top-4 left-4 inline-block text-xs font-bold uppercase tracking-wider text-[#F4B218] bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-[#F4B218]/30 shadow-lg">
-                        SASMO 2025 • Gold Medal
-                      </span>
                     </div>
                   </div>
 
@@ -470,22 +464,19 @@ export default function Home() {
                           <Award className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Ranked 1st National
+                          Silver Medalist
                         </h3>
                       </div>
 
                       <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                        Catherine secured the 1st national rank in the American Mathematics Olympiad (AMO) 2024, demonstrating top-tier logical reasoning.
+                        Achieved the 2nd place in the Singapore and Asian Schools Math Olympiad (SASMO), demonstrating top-tier logical reasoning.
                       </p>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">Catherine Wijaya</p>
-                        <p className="text-xs text-slate-500">Secondary 2 Student</p>
-                      </div>
-                      <div className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">
-                        Surabaya
+                        <p className="font-bold text-slate-900 text-sm">David Vincent Sugia</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
                       </div>
                     </div>
                   </div>
@@ -502,15 +493,11 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/achievement1.png"
-                        alt="Bryan Tjandra - SASMO Gold Medalist"
+                        src="/David (1).png"
+                        alt="David Vincent Sugia - SASMO Gold Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-
-                      <span className="absolute top-4 left-4 inline-block text-xs font-bold uppercase tracking-wider text-[#F4B218] bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-[#F4B218]/30 shadow-lg">
-                        SASMO 2025 • Gold Medal
-                      </span>
                     </div>
                   </div>
 
@@ -522,22 +509,19 @@ export default function Home() {
                           <Star className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Seoul Finals Gold
+                          World Mathematics Invitationals Gold Medalist
                         </h3>
                       </div>
 
                       <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                        Darren traveled to Seoul, South Korea, for the World Mathematics Invitational (WMI) Final Round, winning a Gold Award for his outstanding math prowess.
+                        Achieved the 1st place in World Mathematics Invitational (WMI) Final Round, winning a Gold Award for his outstanding math performance.
                       </p>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">Darren Limanto</p>
-                        <p className="text-xs text-slate-500">Primary 6 Student</p>
-                      </div>
-                      <div className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">
-                        Sidoarjo
+                        <p className="font-bold text-slate-900 text-sm">David Vincent Sugia</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
                       </div>
                     </div>
                   </div>
@@ -554,15 +538,11 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/achievement1.png"
-                        alt="Bryan Tjandra - SASMO Gold Medalist"
+                        src="/Hugo 2.png"
+                        alt="Hugo Levinson - SASMO Gold Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-
-                      <span className="absolute top-4 left-4 inline-block text-xs font-bold uppercase tracking-wider text-[#F4B218] bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-[#F4B218]/30 shadow-lg">
-                        SASMO 2025 • Gold Medal
-                      </span>
                     </div>
                   </div>
 
@@ -574,22 +554,18 @@ export default function Home() {
                           <Medal className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          National Science Olympiad
+                          Singapore and Asian School Math Olympiad (SASMO) Gold Medalist
                         </h3>
                       </div>
 
                       <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                        Eliana was selected to represent East Java in the National Science Olympiad (OSN) 2025, winning a prestigious Bronze Medal in Mathematics.
-                      </p>
+                        Achieved the 1st place in Singapore and Asian School Math Olympiad (SASMO)</p>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">Eliana Sutedjo</p>
-                        <p className="text-xs text-slate-500">Secondary 3 Student</p>
-                      </div>
-                      <div className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">
-                        Surabaya
+                        <p className="font-bold text-slate-900 text-sm">Hugo Levinson Susanto</p>
+                        <p className="text-xs text-slate-500">Grade 4 Student</p>
                       </div>
                     </div>
                   </div>
@@ -606,14 +582,143 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/achievement1.png"
-                        alt="Bryan Tjandra - SASMO Gold Medalist"
+                        src="/matthew.png"
+                        alt=""
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <span className="absolute top-4 left-4 inline-block text-xs font-bold uppercase tracking-wider text-[#F4B218] bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full border border-[#F4B218]/30 shadow-lg">
-                        SASMO 2025 • Gold Medal
-                      </span>
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform duration-300">
+                          <Medal className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          World Mathematics Invitationals Gold Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the 1st place in World Mathematics Invitationals (WMI)</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Matthew Wayne Louis</p>
+                        <p className="text-xs text-slate-500">Grade 3 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 6 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/Roy.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform duration-300">
+                          <Medal className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore and Asian Schools Math Olympiad Silver Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the 2nd place in Singapore and Asian Schools Math Olympiad (SASMO)</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Roy Alexander Rusli</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 7 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/roy 2.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform duration-300">
+                          <Medal className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Gold Medalist in Singapore Math Challenge
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the 1st place in Singapore Math Challenge with a perfect score.</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Roy Alexander Rusli</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 8 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/Hugo Levinson .png"
+                        alt="Hugo - JISMO Ruby Medalist"
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
                     </div>
                   </div>
 
@@ -625,22 +730,18 @@ export default function Home() {
                           <Sparkles className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Top 1% Globally
+                          Ruby Award
                         </h3>
                       </div>
 
                       <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                        Felix achieved a High Distinction in ICAS Mathematics, placing him in the top 1% of participants worldwide in this global UNSW assessment.
-                      </p>
+                        Achieved the Ruby Award in Japan International Science & Mathematics Olympiad (JISMO - Math)                      </p>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">Felix Anderson</p>
-                        <p className="text-xs text-slate-500">Primary 4 Student</p>
-                      </div>
-                      <div className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">
-                        Gresik
+                        <p className="font-bold text-slate-900 text-sm">Hugo Levinson Susanto</p>
+                        <p className="text-xs text-slate-500">Grade 4 Student</p>
                       </div>
                     </div>
                   </div>

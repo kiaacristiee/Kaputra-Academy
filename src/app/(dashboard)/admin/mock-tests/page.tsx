@@ -7,7 +7,7 @@ import MockTestClient from "../../student/mock-test/MockTestClient";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Manage Mock Tests | Admin | Kaputra Academy",
+  title: "Manage Quizzes | Admin | Kaputra Academy",
 };
 
 export default async function AdminMockTestsPage() {

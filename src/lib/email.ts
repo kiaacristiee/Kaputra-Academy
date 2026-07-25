@@ -43,9 +43,18 @@ export interface TestResultEmailParams {
   qualificationStatus: "QUALIFIED" | "NOT_QUALIFIED";
 }
 
+export function getPerformanceScale(score: number): string {
+  if (score >= 85) return "Excellent";
+  if (score >= 60) return "Good";
+  if (score >= 40) return "Fair";
+  return "Needs Improvement";
+}
+
 export async function sendPlacementTestResultEmail(
   params: TestResultEmailParams
 ) {
+  const performanceScale = getPerformanceScale(params.score);
+
   const recommendation =
     params.qualificationStatus === "QUALIFIED"
       ? "Competition Class"
@@ -95,8 +104,8 @@ Your child has completed the Placement Test.
 </tr>
 
 <tr>
-<td style="padding:8px"><strong>Score</strong></td>
-<td style="padding:8px">${params.score}</td>
+<td style="padding:8px"><strong>Performance</strong></td>
+<td style="padding:8px"><strong>${performanceScale}</strong></td>
 </tr>
 
 <tr>
@@ -183,6 +192,64 @@ Regards,<br/>
     from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
     to: params.parentEmail,
     subject: "Enrollment Confirmed - Kaputra Academy",
+    html: emailHtml,
+  });
+
+  return { success: true };
+}
+
+export interface CampEnrollmentConfirmationEmailParams {
+  parentEmail: string;
+  studentName: string;
+  campName: string;
+}
+
+export async function sendCampEnrollmentConfirmationEmail(
+  params: CampEnrollmentConfirmationEmailParams
+) {
+  const emailHtml = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;border:1px solid #ddd;border-radius:10px">
+
+<h2 style="color:#1E40AF">
+Kaputra Academy
+</h2>
+
+<h3>Camp Registration Confirmed</h3>
+
+<p>
+Dear Parent,
+</p>
+
+<p>
+We are pleased to inform you that
+<strong>${params.studentName}</strong>
+has been successfully enrolled in the Camp Program:
+</p>
+
+<p style="font-size:18px;font-weight:bold;color:#1E40AF">
+    ${params.campName}
+</p>
+
+<p>
+Your child now has full access to the camp program materials, schedules, and learning resources through the student dashboard.
+</p>
+
+<p>
+Thank you for choosing Kaputra Academy.
+</p>
+
+<br/>
+
+Regards,<br/>
+<strong>Kaputra Academy</strong>
+
+</div>
+`;
+
+  await transporter.sendMail({
+    from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+    to: params.parentEmail,
+    subject: "Camp Registration Confirmed - Kaputra Academy",
     html: emailHtml,
   });
 

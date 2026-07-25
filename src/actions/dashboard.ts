@@ -138,7 +138,14 @@ export async function createVideo(data: {
 }) {
   try {
     await checkAuth(["ADMIN", "TEACHER"]);
-    const video = await prisma.video.create({ data });
+    const video = await prisma.video.create({
+      data,
+      include: {
+        quizzes: {
+          orderBy: { timestamp: "asc" },
+        },
+      },
+    });
     revalidatePath("/student/trial");
     return { success: true, video };
   } catch (error: any) {
@@ -162,6 +169,11 @@ export async function updateVideo(
     const video = await prisma.video.update({
       where: { id },
       data,
+      include: {
+        quizzes: {
+          orderBy: { timestamp: "asc" },
+        },
+      },
     });
     revalidatePath("/student/trial");
     return { success: true, video };
@@ -250,7 +262,7 @@ export async function deleteMaterial(id: string) {
 }
 
 /* =========================================================================
-   MOCK TESTS
+   QUIZZES
    ========================================================================= */
 
 export async function getMockTests(courseId?: string, isTrial: boolean = false) {
@@ -321,8 +333,8 @@ export async function updateMockTest(
         ...testData,
         questions: questionIds
           ? {
-              set: questionIds.map((qid) => ({ id: qid })),
-            }
+            set: questionIds.map((qid) => ({ id: qid })),
+          }
           : undefined,
       },
     });
@@ -394,9 +406,18 @@ export async function submitMockTest(testId: string, answers: Record<string, str
       include: { questions: true },
     });
 
-    if (!test) throw new Error("Mock test not found");
+    if (!test) throw new Error("Quiz not found");
 
-    // Removed existing submission check to allow multiple retakes
+    const existingSubmission = await prisma.mockSubmission.findFirst({
+      where: {
+        mockTestId: testId,
+        studentId: user.id,
+      },
+    });
+
+    if (existingSubmission) {
+      throw new Error("You have already submitted this mock test.");
+    }
 
     let correctCount = 0;
     test.questions.forEach((q) => {
@@ -511,7 +532,7 @@ export async function markAttendance(data: {
 }) {
   try {
     const user = await checkAuth(["ADMIN", "TEACHER"]);
-    
+
     // Check if attendance already exists for that day
     const startOfDay = new Date(data.date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -612,7 +633,7 @@ export async function createScheduleSlot(data: {
 export async function bookPrivateSchedule(scheduleId: string, studentId: string) {
   try {
     await checkAuth(["ADMIN", "STUDENT"]);
-    
+
     // Check if slot is available
     const slot = await prisma.schedule.findUnique({
       where: { id: scheduleId },

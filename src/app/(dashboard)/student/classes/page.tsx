@@ -55,14 +55,31 @@ export default async function StudentClassesPage() {
     (e) => !resolvedCourseIds.includes(e.itemId)
   );
 
-  const fallbackCourses = unresolvedEnrollments.map((e) => ({
-    id: e.id,
-    title: e.itemId, // e.g. "Regular Class - Private Class"
-    schedule: "Schedule to be arranged with your instructor",
-    type: e.itemType === "CLASS" ? "REGULAR" : "COMPETITION",
-    category: { name: e.itemType },
-    teachers: [],
-  }));
+  const campIds = unresolvedEnrollments
+    .filter((e) => e.itemType === "PROGRAM" || e.itemType === "CAMP")
+    .map((e) => e.itemId);
+
+  const camps = await prisma.campProgram.findMany({
+    where: { id: { in: campIds } },
+  });
+
+  const campMap = new Map(camps.map((c) => [c.id, c]));
+
+  const fallbackCourses = unresolvedEnrollments.map((e) => {
+    const isProgram = e.itemType === "PROGRAM" || e.itemType === "CAMP";
+    const camp = isProgram ? campMap.get(e.itemId) : null;
+
+    return {
+      id: e.id,
+      title: camp ? camp.name : e.itemId,
+      schedule: camp
+        ? `Starts: ${new Date(camp.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+        : "Schedule to be arranged with your instructor",
+      type: camp ? (camp as any).type : (isProgram ? "CAMP" : (e.itemType === "CLASS" ? "REGULAR" : "COMPETITION")),
+      category: { name: isProgram ? "Camp Program" : e.itemType },
+      teachers: [],
+    };
+  });
 
   const allCourses = [
     ...courses.map((c) => ({

@@ -7,7 +7,7 @@ import MockTestClient from "./MockTestClient";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Mock Tests | Kaputra Academy",
+  title: "Quizzes | Kaputra Academy",
 };
 
 export default async function MockTestPage() {
@@ -30,7 +30,7 @@ export default async function MockTestPage() {
 
   const isUnlocked = activeEnrollments.length > 0 || ["ADMIN", "TEACHER"].includes(role);
 
-  // Fetch courses with mock tests
+  // Fetch courses with quizzes
   let courses: any[] = [];
   if (role === "TEACHER") {
     const teacherAssignments = await prisma.teacherAssignment.findMany({
@@ -71,7 +71,7 @@ export default async function MockTestPage() {
       },
     });
   } else {
-    // Student: find courses they are enrolled in — show only published, non-trial mock tests
+    // Student: find courses they are enrolled in — show only published, non-trial quizzes
     const courseIds = activeEnrollments.map((e) => e.itemId);
     courses = await prisma.course.findMany({
       where: {

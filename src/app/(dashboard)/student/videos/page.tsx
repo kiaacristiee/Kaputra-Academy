@@ -40,6 +40,11 @@ export default async function VideosPage() {
           include: {
             videos: {
               orderBy: { order: "asc" },
+              include: {
+                quizzes: {
+                  orderBy: { timestamp: "asc" },
+                },
+              },
             },
           },
         },
@@ -51,6 +56,11 @@ export default async function VideosPage() {
       include: {
         videos: {
           orderBy: { order: "asc" },
+          include: {
+            quizzes: {
+              orderBy: { timestamp: "asc" },
+            },
+          },
         },
       },
     });
@@ -65,6 +75,11 @@ export default async function VideosPage() {
         videos: {
           where: { isPublished: true },
           orderBy: { order: "asc" },
+          include: {
+            quizzes: {
+              orderBy: { timestamp: "asc" },
+            },
+          },
         },
       },
     });

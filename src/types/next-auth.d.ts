@@ -13,6 +13,9 @@ declare module "next-auth" {
       email?: string | null;
       role: string;
       studentIdStr?: string | null;
+      viewingAsStudentId?: string | null;
+      originalParentId?: string | null;
+      originalParentName?: string | null;
     };
   }
 }
@@ -22,5 +25,8 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     studentIdStr?: string | null;
+    viewingAsStudentId?: string | null;
+    originalParentId?: string | null;
+    originalParentName?: string | null;
   }
 }

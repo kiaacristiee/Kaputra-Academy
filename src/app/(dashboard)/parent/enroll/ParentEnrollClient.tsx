@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, BookOpen, Calendar, DollarSign, PlusCircle, CheckCircle2, ChevronRight, AlertCircle, Sparkles, Loader2 } from "lucide-react";
+import { Users, BookOpen, Calendar, DollarSign, PlusCircle, CheckCircle2, ChevronRight, AlertCircle, Sparkles, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAvailableCourses, enrollInClass, getAvailablePrivateSchedules } from "@/actions/enrollClass";
+import { getAvailableCamps, enrollInCamp } from "@/actions/camps";
 import TermsModal from "@/components/TermsModal";
 import Link from "next/link";
 
@@ -24,6 +25,21 @@ interface Course {
   teachers: { teacher: { name: string } }[];
 }
 
+interface Camp {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  thumbnailUrl: string | null;
+  startDate: string | Date;
+  endDate: string | Date;
+  registrationDeadline: string | Date;
+  price: number;
+  capacity: number | null;
+  status: string;
+  visibility: string;
+}
+
 interface ParentEnrollClientProps {
   childrenList: Child[];
 }
@@ -36,18 +52,34 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+function formatDate(dStr: string | Date) {
+  if (!dStr) return "-";
+  return new Date(dStr).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ParentEnrollClient({ childrenList }: ParentEnrollClientProps) {
   const [selectedChildId, setSelectedChildId] = useState<string>(childrenList[0]?.id || "");
   const [courses, setCourses] = useState<Course[]>([]);
-  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [camps, setCamps] = useState<Camp[]>([]);
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "class" | "camp">("all");
   
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCamp, setSelectedCamp] = useState<Camp | null>(null);
+  
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successInvoiceId, setSuccessInvoiceId] = useState<string | null>(null);
+  const [successType, setSuccessType] = useState<"CLASS" | "PLACEMENT_TEST" | "CAMP">("CLASS");
+  const [successAmount, setSuccessAmount] = useState(300000);
 
-  // Terms modal state for class registration
-  const [pendingCourse, setPendingCourse] = useState<Course | null>(null); // course queued until terms accepted
+  // Terms modal state for registration
+  const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
+  const [pendingCamp, setPendingCamp] = useState<Camp | null>(null);
   const [showTermsForRegistration, setShowTermsForRegistration] = useState(false);
 
   const [learningMethod, setLearningMethod] = useState<"SEMI_PRIVATE" | "PRIVATE">("SEMI_PRIVATE");
@@ -58,21 +90,33 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
 
   const activeChild = childrenList.find((c) => c.id === selectedChildId);
 
-  // Fetch courses whenever child selection changes
+  // Fetch courses and camps whenever child selection changes
   useEffect(() => {
-    async function loadCourses() {
+    async function loadPrograms() {
       if (!selectedChildId) return;
-      setLoadingCourses(true);
+      setLoadingPrograms(true);
       setError(null);
-      const res = await getAvailableCourses(selectedChildId);
-      if (res.success && res.courses) {
-        setCourses(res.courses as Course[]);
+      
+      const [courseRes, campRes] = await Promise.all([
+        getAvailableCourses(selectedChildId),
+        getAvailableCamps(selectedChildId)
+      ]);
+
+      if (courseRes.success && courseRes.courses) {
+        setCourses(courseRes.courses as Course[]);
       } else {
-        setError(res.error || "Failed to load courses.");
+        setError(courseRes.error || "Failed to load courses.");
       }
-      setLoadingCourses(false);
+
+      if (campRes.success && campRes.camps) {
+        setCamps(campRes.camps as Camp[]);
+      } else {
+        setError((prev) => prev || campRes.error || "Failed to load camp programs.");
+      }
+      
+      setLoadingPrograms(false);
     }
-    loadCourses();
+    loadPrograms();
   }, [selectedChildId]);
 
   const loadSchedules = async () => {
@@ -89,13 +133,20 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
 
   const handleRegisterClick = () => {
     if (!selectedCourse) return;
-    setShowPTPopup(true);
+    if (selectedCourse.type === "COMPETITION") {
+      setShowPTPopup(true);
+    } else {
+      handleEnroll();
+    }
   };
 
   const handleEnroll = async () => {
     if (!selectedCourse || !selectedChildId) return;
     setSubmitting(true);
     setError(null);
+
+    const wasRegular = selectedCourse.type === "REGULAR";
+    const amount = wasRegular ? (selectedCourse.price + selectedCourse.registrationFee) : 300000;
 
     const res = await enrollInClass(
       selectedChildId, 
@@ -104,6 +155,8 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
       learningMethod === "PRIVATE" ? selectedScheduleId : undefined
     );
     if (res.success && res.invoiceId) {
+      setSuccessType(wasRegular ? "CLASS" : "PLACEMENT_TEST");
+      setSuccessAmount(amount);
       setSuccessInvoiceId(res.invoiceId);
       setCourses(courses.filter((c) => c.id !== selectedCourse.id));
       setSelectedCourse(null);
@@ -116,9 +169,29 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
     setSubmitting(false);
   };
 
+  const handleCampEnroll = async () => {
+    if (!selectedCamp || !selectedChildId) return;
+    setSubmitting(true);
+    setError(null);
+
+    const res = await enrollInCamp(selectedChildId, selectedCamp.id);
+    if (res.success && res.invoiceId) {
+      setSuccessType("CAMP");
+      setSuccessAmount(selectedCamp.price);
+      setSuccessInvoiceId(res.invoiceId);
+      setCamps(camps.filter((c) => c.id !== selectedCamp.id));
+      setSelectedCamp(null);
+    } else {
+      setError(res.error || "Failed to register camp program. Please try again.");
+      setSelectedCamp(null);
+    }
+    setSubmitting(false);
+  };
+
   const handleResetSuccess = () => {
     setSuccessInvoiceId(null);
     setSelectedCourse(null);
+    setSelectedCamp(null);
   };
 
   if (childrenList.length === 0) {
@@ -142,7 +215,9 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
         <div className="space-y-2">
           <h1 className="text-3xl font-black tracking-tight text-white">Enrollment Registered!</h1>
           <p className="text-slate-400 text-sm">
-            A placement test invoice has been generated for **{activeChild?.name}**. Please complete the payment to proceed to the test.
+            {successType === "CLASS" && `A tuition invoice has been generated for **${activeChild?.name}**. Please complete the payment to proceed.`}
+            {successType === "PLACEMENT_TEST" && `A placement test invoice has been generated for **${activeChild?.name}**. Please complete the payment to proceed to the test.`}
+            {successType === "CAMP" && `A camp program registration invoice has been generated for **${activeChild?.name}**. Please complete the payment to proceed.`}
           </p>
         </div>
 
@@ -151,16 +226,22 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
             <span className="text-xs text-slate-500 font-bold uppercase">Student</span>
             <span className="text-sm font-bold text-white">{activeChild?.name}</span>
           </div>
+          <div className="flex justify-between items-center pb-2 border-b border-slate-900 text-xs">
+            <span className="text-slate-500">Item</span>
+            <span className="text-slate-350 font-bold">
+              {successType === "CLASS" ? "Class Tuition & Registration" : successType === "CAMP" ? "Camp Program Registration" : "Placement Test Registration"}
+            </span>
+          </div>
           <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-500">Placement Test Fee</span>
+            <span className="text-slate-500">{successType === "CLASS" ? "Tuition & Reg Fee" : successType === "CAMP" ? "Camp Program Fee" : "Placement Test Fee"}</span>
             <span className="text-slate-300 font-mono">
-              {formatCurrency(300000)}
+              {formatCurrency(successAmount)}
             </span>
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-slate-900 font-bold text-sm">
             <span className="text-white">Total Amount</span>
             <span className="text-[#CA8E25] font-mono">
-              {formatCurrency(300000)}
+              {formatCurrency(successAmount)}
             </span>
           </div>
         </div>
@@ -176,7 +257,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
             onClick={handleResetSuccess}
             className="text-slate-400 hover:text-white"
           >
-            Register Another Class
+            Register Another Program
           </Button>
         </div>
       </div>
@@ -193,7 +274,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
             Register Child Class
           </h1>
           <p className="text-slate-400 mt-2">
-            Enroll your children in Kaputra Academy Singapore Curriculum courses.
+            Enroll your children in Kaputra Academy Singapore Curriculum courses and camp programs.
           </p>
         </div>
 
@@ -206,7 +287,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
               value={selectedChildId}
               onChange={(e) => setSelectedChildId(e.target.value)}
               className="w-full bg-transparent text-sm text-white font-bold focus:outline-none pr-4"
-              disabled={loadingCourses || submitting}
+              disabled={loadingPrograms || submitting}
             >
               {childrenList.map((child) => (
                 <option key={child.id} value={child.id} className="bg-slate-950">
@@ -218,6 +299,24 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-slate-800 gap-6">
+        {["all", "class", "camp"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as any)}
+            className={`pb-3 text-sm font-bold capitalize transition-all relative ${
+              activeTab === tab ? "text-[#CA8E25]" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            {tab === "camp" ? "Camp Program" : tab}
+            {activeTab === tab && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#CA8E25]" />
+            )}
+          </button>
+        ))}
+      </div>
+
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3 text-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
@@ -225,85 +324,297 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
         </div>
       )}
 
-      {loadingCourses ? (
+      {loadingPrograms ? (
         <div className="py-20 text-center text-slate-400 space-y-3">
           <Loader2 className="w-8 h-8 text-[#CA8E25] animate-spin mx-auto" />
-          <p className="text-sm">Fetching available courses for child...</p>
-        </div>
-      ) : courses.length === 0 ? (
-        <div className="py-20 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-3">
-          <BookOpen className="w-12 h-12 text-slate-700 mx-auto" />
-          <p className="font-bold text-white text-lg">No classes available</p>
-          <p className="text-sm text-slate-500 max-w-sm mx-auto">
-            **{activeChild?.name}** is already enrolled in all published classes or has pending registrations/invoices for them.
-          </p>
+          <p className="text-sm">Fetching available programs for child...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course) => (
-            <div
-              key={course.id}
-              className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
-            >
-              <div className="space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="text-[10px] bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    {course.category.name}
-                  </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    course.type === "COMPETITION"
-                      ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                      : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  }`}>
-                    {course.type}
-                  </span>
+        <>
+          {activeTab === "class" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-white">Available Classes</h2>
+              {courses.length === 0 ? (
+                <div className="py-20 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-3">
+                  <BookOpen className="w-12 h-12 text-slate-700 mx-auto" />
+                  <p className="font-bold text-white text-lg">No classes available</p>
+                  <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                    **{activeChild?.name}** is already enrolled in all published classes or has pending registrations/invoices for them.
+                  </p>
                 </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {courses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[10px] bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {course.category.name}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            course.type === "COMPETITION"
+                              ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          }`}>
+                            {course.type}
+                          </span>
+                        </div>
 
-                <h3 className="font-bold text-white text-lg leading-tight line-clamp-1">{course.title}</h3>
+                        <h3 className="font-bold text-white text-lg leading-tight line-clamp-1">{course.title}</h3>
 
-                <div className="space-y-1.5 pt-2 text-xs text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{course.schedule}</span>
-                  </div>
-                  {course.teachers.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Taught by: {course.teachers.map((t) => t.teacher.name).join(", ")}</span>
+                        <div className="space-y-1.5 pt-2 text-xs text-slate-400">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{course.schedule}</span>
+                          </div>
+                          {course.teachers.length > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Taught by: {course.teachers.map((t) => t.teacher.name).join(", ")}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-900 space-y-3">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-xs text-slate-500">Price</span>
+                          <span className="text-[#CA8E25] font-black text-lg font-mono">
+                            {formatCurrency(course.price)}
+                          </span>
+                        </div>
+                        {course.registrationFee > 0 && (
+                          <div className="flex justify-between items-baseline text-xs">
+                            <span className="text-slate-500">Reg. Fee</span>
+                            <span className="text-slate-400 font-bold font-mono">
+                              {formatCurrency(course.registrationFee)}
+                            </span>
+                          </div>
+                        )}
+                        <Button
+                          onClick={() => {
+                            setPendingCourse(course);
+                            setShowTermsForRegistration(true);
+                          }}
+                          className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
+                        >
+                          Register Course
+                        </Button>
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
+              )}
+            </div>
+          )}
 
-              <div className="pt-4 border-t border-slate-900 space-y-3">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-xs text-slate-500">Price</span>
-                  <span className="text-[#CA8E25] font-black text-lg font-mono">
-                    {formatCurrency(course.price)}
-                  </span>
+          {activeTab === "camp" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-white">Camp Programs</h2>
+              {camps.length === 0 ? (
+                <div className="py-20 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-3">
+                  <Calendar className="w-12 h-12 text-slate-700 mx-auto" />
+                  <p className="font-bold text-white text-lg">No camp programs available</p>
+                  <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                    **{activeChild?.name}** is already enrolled in all published camp programs or has pending registrations/invoices for them.
+                  </p>
                 </div>
-                {course.registrationFee > 0 && (
-                  <div className="flex justify-between items-baseline text-xs">
-                    <span className="text-slate-500">Reg. Fee</span>
-                    <span className="text-slate-400 font-bold font-mono">
-                      {formatCurrency(course.registrationFee)}
-                    </span>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {camps.map((camp) => (
+                    <div
+                      key={camp.id}
+                      className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-[#CA8E25] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {(camp as any).type || "CAMP"}
+                          </span>
+                        </div>
+
+                        <h3 className="font-bold text-white text-lg leading-tight line-clamp-1 font-mono">{camp.name}</h3>
+                        <p className="text-xs text-slate-400 line-clamp-2">{camp.description}</p>
+
+                        <div className="space-y-1.5 pt-2 text-xs text-slate-400">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{formatDate(camp.startDate)} - {formatDate(camp.endDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Deadline: {formatDate(camp.registrationDeadline)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-900 space-y-3">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-xs text-slate-500">Price</span>
+                          <span className="text-[#CA8E25] font-black text-lg font-mono">
+                            {formatCurrency(camp.price)}
+                          </span>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setPendingCamp(camp);
+                            setShowTermsForRegistration(true);
+                          }}
+                          className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
+                        >
+                          Register Camp Program
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "all" && (
+            <div className="space-y-12">
+              {/* Classes Section */}
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-white">Available Classes</h2>
+                {courses.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-3">
+                    <BookOpen className="w-10 h-10 text-slate-700 mx-auto" />
+                    <p className="font-bold text-white text-base">No new classes available</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {courses.map((course) => (
+                      <div
+                        key={course.id}
+                        className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-start">
+                            <span className="text-[10px] bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              {course.category.name}
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              course.type === "COMPETITION"
+                                ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            }`}>
+                              {course.type}
+                            </span>
+                          </div>
+
+                          <h3 className="font-bold text-white text-lg leading-tight line-clamp-1">{course.title}</h3>
+
+                          <div className="space-y-1.5 pt-2 text-xs text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                              <span>{course.schedule}</span>
+                            </div>
+                            {course.teachers.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Taught by: {course.teachers.map((t) => t.teacher.name).join(", ")}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-900 space-y-3">
+                          <div className="flex justify-between items-baseline">
+                            <span className="text-xs text-slate-500">Price</span>
+                            <span className="text-[#CA8E25] font-black text-lg font-mono">
+                              {formatCurrency(course.price)}
+                            </span>
+                          </div>
+                          {course.registrationFee > 0 && (
+                            <div className="flex justify-between items-baseline text-xs">
+                              <span className="text-slate-500">Reg. Fee</span>
+                              <span className="text-slate-400 font-bold font-mono">
+                                {formatCurrency(course.registrationFee)}
+                              </span>
+                            </div>
+                          )}
+                          <Button
+                            onClick={() => {
+                              setPendingCourse(course);
+                              setShowTermsForRegistration(true);
+                            }}
+                            className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
+                          >
+                            Register Course
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
-                <Button
-                  onClick={() => {
-                    // Show Terms & Conditions before allowing registration
-                    setPendingCourse(course);
-                    setShowTermsForRegistration(true);
-                  }}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
-                >
-                  Register Course
-                </Button>
+              </div>
+
+              {/* Camp Programs Section */}
+              <div className="space-y-6 pt-4 border-t border-slate-800">
+                <h2 className="text-xl font-bold text-white">Camp Programs</h2>
+                {camps.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-3">
+                    <Calendar className="w-10 h-10 text-slate-700 mx-auto" />
+                    <p className="font-bold text-white text-base">No new camp programs available</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {camps.map((camp) => (
+                      <div
+                        key={camp.id}
+                        className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-start">
+                            <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-[#CA8E25] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              {(camp as any).type || "CAMP"}
+                            </span>
+                          </div>
+
+                          <h3 className="font-bold text-white text-lg leading-tight line-clamp-1 font-mono">{camp.name}</h3>
+                          <p className="text-xs text-slate-400 line-clamp-2">{camp.description}</p>
+
+                          <div className="space-y-1.5 pt-2 text-xs text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                              <span>{formatDate(camp.startDate)} - {formatDate(camp.endDate)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Deadline: {formatDate(camp.registrationDeadline)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-900 space-y-3">
+                          <div className="flex justify-between items-baseline">
+                            <span className="text-xs text-slate-500">Price</span>
+                            <span className="text-[#CA8E25] font-black text-lg font-mono">
+                              {formatCurrency(camp.price)}
+                            </span>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setPendingCamp(camp);
+                              setShowTermsForRegistration(true);
+                            }}
+                            className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
+                          >
+                            Register Camp Program
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Terms Modal — shown before registration confirmation */}
@@ -312,14 +623,19 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
           mode="session"
           onAccept={() => {
             setShowTermsForRegistration(false);
-            setSelectedCourse(pendingCourse);
-            setLearningMethod("SEMI_PRIVATE");
-            setPendingCourse(null);
+            if (pendingCourse) {
+              setSelectedCourse(pendingCourse);
+              setLearningMethod("SEMI_PRIVATE");
+              setPendingCourse(null);
+            } else if (pendingCamp) {
+              setSelectedCamp(pendingCamp);
+              setPendingCamp(null);
+            }
           }}
         />
       )}
 
-      {/* Confirmation & Options Modal */}
+      {/* Confirmation & Options Modal for Classes */}
       {selectedCourse && !showTermsForRegistration && !showPTPopup && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
@@ -418,6 +734,61 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
                   className="flex-1 bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl"
                 >
                   Register
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Camps */}
+      {selectedCamp && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 border-b border-slate-900 flex items-center justify-between">
+              <h3 className="font-bold text-white text-base">Register Camp Program</h3>
+              <button
+                onClick={() => setSelectedCamp(null)}
+                className="text-slate-500 hover:text-white text-xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="space-y-1.5 bg-slate-900 border border-slate-850 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">Camp Name</span>
+                <p className="text-sm text-white font-semibold font-mono">{selectedCamp.name}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1 bg-slate-900 border border-slate-850 p-3 rounded-xl text-xs">
+                  <span className="text-slate-500 block font-bold uppercase text-[9px]">Start Date</span>
+                  <span className="text-white font-semibold">{formatDate(selectedCamp.startDate)}</span>
+                </div>
+                <div className="space-y-1 bg-slate-900 border border-slate-850 p-3 rounded-xl text-xs">
+                  <span className="text-slate-500 block font-bold uppercase text-[9px]">End Date</span>
+                  <span className="text-white font-semibold">{formatDate(selectedCamp.endDate)}</span>
+                </div>
+              </div>
+              <div className="space-y-1.5 bg-slate-900 border border-slate-850 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">Camp Price</span>
+                <p className="text-base text-[#CA8E25] font-black font-mono">{formatCurrency(selectedCamp.price)}</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setSelectedCamp(null)}
+                  className="flex-1 text-slate-400 hover:text-white rounded-xl border border-slate-850"
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCampEnroll}
+                  disabled={submitting}
+                  className="flex-1 bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl"
+                >
+                  {submitting ? "Registering..." : "Confirm & Register"}
                 </Button>
               </div>
             </div>

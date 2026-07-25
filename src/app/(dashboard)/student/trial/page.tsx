@@ -70,7 +70,7 @@ export default async function TrialPage() {
     })),
   ];
 
-  // Fetch trial mock tests — students only see published ones
+  // Fetch trial quizzes — students only see published ones
   const mockTests = await prisma.mockTest.findMany({
     where: {
       isTrial: true,

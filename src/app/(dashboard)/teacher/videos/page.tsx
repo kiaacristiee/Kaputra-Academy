@@ -23,6 +23,11 @@ export default async function TeacherVideosPage() {
         include: {
           videos: {
             orderBy: { order: "asc" },
+            include: {
+              quizzes: {
+                orderBy: { timestamp: "asc" },
+              },
+            },
           },
         },
       },

@@ -57,19 +57,66 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.studentIdStr = user.studentIdStr;
       }
+      
+      if (trigger === "update" && session) {
+        if (session.action === "SWITCH_TO_STUDENT" && session.studentId) {
+          const parentId = token.originalParentId || token.id;
+          
+          // Validate ownership securely on the server
+          const child = await prisma.user.findFirst({
+            where: {
+              id: session.studentId,
+              parentId: parentId as string,
+            }
+          });
+          
+          if (child) {
+            // Store original parent data if not already stored
+            if (!token.originalParentId) {
+              token.originalParentId = token.id;
+              token.originalParentName = token.name;
+            }
+            
+            // Switch context to student
+            token.viewingAsStudentId = child.id;
+            token.id = child.id;
+            token.role = "STUDENT";
+            token.name = child.name;
+            token.studentIdStr = child.studentIdStr;
+          }
+        } else if (session.action === "SWITCH_TO_PARENT") {
+          // Revert to parent context
+          if (token.originalParentId) {
+            token.id = token.originalParentId;
+            token.role = "PARENT";
+            token.name = token.originalParentName;
+            
+            // Clear overrides
+            token.originalParentId = null;
+            token.originalParentName = null;
+            token.viewingAsStudentId = null;
+            token.studentIdStr = null;
+          }
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-        session.user.studentIdStr = token.studentIdStr as string;
+        session.user.studentIdStr = token.studentIdStr as string | null | undefined;
+        
+        session.user.viewingAsStudentId = token.viewingAsStudentId as string | null | undefined;
+        session.user.originalParentId = token.originalParentId as string | null | undefined;
+        session.user.originalParentName = token.originalParentName as string | null | undefined;
       }
       return session;
     }

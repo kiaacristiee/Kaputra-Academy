@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, Mail, ShieldCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Register | Kaputra Academy",
@@ -19,6 +22,15 @@ export default async function RegisterPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const session = await getServerSession(authOptions);
+  if (session?.user) {
+    const role = session.user.role;
+    if (role === "ADMIN") redirect("/admin");
+    if (role === "TEACHER") redirect("/teacher");
+    if (role === "PARENT") redirect("/parent");
+    if (role === "STUDENT") redirect("/student");
+  }
+
   const { success, studentId } = await searchParams;
 
   if (success === "true") {
