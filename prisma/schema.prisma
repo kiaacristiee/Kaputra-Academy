@@ -1,6 +1,7 @@
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -242,7 +243,7 @@ model InteractiveVideoQuiz {
   optionC        String
   optionD        String
   correctAnswer  String
-  explanation    String?  @db.Text
+  explanation    String?
   requireCorrect Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -438,7 +439,7 @@ model CampProgram {
   id                   String             @id @default(cuid())
   name                 String
   slug                 String             @unique
-  description          String             @db.Text
+  description          String
   thumbnailUrl         String?
   startDate            DateTime
   endDate              DateTime

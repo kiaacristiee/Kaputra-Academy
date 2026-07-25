@@ -419,7 +419,7 @@ export default function Home() {
                           <Trophy className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Silver Medalist
+                          Singapore and Asian School Math Olympiad Silver Medalist
                         </h3>
                       </div>
 
@@ -464,7 +464,7 @@ export default function Home() {
                           <Award className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Silver Medalist
+                          Singapore and Asian School Math Olympiad Silver Medalist
                         </h3>
                       </div>
 
@@ -730,7 +730,7 @@ export default function Home() {
                           <Sparkles className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Ruby Award
+                          Japan International Science & Mathematics Olympiad (JISMO) Ruby Award
                         </h3>
                       </div>
 
