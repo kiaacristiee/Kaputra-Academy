@@ -29,7 +29,7 @@ export default function TermsModal({ onAccept, mode = "persist" }: TermsModalPro
       if (res.success) {
         onAccept();
       } else {
-        alert("Failed to save agreement. Please try again.");
+        alert("Failed to save agreement: " + (res.error || "Please try again."));
       }
     } else {
       // session mode: no DB write, just accept
@@ -102,6 +102,7 @@ export default function TermsModal({ onAccept, mode = "persist" }: TermsModalPro
 
           <div className="flex justify-end gap-3 pt-2">
             <Button
+              type="button"
               onClick={handleAgree}
               disabled={!agreed || loading}
               className="w-full md:w-auto bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-xl px-8 py-2.5 flex items-center justify-center gap-2 transition"

@@ -32,18 +32,36 @@ export default async function AdminPaymentsPage() {
   });
 
   const courses = await prisma.course.findMany({
-    select: { id: true, title: true },
+    select: { id: true, title: true, type: true },
   });
   const camps = await prisma.campProgram.findMany({
-    select: { id: true, name: true },
+    select: { id: true, name: true, type: true },
   });
-  const nameMap = new Map<string, string>([
-    ...courses.map((c) => [c.id, c.title] as [string, string]),
-    ...camps.map((c) => [c.id, c.name] as [string, string]),
-  ]);
-
+  
+  const courseMap = new Map(courses.map((c) => [c.id, c]));
+  const campMap = new Map(camps.map((c) => [c.id, c]));
+  
   const formatted = allInvoices.map((inv) => {
-    const itemTitle = nameMap.get(inv.itemId) || inv.itemId;
+    let itemTitle = inv.itemId;
+    let actualCategory = (inv as any).itemCategory;
+
+    if (inv.itemType === "PLACEMENT_TEST") {
+      itemTitle = "Placement Test Fee";
+    } else if (inv.itemType === "CAMP_PROGRAM" || (inv as any).itemCategory === "CAMP") {
+      const camp = campMap.get(inv.itemId);
+      itemTitle = camp?.name || inv.itemId;
+      actualCategory = "CAMP";
+    } else {
+      const course = courseMap.get(inv.itemId);
+      if (course) {
+        itemTitle = course.title;
+        if (!actualCategory) actualCategory = course.type.toUpperCase();
+      }
+    }
+    
+    // Fallback if still unknown
+    if (!actualCategory) actualCategory = "REGULAR";
+
     return {
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,
@@ -51,6 +69,15 @@ export default async function AdminPaymentsPage() {
       itemType: inv.itemType,
       amount: inv.amount,
       virtualAccountNumber: inv.virtualAccountNumber,
+      itemCategory: actualCategory,
+      learningMethod: (inv as any).learningMethod || "SEMI_PRIVATE",
+      sessionsPerWeek: (inv as any).sessionsPerWeek || 1,
+      settlementAccount: (inv as any).settlementAccount || "COMPANY",
+      approvalStatus: (inv as any).approvalStatus || "APPROVED",
+      bank: (inv as any).bank ?? null,
+      orderId: (inv as any).orderId ?? null,
+      transactionId: (inv as any).transactionId ?? null,
+      expiryTime: (inv as any).expiryTime ? (inv as any).expiryTime.toISOString() : null,
       status: inv.status,
       receiptUrl: inv.receiptUrl,
       dueDate: inv.dueDate.toISOString(),

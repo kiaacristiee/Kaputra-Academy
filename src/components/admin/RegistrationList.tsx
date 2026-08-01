@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { approveRegistration, rejectRegistration } from "@/actions/admin";
 import { Button } from "@/components/ui/button";
-import { Clock, CheckCircle, XCircle, FileText, User, Mail, Phone, BookOpen, ExternalLink } from "lucide-react";
+import { Clock, CheckCircle, XCircle, FileText, User, Mail, Phone, BookOpen, ExternalLink, ShieldAlert } from "lucide-react";
+import { useCanManageEnrollment } from "@/hooks/usePermissions";
 
 type RegistrationWithCourse = {
   id: string;
@@ -13,11 +14,13 @@ type RegistrationWithCourse = {
   parentPhone: string;
   parentEmail: string;
   status: string;
+  learningMethod?: string | null;
   createdAt: Date;
   course: {
     title: string;
     price: number;
     registrationFee: number;
+    learningMethod?: string | null;
   };
   payment?: {
     id: string;
@@ -36,10 +39,12 @@ export default function RegistrationList({
 }: {
   initialRegistrations: RegistrationWithCourse[];
 }) {
+  const { canManage } = useCanManageEnrollment();
   const [registrations, setRegistrations] = useState(initialRegistrations);
   const [activeTab, setActiveTab] = useState<"PENDING" | "VERIFYING" | "APPROVED" | "REJECTED">("VERIFYING");
   const [selectedReg, setSelectedReg] = useState<RegistrationWithCourse | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null);
 
   const filtered = registrations.filter((r) => {
     if (activeTab === "VERIFYING") {
@@ -142,86 +147,97 @@ export default function RegistrationList({
             No registrations found in this category.
           </div>
         ) : (
-          filtered.map((reg) => (
-            <div
-              key={reg.id}
-              className="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
-            >
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-xs font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                    ID: {reg.id.slice(-6).toUpperCase()}
-                  </span>
-                  <span className="text-xs text-slate-500 flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {new Date(reg.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2 flex-wrap">
-                  {reg.studentName} (Age: {reg.studentAge})
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold border ${
-                    reg.status.startsWith("VERIFYING") 
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20" 
-                      : reg.status === "APPROVED" 
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      : reg.status === "REJECTED"
-                      ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                      : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                  }`}>
-                    {reg.status}
-                  </span>
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-slate-400">
-                  <span className="flex items-center gap-1">
-                    <BookOpen className="h-3.5 w-3.5 text-[#CA8E25]" />
-                    Program: {reg.course.title}
-                  </span>
-                  {reg.placementTest && (
-                    <span className="flex items-center gap-1 text-emerald-400">
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      StudentID: {reg.placementTest.studentIdStr}
+          filtered.map((reg) => {
+            const method = reg.learningMethod || reg.course?.learningMethod || "SEMI_PRIVATE";
+            const allowed = canManage(method);
+
+            return (
+              <div
+                key={reg.id}
+                className="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
+              >
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-xs font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                      ID: {reg.id.slice(-6).toUpperCase()}
                     </span>
+                    <span className="text-xs text-slate-500 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {new Date(reg.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2 flex-wrap">
+                    {reg.studentName} (Age: {reg.studentAge})
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold border ${
+                      reg.status.startsWith("VERIFYING") 
+                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20" 
+                        : reg.status === "APPROVED" 
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : reg.status === "REJECTED"
+                        ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                        : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                    }`}>
+                      {reg.status}
+                    </span>
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="h-3.5 w-3.5 text-[#CA8E25]" />
+                      Program: {reg.course.title} ({method.replace("_", " ")})
+                    </span>
+                    {reg.placementTest && (
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        StudentID: {reg.placementTest.studentIdStr}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end md:self-center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-slate-800 hover:bg-slate-900 text-white rounded-xl gap-1"
+                    onClick={() => setSelectedReg(reg)}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Review Details
+                  </Button>
+
+                  {(reg.status === "VERIFYING" || reg.status === "VERIFYING_PT_PAYMENT" || reg.status === "VERIFYING_ENROLLMENT_PAYMENT") && (
+                    allowed ? (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-1"
+                          disabled={loadingId === reg.id}
+                          onClick={() => handleApprove(reg.id)}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-rose-950 hover:bg-rose-950 text-rose-400 rounded-xl gap-1"
+                          disabled={loadingId === reg.id}
+                          onClick={() => handleReject(reg.id)}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="text-xs bg-slate-900 text-slate-400 px-3 py-1.5 rounded-xl border border-slate-800 font-medium flex items-center gap-1">
+                        <ShieldAlert className="h-3.5 w-3.5 text-amber-400" /> View Only
+                      </span>
+                    )
                   )}
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 self-end md:self-center">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-slate-800 hover:bg-slate-900 text-white rounded-xl gap-1"
-                  onClick={() => setSelectedReg(reg)}
-                >
-                  <FileText className="h-4 w-4" />
-                  Review Details
-                </Button>
-
-                {(reg.status === "VERIFYING" || reg.status === "VERIFYING_PT_PAYMENT" || reg.status === "VERIFYING_ENROLLMENT_PAYMENT") && (
-                  <>
-                    <Button
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-1"
-                      disabled={loadingId === reg.id}
-                      onClick={() => handleApprove(reg.id)}
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-rose-950 hover:bg-rose-950 text-rose-400 rounded-xl gap-1"
-                      disabled={loadingId === reg.id}
-                      onClick={() => handleReject(reg.id)}
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Reject
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -272,14 +288,13 @@ export default function RegistrationList({
                   {selectedReg.payment?.receiptUrl && (
                     <div className="pt-2 border-t border-slate-800 flex justify-between items-center">
                       <span className="text-sm">Payment Receipt:</span>
-                      <a
-                        href={selectedReg.payment.receiptUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                      <button
+                        type="button"
+                        onClick={() => setViewingReceipt(selectedReg.payment?.receiptUrl || null)}
+                        className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 font-medium"
                       >
                         View Receipt <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -298,24 +313,52 @@ export default function RegistrationList({
             </div>
 
             {(selectedReg.status === "VERIFYING" || selectedReg.status === "VERIFYING_PT_PAYMENT" || selectedReg.status === "VERIFYING_ENROLLMENT_PAYMENT") && (
-              <div className="flex gap-2 pt-2">
-                <Button
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-bold"
-                  disabled={loadingId === selectedReg.id}
-                  onClick={() => handleApprove(selectedReg.id)}
-                >
-                  Approve Payment
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 border-rose-950 hover:bg-rose-950 text-rose-400 rounded-xl py-2.5 font-bold"
-                  disabled={loadingId === selectedReg.id}
-                  onClick={() => handleReject(selectedReg.id)}
-                >
-                  Reject Payment
-                </Button>
-              </div>
+              canManage(selectedReg.learningMethod || selectedReg.course?.learningMethod) ? (
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 font-bold"
+                    disabled={loadingId === selectedReg.id}
+                    onClick={() => handleApprove(selectedReg.id)}
+                  >
+                    Approve Payment
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-rose-950 hover:bg-rose-950 text-rose-400 rounded-xl py-2.5 font-bold"
+                    disabled={loadingId === selectedReg.id}
+                    onClick={() => handleReject(selectedReg.id)}
+                  >
+                    Reject Payment
+                  </Button>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-amber-400 text-sm font-semibold flex items-center justify-center gap-2">
+                  <ShieldAlert className="h-4 w-4" />
+                  View Only: Super Admin access required for Private class enrollments.
+                </div>
+              )
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Image Preview Modal */}
+      {viewingReceipt && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 text-white relative shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-white text-base">Payment Receipt Preview</h3>
+              <button onClick={() => setViewingReceipt(null)} className="text-slate-400 hover:text-white text-lg font-bold">
+                ✕
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-slate-900/60 rounded-xl p-4 border border-slate-850">
+              {viewingReceipt.startsWith("data:application/pdf") ? (
+                <iframe src={viewingReceipt} className="w-full h-[500px] rounded-lg" />
+              ) : (
+                <img src={viewingReceipt} alt="Payment Receipt" className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg" />
+              )}
+            </div>
           </div>
         </div>
       )}

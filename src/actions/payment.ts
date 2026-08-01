@@ -21,23 +21,9 @@ export async function uploadReceipt(formData: FormData) {
   const bytes = await receiptFile.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  // Generate a unique filename
-  const filename = `${Date.now()}-${receiptFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads");
-
-  let receiptUrl: string;
-
-  try {
-    await mkdir(uploadDir, { recursive: true });
-    const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-    receiptUrl = `/uploads/${filename}`;
-  } catch (fsError) {
-    // Read-only filesystem fallback for production / serverless environments (e.g. Vercel)
-    console.warn("Serverless disk write fallback activated:", fsError);
-    const base64Data = buffer.toString("base64");
-    receiptUrl = `data:${receiptFile.type};base64,${base64Data}`;
-  }
+  // Save as Base64 Data URL so receipts are permanently stored in database (essential for serverless/cloud hosting)
+  const base64Data = buffer.toString("base64");
+  const receiptUrl = `data:${receiptFile.type};base64,${base64Data}`;
 
   // Update payment status
   await prisma.payment.update({

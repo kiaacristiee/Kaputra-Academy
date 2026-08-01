@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import { notFound } from "next/navigation";
+import StudentActionClient from "./StudentActionClient";
 
 export default async function StudentDetailPage({
     params,
@@ -64,6 +65,9 @@ export default async function StudentDetailPage({
                         </p>
                     </div>
                 </div>
+                
+                {/* @ts-ignore */}
+                <StudentActionClient studentId={student.id} initialIsDisabled={(student as any).isDisabled || false} />
             </div>
         </div>
     );

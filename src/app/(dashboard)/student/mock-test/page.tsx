@@ -93,9 +93,14 @@ export default async function MockTestPage() {
   }
 
   let bankQuestions: any[] = [];
+  let folders: any[] = [];
   if (role === "ADMIN" || role === "TEACHER") {
     bankQuestions = await prisma.mockQuestion.findMany({
       orderBy: { createdAt: "desc" },
+    });
+    folders = await prisma.questionFolder.findMany({
+      include: { _count: { select: { questions: true } } },
+      orderBy: { name: "asc" },
     });
   }
 
@@ -105,6 +110,7 @@ export default async function MockTestPage() {
       isUnlocked={isUnlocked}
       userRole={role}
       initialBankQuestions={bankQuestions}
+      initialFolders={folders}
     />
   );
 }

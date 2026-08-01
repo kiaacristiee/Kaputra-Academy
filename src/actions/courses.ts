@@ -2,6 +2,8 @@
 
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function getCourses() {
   try {
@@ -64,9 +66,23 @@ export async function createCourse(data: {
   categoryId: string;
   isPublished: boolean;
   type: string;
+  learningMethod?: string;
+  sessionsPerWeek?: number;
+  settlementAccount?: string;
   teacherIds?: string[];
 }) {
   try {
+    const session = await getServerSession(authOptions);
+    const role = session?.user?.role;
+    if (!role || !["ADMIN", "OWNER", "CO_OWNER"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
+    
+    // RBAC: Only OWNER/CO_OWNER can create Private Classes
+    if (data.learningMethod === "PRIVATE" && role === "ADMIN") {
+      return { success: false, error: "Admins are not allowed to create Private Classes." };
+    }
+
     // Check if slug is unique
     const existing = await prisma.course.findUnique({
       where: { slug: data.slug },
@@ -114,10 +130,29 @@ export async function updateCourse(
     categoryId: string;
     isPublished: boolean;
     type: string;
+    learningMethod?: string;
+    sessionsPerWeek?: number;
+    settlementAccount?: string;
     teacherIds?: string[];
   }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    const role = session?.user?.role;
+    if (!role || !["ADMIN", "OWNER", "CO_OWNER"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const existingCourse = await prisma.course.findUnique({ where: { id } });
+    if (!existingCourse) {
+      return { success: false, error: "Course not found" };
+    }
+    
+    // RBAC: Only OWNER/CO_OWNER can edit Private Classes
+    if (((existingCourse as any).learningMethod === "PRIVATE" || data.learningMethod === "PRIVATE") && role === "ADMIN") {
+      return { success: false, error: "Admins are not allowed to edit Private Classes." };
+    }
+
     // Check slug uniqueness excluding this course
     const existing = await prisma.course.findFirst({
       where: {
@@ -160,6 +195,22 @@ export async function updateCourse(
 
 export async function deleteCourse(id: string) {
   try {
+    const session = await getServerSession(authOptions);
+    const role = session?.user?.role;
+    if (!role || !["ADMIN", "OWNER", "CO_OWNER"].includes(role)) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const existingCourse = await prisma.course.findUnique({ where: { id } });
+    if (!existingCourse) {
+      return { success: false, error: "Course not found" };
+    }
+    
+    // RBAC: Only OWNER/CO_OWNER can delete Private Classes
+    if ((existingCourse as any).learningMethod === "PRIVATE" && role === "ADMIN") {
+      return { success: false, error: "Admins are not allowed to delete Private Classes." };
+    }
+
     // Delete relations first
     await prisma.teacherAssignment.deleteMany({
       where: { courseId: id },

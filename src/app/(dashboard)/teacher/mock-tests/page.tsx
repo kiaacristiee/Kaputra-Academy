@@ -40,15 +40,21 @@ export default async function TeacherMockTestsPage() {
 
   const courses = teacherAssignments.map((ta) => ta.course);
 
-  // Fetch all bank questions
+  // Fetch all bank questions with folder info
   const bankQuestions = await prisma.mockQuestion.findMany({
     orderBy: { createdAt: "desc" },
+  });
+
+  // Fetch all folders with question counts
+  const folders = await prisma.questionFolder.findMany({
+    include: { _count: { select: { questions: true } } },
+    orderBy: { name: "asc" },
   });
 
   return (
     <>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Manage Mock Tests</h1>
+        <h1 className="text-2xl font-bold">Manage Quizzes</h1>
         <BulkUpload courses={courses} />
       </div>
       <MockTestClient
@@ -56,6 +62,7 @@ export default async function TeacherMockTestsPage() {
         isUnlocked={true}
         userRole="TEACHER"
         initialBankQuestions={bankQuestions}
+        initialFolders={folders}
       />
     </>
   );

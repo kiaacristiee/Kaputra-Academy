@@ -44,6 +44,9 @@ export default function CoursesClient({
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [isPublished, setIsPublished] = useState(true);
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
+  const [learningMethod, setLearningMethod] = useState("SEMI_PRIVATE");
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(1);
+  const [settlementAccount, setSettlementAccount] = useState("COMPANY");
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -72,6 +75,9 @@ export default function CoursesClient({
     setThumbnailUrl("");
     setIsPublished(true);
     setSelectedTeacherIds([]);
+    setLearningMethod("SEMI_PRIVATE");
+    setSessionsPerWeek(1);
+    setSettlementAccount("COMPANY");
     setError(null);
     setIsModalOpen(true);
   };
@@ -92,6 +98,9 @@ export default function CoursesClient({
     setThumbnailUrl(course.thumbnailUrl || "");
     setIsPublished(course.isPublished);
     setSelectedTeacherIds(course.teachers.map((ta: any) => ta.teacherId));
+    setLearningMethod(course.learningMethod || "SEMI_PRIVATE");
+    setSessionsPerWeek(course.sessionsPerWeek || 1);
+    setSettlementAccount(course.settlementAccount || "COMPANY");
     setError(null);
     setIsModalOpen(true);
   };
@@ -119,6 +128,9 @@ export default function CoursesClient({
       categoryId,
       isPublished,
       type,
+      learningMethod,
+      sessionsPerWeek: Number(sessionsPerWeek),
+      settlementAccount,
       teacherIds: selectedTeacherIds,
     };
 
@@ -266,15 +278,23 @@ export default function CoursesClient({
             <div>
               {/* Type Badge & Publish Status */}
               <div className="flex justify-between items-center mb-4">
-                <span
-                  className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider ${
-                    course.type === "COMPETITION"
-                      ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                      : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                  }`}
-                >
-                  {course.type}
-                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider ${
+                      course.type === "COMPETITION"
+                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                        : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                    }`}
+                  >
+                    {course.type}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700 font-mono">
+                    {course.learningMethod || "SEMI_PRIVATE"}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700 font-mono">
+                    {course.sessionsPerWeek || 1}×/wk
+                  </span>
+                </div>
 
                 <span
                   className={`text-xs px-2.5 py-0.5 rounded-full ${
@@ -446,6 +466,45 @@ export default function CoursesClient({
                     >
                       <option value="REGULAR">Regular Class</option>
                       <option value="COMPETITION">Competition Class</option>
+                    </select>
+                  </div>
+
+                  {/* Learning Method */}
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Learning Method</Label>
+                    <select
+                      value={learningMethod}
+                      onChange={(e) => setLearningMethod(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="SEMI_PRIVATE">Semi-Private</option>
+                      <option value="PRIVATE">Private</option>
+                    </select>
+                  </div>
+
+                  {/* Sessions Per Week */}
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Sessions / Week</Label>
+                    <select
+                      value={sessionsPerWeek}
+                      onChange={(e) => setSessionsPerWeek(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value={1}>1 Session / Week</option>
+                      <option value={2}>2 Sessions / Week</option>
+                    </select>
+                  </div>
+
+                  {/* Settlement Account */}
+                  <div className="space-y-2">
+                    <Label className="text-slate-300">Settlement Account</Label>
+                    <select
+                      value={settlementAccount}
+                      onChange={(e) => setSettlementAccount(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
+                    >
+                      <option value="COMPANY">Company Account</option>
+                      <option value="PERSONAL">Personal Account (Owner)</option>
                     </select>
                   </div>
 

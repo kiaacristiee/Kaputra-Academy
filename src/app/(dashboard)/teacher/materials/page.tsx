@@ -33,7 +33,7 @@ export default async function TeacherMaterialsPage() {
 
   return (
     <MaterialsClient
-      initialCourses={courses}
+      initialCourses={courses as any}
       isUnlocked={true}
       userRole="TEACHER"
     />

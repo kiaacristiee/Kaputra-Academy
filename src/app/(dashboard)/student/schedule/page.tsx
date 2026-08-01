@@ -22,21 +22,22 @@ export default async function StudentSchedulePage() {
     redirect("/login");
   }
 
-  // Fetch schedules assigned to this student
-  const schedules = await prisma.schedule.findMany({
-    where: { studentId: session.user.id },
-    include: {
-      course: { select: { title: true } },
-      teacher: { select: { name: true } },
-    },
-    orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
-  });
+  // Fetch schedules and enrollments concurrently
+  const [schedules, enrollments] = await Promise.all([
+    prisma.schedule.findMany({
+      where: { studentId: session.user.id },
+      include: {
+        course: { select: { title: true } },
+        teacher: { select: { name: true } },
+      },
+      orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+    }),
+    prisma.enrollment.findMany({
+      where: { studentId: session.user.id, status: "ACTIVE" },
+      select: { itemId: true },
+    }),
+  ]);
 
-  // Fetch active reminders from teacher for courses student is enrolled in
-  const enrollments = await prisma.enrollment.findMany({
-    where: { studentId: session.user.id, status: "ACTIVE" },
-    select: { itemId: true },
-  });
   const courseIds = enrollments.map((e) => e.itemId);
 
   const reminders = await prisma.reminder.findMany({

@@ -1,0 +1,109 @@
+﻿diff --git a/src/app/(dashboard)/student/mock-test/MockTestClient.tsx b/src/app/(dashboard)/student/mock-test/MockTestClient.tsx
+index 78ca1ed..93cf620 100644
+--- a/src/app/(dashboard)/student/mock-test/MockTestClient.tsx
++++ b/src/app/(dashboard)/student/mock-test/MockTestClient.tsx
+@@ -73,6 +73,7 @@ interface MockTestClientProps {
+   isUnlocked: boolean;
+   userRole: string;
+   initialBankQuestions?: MockQuestion[];
++  initialFolders?: any[];
+ }
+ 
+ export default function MockTestClient({
+@@ -108,8 +109,14 @@ export default function MockTestClient({
+   const [timeSpentPerQuestion, setTimeSpentPerQuestion] = useState<Record<string, number>>({});
+   const [timeLeft, setTimeLeft] = useState(0); // in seconds
+   const timerRef = useRef<NodeJS.Timeout | null>(null);
+-  const [testResult, setTestResult] = useState<{ score: number; isPassed: boolean; id: string } | null>(null);
++  const [testResult, setTestResult] = useState<{ score: number; isPassed: boolean; id: string; correctCount?: number; totalQuestions?: number } | null>(null);
+   const [reviewMode, setReviewMode] = useState(false);
++  const [totalTimeSpent, setTotalTimeSpent] = useState(0);
++
++  const hasAttempted = (test: MockTest) => {
++    if (isStaff) return false;
++    return test.submissions.length > 0;
++  };
+ 
+   // CMS state
+   const [isCmsOpen, setIsCmsOpen] = useState(false);
+@@ -169,11 +176,46 @@ export default function MockTestClient({
+     setCurrentQuestionIdx(0);
+     setTestAnswers({});
+     setTimeSpentPerQuestion({});
++    setTimeout(() => setTotalTimeSpent(0), 0);
+     setTimeLeft(test.timeLimit * 60);
+     setTestResult(null);
+     setReviewMode(false);
+   };
+ 
++
++
++  const handleReviewTest = (test: MockTest) => {
++    const submission = test.submissions[0];
++    if (!submission) return;
++
++    let parsedAnswers = {};
++    let parsedTimeSpent = {};
++    try { parsedAnswers = JSON.parse(submission.answers || "{}"); } catch (e) {}
++    try { (submission as any).timeSpent && (parsedTimeSpent = JSON.parse((submission as any).timeSpent || "{}")); } catch (e) {}
++
++    let correctCount = 0;
++    test.questions.forEach((q) => {
++      const studentAns = (parsedAnswers as Record<string, string>)[q.id];
++      if (studentAns?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim()) {
++        correctCount++;
++      }
++    });
++
++    setActiveTest(test);
++    setCurrentQuestionIdx(0);
++    setTestAnswers(parsedAnswers as Record<string, string>);
++    setTimeSpentPerQuestion(parsedTimeSpent as Record<string, number>);
++    setTotalTimeSpent((submission as any).totalCompletionTime || 0);
++    setTestResult({
++      score: submission.score,
++      isPassed: submission.isPassed,
++      id: submission.id,
++      correctCount: correctCount,
++      totalQuestions: test.questions.length
++    });
++    setReviewMode(true);
++  };
++
+   const handleSelectAnswer = (questionId: string, option: string) => {
+     setTestAnswers({ ...testAnswers, [questionId]: option });
+   };
+@@ -535,16 +577,25 @@ export default function MockTestClient({
+                       </div>
+ 
+                       <div className="flex items-center gap-2 w-full md:w-auto">
+-                        <Button
+-                          onClick={() => handleStartTest(test)}
+-                          className="flex-1 md:flex-none bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-1.5"
+-                        >
+-                          {latestSubmission ? (
+-                            <><RotateCcw className="w-3.5 h-3.5" /> Retake Exam</>
++                          {hasAttempted(test) && !isStaff ? (
++                            <Button
++                              onClick={() => handleReviewTest(test)}
++                              className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-1.5 border border-slate-700"
++                            >
++                              <FileText className="w-3.5 h-3.5" /> Review Answers
++                            </Button>
+                           ) : (
+-                            <><Play className="w-3.5 h-3.5" /> Start Exam</>
++                            <Button
++                              onClick={() => handleStartTest(test)}
++                              className="flex-1 md:flex-none bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-1.5"
++                            >
++                              {latestSubmission && isStaff ? (
++                                <><RotateCcw className="w-3.5 h-3.5" /> Retake (Staff)</>
++                              ) : (
++                                <><Play className="w-3.5 h-3.5" /> Start Quiz</>
++                              )}
++                            </Button>
+                           )}
+-                        </Button>
+ 
+                         {isStaff && (
+                           <div className="flex gap-1">

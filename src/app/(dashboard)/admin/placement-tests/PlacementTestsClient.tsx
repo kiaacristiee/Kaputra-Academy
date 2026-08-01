@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Award, Plus, Trash2, Edit2, Download, Save, CheckCircle2, AlertCircle, Search, HelpCircle, Settings } from "lucide-react";
+import { Award, Plus, Trash2, Edit2, Download, Save, CheckCircle2, AlertCircle, Search, HelpCircle, Settings, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { updatePlacementTestConfig } from "@/actions/adminExtra";
@@ -47,6 +47,41 @@ export default function PlacementTestsClient({ results, config: initialConfig }:
   const [config, setConfig] = useState<Config>(initialConfig);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleBulkUploadPlacement = async () => {
+    if (!file) {
+      alert("Pilih file ZIP terlebih dahulu.");
+      return;
+    }
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/admin/placement-tests/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        showStatus("success", `Berhasil mengunggah ${data.count} soal placement test!`);
+        setConfig(data.config);
+        setIsBulkOpen(false);
+        setFile(null);
+      } else {
+        showStatus("error", `Error: ${data.error}`);
+      }
+    } catch (e) {
+      showStatus("error", "Terjadi kesalahan saat mengunggah file.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Question editing form states
   const [editingQuestionIdx, setEditingQuestionIdx] = useState<number | null>(null);
@@ -326,13 +361,22 @@ export default function PlacementTestsClient({ results, config: initialConfig }:
                 <h3 className="font-bold text-white text-lg flex items-center gap-2">
                   <HelpCircle className="h-5 w-5 text-[#CA8E25]" /> Questions ({config.questions.length})
                 </h3>
-                <Button
-                  onClick={handleAddQuestion}
-                  size="sm"
-                  className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Question
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => setIsBulkOpen(true)}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex items-center gap-1.5"
+                  >
+                    <Upload className="h-4 w-4" /> Bulk Upload Soal
+                  </Button>
+                  <Button
+                    onClick={handleAddQuestion}
+                    size="sm"
+                    className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl flex items-center gap-1"
+                  >
+                    <Plus className="h-4 w-4" /> Add Question
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -458,6 +502,55 @@ export default function PlacementTestsClient({ results, config: initialConfig }:
           </div>
         )}
       </div>
+      {/* Bulk Upload Modal */}
+      {isBulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 text-white p-6 rounded-2xl shadow-xl max-w-md w-full space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Upload className="h-5 w-5 text-[#CA8E25]" />
+                Bulk Upload Placement Questions
+              </h2>
+              <button onClick={() => setIsBulkOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-slate-400 uppercase">Pilih File (.zip)</label>
+              <input
+                type="file"
+                accept=".zip"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none"
+              />
+              <p className="text-xs text-slate-500">
+                Upload file ZIP yang berisi Excel (Template Soal) dan folder images (jika ada gambar).
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <a
+                href="/api/teacher/mock-tests/template"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-[#CA8E25] hover:underline flex items-center gap-1.5 font-bold"
+              >
+                <Download className="w-4 h-4" /> Download Excel/ZIP Template
+              </a>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
+              <Button variant="outline" onClick={() => setIsBulkOpen(false)} className="border-slate-800 text-slate-300 rounded-xl text-xs">
+                Batal
+              </Button>
+              <Button onClick={handleBulkUploadPlacement} disabled={isUploading || !file} className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl text-xs px-5">
+                {isUploading ? "Mengunggah..." : "Upload Soal"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

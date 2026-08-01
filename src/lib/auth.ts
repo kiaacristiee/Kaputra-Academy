@@ -9,9 +9,32 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         username: { label: "Student ID or Email", type: "text" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        isDevSwitch: { label: "Dev Switch", type: "text" },
+        userId: { label: "User ID", type: "text" }
       },
       async authorize(credentials) {
+        // Dev Account Switcher Bypass
+        if (
+          process.env.NODE_ENV === "development" && 
+          credentials?.isDevSwitch === "true" && 
+          credentials?.userId
+        ) {
+          const user = await prisma.user.findUnique({
+            where: { id: credentials.userId }
+          });
+          
+          if (!user) return null;
+          
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            studentIdStr: user.studentIdStr,
+          };
+        }
+
         if (!credentials?.username || !credentials?.password) {
           return null;
         }

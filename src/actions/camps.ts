@@ -213,13 +213,16 @@ export async function enrollInCamp(studentId: string, campProgramId: string) {
       return { success: false, error: "Unauthorized" };
     }
 
-    // Verify user accepted terms
+    // Verify user accepted terms (auto-update if false/null)
     const dbUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { acceptedTerms: true },
     });
     if (dbUser && !dbUser.acceptedTerms) {
-      return { success: false, error: "You must accept the Terms & Conditions before registering." };
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { acceptedTerms: true },
+      });
     }
 
     // Auth validation

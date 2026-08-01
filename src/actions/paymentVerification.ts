@@ -5,10 +5,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generatePlacementTestCode } from "@/lib/idGenerator";
 import { revalidatePath } from "next/cache";
+import { canManageEnrollment } from "@/lib/permissions";
 
 export async function approvePayment(invoiceId: string) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !["ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
 
@@ -18,6 +19,10 @@ export async function approvePayment(invoiceId: string) {
   });
 
   if (!invoice) throw new Error("Invoice not found");
+
+  if (!canManageEnrollment(session.user.role, (invoice as any).learningMethod)) {
+    throw new Error("This action requires super admin access for Private class enrollments");
+  }
 
   // 1. Update Invoice
   const updatedInvoice = await prisma.invoice.update({
@@ -78,6 +83,7 @@ export async function approvePayment(invoiceId: string) {
         studentName: registration.studentName,
         studentId: studentIdStr,
         activationLink,
+        testCode,
       });
     }
   } else if (invoice.itemType === "CLASS") {
@@ -110,12 +116,36 @@ export async function approvePayment(invoiceId: string) {
         data: { status: "APPROVED" },
       });
 
+      // Fetch schedule if assigned
+      let scheduleDetails: string | undefined = undefined;
+      if (registration.scheduleId) {
+        const sched = await prisma.schedule.findUnique({
+          where: { id: registration.scheduleId },
+        });
+        if (sched) {
+          scheduleDetails = `${sched.dayOfWeek} (${sched.startTime} - ${sched.endTime})`;
+        }
+      }
+
+      const bankName = (invoice as any).bank ? `${(invoice as any).bank.toUpperCase()} Virtual Account` : "Bank Transfer / Manual Receipt";
+
       // Send Enrollment Confirmation Email
       const { sendEnrollmentConfirmationEmail } = await import("@/lib/email");
       await sendEnrollmentConfirmationEmail({
         parentEmail: registration.parentEmail,
+        parentName: registration.parentName,
         studentName: registration.studentName,
-        courseTitle: registration.course.title,
+        invoiceNumber: invoice.invoiceNumber,
+        paymentDate: updatedInvoice.paidAt || new Date(),
+        paymentStatus: "PAID",
+        paymentMethod: bankName,
+        totalPaid: invoice.amount,
+        programType: "Class",
+        programName: registration.course.title,
+        category: registration.course.type === "COMPETITION" ? "Competition Class" : "Regular Class",
+        duration: (registration.course as any).duration || undefined,
+        scheduleDetails,
+        location: "Kaputra Academy Online Campus (Zoom)",
       });
     }
 
@@ -158,12 +188,31 @@ export async function approvePayment(invoiceId: string) {
         data: { status: "APPROVED" },
       });
 
+      const bankName = (invoice as any).bank ? `${(invoice as any).bank.toUpperCase()} Virtual Account` : "Bank Transfer / Manual Receipt";
+      const startDate = campReg.campProgram.startDate
+        ? new Date(campReg.campProgram.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
+        : undefined;
+      const endDate = campReg.campProgram.endDate
+        ? new Date(campReg.campProgram.endDate).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
+        : undefined;
+
       try {
         const { sendCampEnrollmentConfirmationEmail } = await import("@/lib/email");
         await sendCampEnrollmentConfirmationEmail({
           parentEmail: campReg.parentEmail,
+          parentName: campReg.parentName,
           studentName: campReg.studentName,
-          campName: campReg.campProgram.name,
+          invoiceNumber: invoice.invoiceNumber,
+          paymentDate: updatedInvoice.paidAt || new Date(),
+          paymentStatus: "PAID",
+          paymentMethod: bankName,
+          totalPaid: invoice.amount,
+          programType: "Camp Program",
+          programName: campReg.campProgram.name,
+          category: "Camp Program",
+          startDate,
+          endDate,
+          location: "Kaputra Academy Camp Headquarters",
         });
       } catch (emailErr) {
         console.error("Failed to send camp enrollment confirmation email:", emailErr);
@@ -204,8 +253,13 @@ export async function approvePayment(invoiceId: string) {
 
 export async function rejectPayment(invoiceId: string, reason: string) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !["ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
     throw new Error("Unauthorized");
+  }
+
+  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
+  if (invoice && !canManageEnrollment(session.user.role, (invoice as any).learningMethod)) {
+    throw new Error("This action requires super admin access for Private class enrollments");
   }
 
   // 1. Update Invoice

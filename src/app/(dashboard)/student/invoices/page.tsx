@@ -86,7 +86,7 @@ export default async function StudentInvoicesPage() {
               const cfg = STATUS_CONFIG[invoice.status] || STATUS_CONFIG.PENDING;
               const StatusIcon = cfg.icon;
               const isPrintable = invoice.status === "PAID";
-              const itemTitle = courseMap.get(invoice.itemId) || invoice.itemId;
+              const itemTitle = invoice.itemType === "PLACEMENT_TEST" ? "Placement Test Fee" : (courseMap.get(invoice.itemId) || invoice.itemId);
 
               return (
                 <div key={invoice.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-5 hover:bg-slate-900/40 transition">

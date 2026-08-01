@@ -1,0 +1,222 @@
+﻿diff --git a/src/actions/dashboard.ts b/src/actions/dashboard.ts
+index 9e21905..bf3daea 100644
+--- a/src/actions/dashboard.ts
++++ b/src/actions/dashboard.ts
+@@ -128,7 +128,8 @@ export async function getVideos(courseId: string) {
+ }
+ 
+ export async function createVideo(data: {
+-  courseId: string;
++  courseId?: string;
++  campProgramId?: string;
+   title: string;
+   videoUrl: string;
+   category?: string;
+@@ -139,7 +140,16 @@ export async function createVideo(data: {
+   try {
+     await checkAuth(["ADMIN", "TEACHER"]);
+     const video = await prisma.video.create({
+-      data,
++      data: {
++        courseId: data.courseId || null,
++        campProgramId: data.campProgramId,
++        title: data.title,
++        videoUrl: data.videoUrl,
++        category: data.category,
++        order: data.order,
++        isPublished: data.isPublished,
++        isTrial: data.isTrial,
++      },
+       include: {
+         quizzes: {
+           orderBy: { timestamp: "asc" },
+@@ -210,7 +220,8 @@ export async function getMaterials(courseId: string) {
+ }
+ 
+ export async function createMaterial(data: {
+-  courseId: string;
++  courseId?: string;
++  campProgramId?: string;
+   title: string;
+   fileUrl: string;
+   description?: string;
+@@ -219,7 +230,17 @@ export async function createMaterial(data: {
+ }) {
+   try {
+     await checkAuth(["ADMIN", "TEACHER"]);
+-    const material = await prisma.material.create({ data });
++    const material = await prisma.material.create({
++       data: {
++        courseId: data.courseId || null,
++        campProgramId: data.campProgramId,
++        title: data.title,
++        fileUrl: data.fileUrl,
++        description: data.description,
++        isPublished: data.isPublished,
++        isTrial: data.isTrial,
++      },
++    });
+     revalidatePath("/student/trial");
+     return { success: true, material };
+   } catch (error: any) {
+@@ -285,6 +306,7 @@ export async function getMockTests(courseId?: string, isTrial: boolean = false)
+ 
+ export async function createMockTest(data: {
+   courseId?: string;
++  campProgramId?: string;
+   title: string;
+   timeLimit: number;
+   passingScore: number;
+@@ -294,11 +316,13 @@ export async function createMockTest(data: {
+ }) {
+   try {
+     await checkAuth(["ADMIN", "TEACHER"]);
+-    const { questionIds, ...testData } = data;
++    const { questionIds, courseId, campProgramId, ...testData } = data;
+ 
+     const test = await prisma.mockTest.create({
+       data: {
+         ...testData,
++        courseId: courseId || null,
++        campProgramId: campProgramId || null,
+         questions: {
+           connect: questionIds.map((id) => ({ id })),
+         },
+@@ -349,6 +373,7 @@ export async function updateMockTest(
+ // === QUESTION BANK ACTIONS ===
+ export async function createBankQuestion(data: {
+   courseId?: string;
++  folderId?: string | null;
+   questionText: string;
+   options: string[];
+   correctAnswer: string;
+@@ -362,6 +387,7 @@ export async function createBankQuestion(data: {
+     const q = await prisma.mockQuestion.create({
+       data: {
+         courseId: data.courseId,
++        folderId: data.folderId,
+         questionText: data.questionText,
+         options: JSON.stringify(data.options),
+         correctAnswer: data.correctAnswer,
+@@ -387,6 +413,100 @@ export async function deleteBankQuestion(id: string) {
+   }
+ }
+ 
++export async function deleteBankQuestionsInBulk(ids: string[]) {
++  try {
++    await checkAuth(["ADMIN", "TEACHER"]);
++    if (!ids || ids.length === 0) throw new Error("No questions selected");
++    const result = await prisma.mockQuestion.deleteMany({
++      where: { id: { in: ids } },
++    });
++    return { success: true, deletedCount: result.count };
++  } catch (error: any) {
++    return { success: false, error: error.message };
++  }
++}
++
++/* =========================================================================
++   QUESTION FOLDERS
++   ========================================================================= */
++
++export async function getQuestionFolders() {
++  try {
++    await checkAuth(["ADMIN", "TEACHER"]);
++    const folders = await prisma.questionFolder.findMany({
++      include: { _count: { select: { questions: true } } },
++      orderBy: { name: "asc" },
++    });
++    return { success: true, folders };
++  } catch (error: any) {
++    return { success: false, error: error.message };
++  }
++}
++
++export async function createQuestionFolder(data: {
++  name: string;
++  parentId?: string;
++}) {
++  try {
++    await checkAuth(["ADMIN", "TEACHER"]);
++    if (!data.name.trim()) throw new Error("Folder name is required");
++    const folder = await prisma.questionFolder.create({
++      data: {
++        name: data.name.trim(),
++        parentId: data.parentId || null,
++      },
++      include: { _count: { select: { questions: true } } },
++    });
++    return { success: true, folder };
++  } catch (error: any) {
++    return { success: false, error: error.message };
++  }
++}
++
++export async function renameQuestionFolder(id: string, name: string) {
++  try {
++    await checkAuth(["ADMIN", "TEACHER"]);
++    if (!name.trim()) throw new Error("Folder name is required");
++    const folder = await prisma.questionFolder.update({
++      where: { id },
++      data: { name: name.trim() },
++      include: { _count: { select: { questions: true } } },
++    });
++    return { success: true, folder };
++  } catch (error: any) {
++    return { success: false, error: error.message };
++  }
++}
++
++export async function deleteQuestionFolder(id: string) {
++  try {
++    await checkAuth(["ADMIN", "TEACHER"]);
++    // Move all questions in this folder to "unfiled" (folderId = null)
++    await prisma.mockQuestion.updateMany({
++      where: { folderId: id },
++      data: { folderId: null },
++    });
++    await prisma.questionFolder.delete({ where: { id } });
++    return { success: true };
++  } catch (error: any) {
++    return { success: false, error: error.message };
++  }
++}
++
++export async function moveQuestionsToFolder(questionIds: string[], folderId: string | null) {
++  try {
++    await checkAuth(["ADMIN", "TEACHER"]);
++    if (!questionIds || questionIds.length === 0) throw new Error("No questions selected");
++    await prisma.mockQuestion.updateMany({
++      where: { id: { in: questionIds } },
++      data: { folderId: folderId },
++    });
++    return { success: true };
++  } catch (error: any) {
++    return { success: false, error: error.message };
++  }
++}
++
+ export async function deleteMockTest(id: string) {
+   try {
+     await checkAuth(["ADMIN", "TEACHER"]);
+@@ -415,15 +535,15 @@ export async function submitMockTest(testId: string, answers: Record<string, str
+       },
+     });
+ 
+-    if (existingSubmission) {
+-      throw new Error("You have already submitted this mock test.");
++    if (existingSubmission && user.role === "STUDENT") {
++      throw new Error("You have already submitted this quiz.");
+     }
+ 
+     let correctCount = 0;
+     test.questions.forEach((q) => {
+-      const studentAns = answers[q.id]?.toLowerCase().trim();
+-      const correctAns = q.correctAnswer?.toLowerCase().trim();
+-      if (studentAns === correctAns) {
++      const studentAns = String(answers?.[q.id] || "").toLowerCase().trim();
++      const correctAns = String(q.correctAnswer || "").toLowerCase().trim();
++      if (studentAns && studentAns === correctAns) {
+         correctCount++;
+       }
+     });

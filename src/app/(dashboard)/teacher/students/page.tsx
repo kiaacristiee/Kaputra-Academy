@@ -37,7 +37,7 @@ export default async function TeacherStudentListPage({
     ? [filterCourseId]
     : courseIds;
 
-  // Fetch enrollments with student data
+  // Fetch enrollments with student, parent data
   const enrollments = await prisma.enrollment.findMany({
     where: {
       itemId: { in: targetCourseIds },
@@ -45,16 +45,11 @@ export default async function TeacherStudentListPage({
       status: "ACTIVE",
     },
     include: {
-      student: true,
-    },
-  });
-
-  // Fetch academic reports for progress data
-  const studentIds = enrollments.map((e) => e.studentId);
-  const reports = await prisma.academicReport.findMany({
-    where: {
-      studentId: { in: studentIds },
-      courseId: { in: targetCourseIds },
+      student: {
+        include: {
+          parent: true,
+        },
+      },
     },
   });
 
@@ -63,16 +58,15 @@ export default async function TeacherStudentListPage({
 
   // Build student data
   const students = enrollments.map((e) => {
-    const report = reports.find(
-      (r) => r.studentId === e.studentId && r.courseId === e.itemId
-    );
     return {
       id: e.student.id,
       name: e.student.name,
       studentIdStr: e.student.studentIdStr || "—",
+      email: e.student.email,
+      parentName: e.student.parent?.name || "Not linked",
+      isDisabled: (e.student as any).isDisabled || false,
       courseId: e.itemId,
       courseName: courseMap.get(e.itemId) || "Unknown",
-      progress: report?.progress || 0,
     };
   });
 
@@ -130,36 +124,34 @@ export default async function TeacherStudentListPage({
               className="bg-slate-950 border border-slate-800 rounded-2xl p-6 hover:border-slate-700 transition shadow-lg space-y-4"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-12 h-12 rounded-full bg-[#CA8E25]/10 border border-[#CA8E25]/20 flex items-center justify-center text-[#CA8E25] font-bold text-lg shrink-0">
                   {student.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-bold text-white truncate">{student.name}</h3>
-                  <p className="text-xs text-slate-500 font-mono">{student.studentIdStr}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${student.isDisabled ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"}`}>
+                      {student.isDisabled ? "Disabled" : "Active"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/50 p-2.5 rounded-xl border border-slate-800">
-                <GraduationCap className="h-3.5 w-3.5 text-[#CA8E25]" />
-                <span className="font-medium truncate">{student.courseName}</span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="space-y-1.5">
+              <div className="space-y-2 pt-2 border-t border-slate-800">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-400 font-medium flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    Progress
-                  </span>
-                  <span className="text-white font-bold">{student.progress}%</span>
+                  <span className="text-slate-400">Class:</span>
+                  <span className="text-white font-medium truncate ml-2">{student.courseName}</span>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min(student.progress, 100)}%` }}
-                  />
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400">Parent:</span>
+                  <span className="text-white font-medium truncate ml-2">{student.parentName}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400">Email:</span>
+                  <span className="text-white font-medium truncate ml-2">{student.email}</span>
                 </div>
               </div>
+
             </div>
           ))}
         </div>

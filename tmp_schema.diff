@@ -1,0 +1,273 @@
+﻿diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 7c6fa83..909b1b6 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -18,6 +18,7 @@ model User {
+   studentIdStr  String?   @unique // e.g., KPA-2026-0001
+   parentId      String?   
+   isActive      Boolean   @default(false)
++  isDisabled    Boolean   @default(false) // For admin disable/enable feature
+   acceptedTerms Boolean   @default(false) // For terms & conditions requirement
+   dateOfBirth   DateTime?
+   createdAt     DateTime  @default(now())
+@@ -71,6 +72,9 @@ model Course {
+   categoryId       String
+   isPublished      Boolean  @default(false)
+   type             String   @default("REGULAR") // "REGULAR" or "COMPETITION"
++  learningMethod   String   @default("SEMI_PRIVATE") // "PRIVATE" or "SEMI_PRIVATE"
++  sessionsPerWeek  Int      @default(1) // 1 or 2
++  settlementAccount String  @default("COMPANY") // "PERSONAL" or "COMPANY"
+   createdAt        DateTime @default(now())
+   updatedAt        DateTime @updatedAt
+ 
+@@ -123,20 +127,26 @@ model Registration {
+ }
+ 
+ model Payment {
+-  id               String        @id @default(cuid())
+-  registrationId   String        @unique
+-  amount           Float
+-  paymentMethod    String?
+-  receiptUrl       String?       // Support for payment receipt uploads
+-  status           String        @default("PENDING")
+-  verifiedById     String?
+-  verifiedAt       DateTime?
+-  adminNotes       String?
+-  createdAt        DateTime      @default(now())
+-  updatedAt        DateTime      @updatedAt
+-
+-  registration     Registration  @relation(fields: [registrationId], references: [id])
+-  verifiedBy       User?         @relation("PaymentVerifier", fields: [verifiedById], references: [id])
++  id                   String        @id @default(cuid())
++  registrationId       String        @unique
++  amount               Float
++  paymentMethod        String?
++  receiptUrl           String?       // Support for payment receipt uploads
++  status               String        @default("PENDING")
++  verifiedById         String?
++  verifiedAt           DateTime?
++  adminNotes           String?
++  createdAt            DateTime      @default(now())
++  updatedAt            DateTime      @updatedAt
++
++  // Midtrans VA fields
++  transactionId        String?
++  bank                 String?
++  virtualAccountNumber String?
++  expiryTime           DateTime?
++
++  registration         Registration  @relation(fields: [registrationId], references: [id])
++  verifiedBy           User?         @relation("PaymentVerifier", fields: [verifiedById], references: [id])
+ }
+ 
+ model PlacementTest {
+@@ -175,14 +185,25 @@ model Invoice {
+   itemId               String
+   itemType             String
+   amount               Float
+-  virtualAccountNumber String    @unique
+-  status               String    @default("PENDING") // PENDING, WAITING_VERIFICATION, PAID, REJECTED
++  virtualAccountNumber String?
++  status               String    @default("PENDING") // PENDING, WAITING_VERIFICATION, PAID, REJECTED, EXPIRED, CANCELLED
++  approvalStatus       String    @default("APPROVED") // DRAFT_PENDING, APPROVED, REJECTED
++  itemCategory         String?   // REGULAR, COMPETITION, CAMP
++  learningMethod       String?   // PRIVATE, SEMI_PRIVATE
++  sessionsPerWeek      Int?      // 1 or 2
++  settlementAccount    String?   // PERSONAL, COMPANY
+   receiptUrl           String?
+   dueDate              DateTime
+   paidAt               DateTime?
+   createdAt            DateTime  @default(now())
+   updatedAt            DateTime  @updatedAt
+ 
++  // Midtrans VA fields
++  orderId              String?   @unique
++  transactionId        String?
++  bank                 String?   // bca, bni, bri, permata, mandiri
++  expiryTime           DateTime?
++
+   student              User      @relation(fields: [studentId], references: [id])
+   verifications        PaymentVerification[]
+ }
+@@ -218,19 +239,21 @@ model TrialContent {
+ }
+ 
+ model Video {
+-  id          String   @id @default(cuid())
+-  courseId    String
+-  title       String
+-  videoUrl    String
+-  category    String?
+-  order       Int      @default(0)
+-  isPublished Boolean  @default(false)
+-  isTrial     Boolean  @default(false)
+-  createdAt   DateTime @default(now())
+-  updatedAt   DateTime @updatedAt
+-
+-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+-  quizzes     InteractiveVideoQuiz[]
++  id            String   @id @default(cuid())
++  courseId      String?
++  campProgramId String?
++  title         String
++  videoUrl      String
++  category      String?
++  order         Int      @default(0)
++  isPublished   Boolean  @default(false)
++  isTrial       Boolean  @default(false)
++  createdAt     DateTime @default(now())
++  updatedAt     DateTime @updatedAt
++
++  course        Course?      @relation(fields: [courseId], references: [id], onDelete: Cascade)
++  campProgram   CampProgram? @relation(fields: [campProgramId], references: [id], onDelete: SetNull)
++  quizzes       InteractiveVideoQuiz[]
+ }
+ 
+ model InteractiveVideoQuiz {
+@@ -252,38 +275,43 @@ model InteractiveVideoQuiz {
+ }
+ 
+ model Material {
+-  id          String   @id @default(cuid())
+-  courseId    String
+-  title       String
+-  fileUrl     String
+-  description String?  
+-  isPublished Boolean  @default(false)
+-  isTrial     Boolean  @default(false)
+-  createdAt   DateTime @default(now())
+-  updatedAt   DateTime @updatedAt
+-
+-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
++  id            String       @id @default(cuid())
++  courseId      String?
++  campProgramId String?
++  title         String
++  fileUrl       String
++  description   String?
++  isPublished   Boolean  @default(false)
++  isTrial       Boolean  @default(false)
++  createdAt     DateTime @default(now())
++  updatedAt     DateTime @updatedAt
++
++  course        Course?      @relation(fields: [courseId], references: [id], onDelete: Cascade)
++  campProgram   CampProgram? @relation(fields: [campProgramId], references: [id], onDelete: SetNull)
+ }
+ 
+ model MockTest {
+-  id           String   @id @default(cuid())
+-  courseId     String?  // Null for general/trial mock tests
+-  title        String
+-  timeLimit    Int      // in minutes
+-  passingScore Float
+-  isPublished  Boolean  @default(false)
+-  isTrial      Boolean  @default(false)
+-  createdAt    DateTime @default(now())
+-  updatedAt    DateTime @updatedAt
+-
+-  course       Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+-  questions    MockQuestion[]
+-  submissions  MockSubmission[]
++  id            String   @id @default(cuid())
++  courseId      String?  // Null for general/trial mock tests
++  campProgramId String?  // Optional: ties mock test to a Camp Program
++  title         String
++  timeLimit     Int      // in minutes
++  passingScore  Float
++  isPublished   Boolean  @default(false)
++  isTrial       Boolean  @default(false)
++  createdAt     DateTime @default(now())
++  updatedAt     DateTime @updatedAt
++
++  course        Course?      @relation(fields: [courseId], references: [id], onDelete: Cascade)
++  campProgram   CampProgram? @relation(fields: [campProgramId], references: [id], onDelete: SetNull)
++  questions     MockQuestion[]
++  submissions   MockSubmission[]
+ }
+ 
+ model MockQuestion {
+   id           String   @id @default(cuid())
+   courseId     String?  // Optional: ties question to a specific course's bank
++  folderId     String?
+   questionText String   
+   options      String   // JSON string of options Array
+   correctAnswer String  // the correct answer index or text
+@@ -295,17 +323,32 @@ model MockQuestion {
+   updatedAt    DateTime @updatedAt
+ 
+   mockTests    MockTest[] // Implicit many-to-many
++  folder       QuestionFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
++}
++
++model QuestionFolder {
++  id        String         @id @default(cuid())
++  name      String
++  parentId  String?
++  createdAt DateTime       @default(now())
++  updatedAt DateTime       @updatedAt
++
++  parent    QuestionFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
++  children  QuestionFolder[] @relation("FolderHierarchy")
++  questions MockQuestion[]
+ }
+ 
+ model MockSubmission {
+-  id          String   @id @default(cuid())
+-  mockTestId  String
+-  studentId   String
+-  score       Float
+-  answers     String    // JSON string of student answers
+-  timeSpent   String?   // JSON string of time spent per question in seconds
+-  isPassed    Boolean
+-  submittedAt DateTime @default(now())
++  id                  String   @id @default(cuid())
++  mockTestId          String
++  studentId           String
++  score               Float
++  answers             String    // JSON string of student answers
++  timeSpent           String?   // JSON string of time spent per question in seconds
++  totalCompletionTime Int?      // Overall completion time in seconds
++  attemptNumber       Int      @default(1)
++  isPassed            Boolean
++  submittedAt         DateTime @default(now())
+ 
+   mockTest    MockTest @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+   student     User     @relation("MockStudent", fields: [studentId], references: [id], onDelete: Cascade)
+@@ -440,6 +483,11 @@ model CampProgram {
+   name                 String
+   slug                 String             @unique
+   description          String
++  learningObjectives   String?
++  topicsCovered        String?
++  scheduleInfo         String?
++  instructor           String?
++  duration             String?
+   thumbnailUrl         String?
+   startDate            DateTime
+   endDate              DateTime
+@@ -453,6 +501,9 @@ model CampProgram {
+   updatedAt            DateTime           @updatedAt
+ 
+   registrations        CampRegistration[]
++  videos               Video[]
++  materials            Material[]
++  mockTests            MockTest[]
+ }
+ 
+ model CampRegistration {
+@@ -471,3 +522,15 @@ model CampRegistration {
+   campProgram       CampProgram        @relation(fields: [campProgramId], references: [id], onDelete: Cascade)
+   student           User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+ }
++
++model EmailDraft {
++  id          String   @id @default(cuid())
++  type        String   // "PLACEMENT_TEST_PAYMENT", "CLASS_PAYMENT", "CAMP_PAYMENT", "PLACEMENT_TEST_RESULT", "ENROLLMENT_CONFIRMATION"
++  recipient   String
++  subject     String
++  bodyHtml    String
++  status      String   @default("PENDING_APPROVAL") // "PENDING_APPROVAL", "APPROVED", "REJECTED", "SENT"
++  metadata    String?  // JSON string
++  createdAt   DateTime @default(now())
++  updatedAt   DateTime @updatedAt
++}

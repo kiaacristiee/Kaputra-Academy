@@ -83,6 +83,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
   const [showTermsForRegistration, setShowTermsForRegistration] = useState(false);
 
   const [learningMethod, setLearningMethod] = useState<"SEMI_PRIVATE" | "PRIVATE">("SEMI_PRIVATE");
+  const [sessionsPerWeek, setSessionsPerWeek] = useState<1 | 2>(1);
   const [availableSchedules, setAvailableSchedules] = useState<any[]>([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("");
   const [loadingSchedules, setLoadingSchedules] = useState(false);
@@ -146,13 +147,14 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
     setError(null);
 
     const wasRegular = selectedCourse.type === "REGULAR";
-    const amount = wasRegular ? (selectedCourse.price + selectedCourse.registrationFee) : 300000;
+    const amount = wasRegular ? (selectedCourse.price * sessionsPerWeek + selectedCourse.registrationFee) : 300000;
 
     const res = await enrollInClass(
       selectedChildId, 
       selectedCourse.id, 
       learningMethod, 
-      learningMethod === "PRIVATE" ? selectedScheduleId : undefined
+      learningMethod === "PRIVATE" ? selectedScheduleId : undefined,
+      sessionsPerWeek
     );
     if (res.success && res.invoiceId) {
       setSuccessType(wasRegular ? "CLASS" : "PLACEMENT_TEST");
@@ -620,7 +622,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
       {/* Terms Modal — shown before registration confirmation */}
       {showTermsForRegistration && (
         <TermsModal
-          mode="session"
+          mode="persist"
           onAccept={() => {
             setShowTermsForRegistration(false);
             if (pendingCourse) {
@@ -684,6 +686,30 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
                       Choose your preferred schedule and teacher.
                     </span>
                   </button>
+                </div>
+              </div>
+
+              {/* Sessions per Week */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sessions per Week</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {([1, 2] as const).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSessionsPerWeek(n)}
+                      className={`p-4 rounded-xl border text-left transition flex flex-col gap-1 ${
+                        sessionsPerWeek === n
+                          ? "border-[#CA8E25] bg-[#CA8E25]/5"
+                          : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                      }`}
+                    >
+                      <span className="text-sm font-bold text-white">{n} Session{n > 1 ? "s" : ""} / Week</span>
+                      <span className="text-[10px] text-slate-400">
+                        {selectedCourse && formatCurrency(selectedCourse.price * n + selectedCourse.registrationFee)} total
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
 

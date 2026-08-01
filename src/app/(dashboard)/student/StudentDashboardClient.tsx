@@ -254,17 +254,19 @@ export default function StudentDashboardClient({
                           </div>
                         </div>
 
-                        <Button className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-2 flex items-center justify-center gap-1.5 text-sm">
-                          Access Classroom
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+                        <Link href="/student/class" className="w-full mt-6 block">
+                          <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-2 flex items-center justify-center gap-1.5 text-sm">
+                            Access Classroom
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
                       </div>
                     ))
                   ) : (
                     <div className="col-span-full bg-slate-900 border border-slate-800 p-8 rounded-2xl text-center text-slate-400">
                       You are not currently enrolled in any classes. 
                       <br/>
-                      <Link href="/catalog" className="text-[#CA8E25] font-bold mt-2 inline-block hover:underline">
+                      <Link href="/student/enroll" className="text-[#CA8E25] font-bold mt-2 inline-block hover:underline">
                         Browse our Course Catalog
                       </Link>
                     </div>

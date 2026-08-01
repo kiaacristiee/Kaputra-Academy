@@ -1,0 +1,16 @@
+src/app/(dashboard)/teacher/materials/page.tsx(36,7): error TS2322: Type '({ materials: { id: string; createdAt: Date; updatedAt: Date; title: string; description: string | null; isPublished: boolean; courseId: string | null; campProgramId: string | null; isTrial: boolean; fileUrl: string; }[]; } & { ...; })[]' is not assignable to type 'Course[]'.
+  Type '{ materials: { id: string; createdAt: Date; updatedAt: Date; title: string; description: string | null; isPublished: boolean; courseId: string | null; campProgramId: string | null; isTrial: boolean; fileUrl: string; }[]; } & { ...; }' is not assignable to type 'Course'.
+    Types of property 'materials' are incompatible.
+      Type '{ id: string; createdAt: Date; updatedAt: Date; title: string; description: string | null; isPublished: boolean; courseId: string | null; campProgramId: string | null; isTrial: boolean; fileUrl: string; }[]' is not assignable to type 'MaterialItem[]'.
+        Type '{ id: string; createdAt: Date; updatedAt: Date; title: string; description: string | null; isPublished: boolean; courseId: string | null; campProgramId: string | null; isTrial: boolean; fileUrl: string; }' is not assignable to type 'MaterialItem'.
+          Types of property 'courseId' are incompatible.
+            Type 'string | null' is not assignable to type 'string'.
+              Type 'null' is not assignable to type 'string'.
+src/app/(dashboard)/teacher/videos/page.tsx(41,7): error TS2322: Type '({ videos: ({ quizzes: { id: string; createdAt: Date; updatedAt: Date; timestamp: number; videoId: string; question: string; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; explanation: string | null; requireCorrect: boolean; }[]; } & { ...; })[]; } & { ...; })[]' is not assignable to type 'Course[]'.
+  Type '{ videos: ({ quizzes: { id: string; createdAt: Date; updatedAt: Date; timestamp: number; videoId: string; question: string; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; explanation: string | null; requireCorrect: boolean; }[]; } & { ...; })[]; } & { ...; }' is not assignable to type 'Course'.
+    Types of property 'videos' are incompatible.
+      Type '({ quizzes: { id: string; createdAt: Date; updatedAt: Date; timestamp: number; videoId: string; question: string; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; explanation: string | null; requireCorrect: boolean; }[]; } & { ...; })[]' is not assignable to type 'VideoItem[]'.
+        Type '{ quizzes: { id: string; createdAt: Date; updatedAt: Date; timestamp: number; videoId: string; question: string; optionA: string; optionB: string; optionC: string; optionD: string; correctAnswer: string; explanation: string | null; requireCorrect: boolean; }[]; } & { ...; }' is not assignable to type 'VideoItem'.
+          Types of property 'courseId' are incompatible.
+            Type 'string | null' is not assignable to type 'string'.
+              Type 'null' is not assignable to type 'string'.

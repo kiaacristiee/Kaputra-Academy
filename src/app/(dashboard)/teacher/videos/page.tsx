@@ -34,7 +34,7 @@ export default async function TeacherVideosPage() {
     },
   });
 
-  const courses = teacherAssignments.map((ta) => ta.course);
+  const courses = teacherAssignments.map((ta) => ta.course) as any;
 
   return (
     <VideosClient

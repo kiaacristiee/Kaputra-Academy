@@ -140,9 +140,14 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
     });
 
     if (!test) {
-      throw new Error("Placement test not found");
+      return { success: false, error: "Placement test not found." };
     }
 
+    if (!test.registration || !test.registration.course) {
+      return { success: false, error: "Associated registration or course details not found." };
+    }
+
+    const safeAnswers = answers || {};
     const config = await getTestConfig();
 
     // Auto-grading
@@ -150,7 +155,7 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
     const totalQuestions = config.questions.length;
     
     config.questions.forEach((q) => {
-      if (answers[q.id] === q.correctAnswer) {
+      if (safeAnswers[q.id] === q.correctAnswer) {
         correctCount++;
       }
     });
@@ -159,7 +164,7 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
     const isQualifiedForCompetition = score >= config.passingScore;
 
     let targetCourseId = test.registration.courseId;
-    let targetAmount = test.registration.course.price + test.registration.course.registrationFee;
+    let targetAmount = (test.registration.course.price || 0) + (test.registration.course.registrationFee || 0);
     let qualificationStatus: "QUALIFIED" | "NOT_QUALIFIED" = isQualifiedForCompetition ? "QUALIFIED" : "NOT_QUALIFIED";
 
     if (test.registration.course.type === "COMPETITION") {
@@ -169,30 +174,29 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
         qualificationStatus = "NOT_QUALIFIED";
         // Transition registration to Regular Class
         const regularCourse = await prisma.course.findFirst({
-          where: { type: "REGULAR", isPublished: true },
+          where: { type: "REGULAR" },
         });
-        if (!regularCourse) {
-          throw new Error("Regular Class course not found to demote student.");
-        }
-        targetCourseId = regularCourse.id;
-        targetAmount = regularCourse.price + regularCourse.registrationFee;
+        if (regularCourse) {
+          targetCourseId = regularCourse.id;
+          targetAmount = (regularCourse.price || 0) + (regularCourse.registrationFee || 0);
 
-        // Update the Registration record's courseId
-        await prisma.registration.update({
-          where: { id: test.registrationId },
-          data: { courseId: targetCourseId },
-        });
+          // Update the Registration record's courseId
+          await prisma.registration.update({
+            where: { id: test.registrationId },
+            data: { courseId: targetCourseId },
+          });
+        }
       }
     } else {
       if (isQualifiedForCompetition) {
         qualificationStatus = "QUALIFIED";
         // Transition registration to Competition Class
         const competitionCourse = await prisma.course.findFirst({
-          where: { type: "COMPETITION", isPublished: true },
+          where: { type: "COMPETITION" },
         });
         if (competitionCourse) {
           targetCourseId = competitionCourse.id;
-          targetAmount = competitionCourse.price + competitionCourse.registrationFee;
+          targetAmount = (competitionCourse.price || 0) + (competitionCourse.registrationFee || 0);
 
           // Update the Registration record's courseId
           await prisma.registration.update({
@@ -210,7 +214,7 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
     await prisma.placementTest.update({
       where: { testCode: code },
       data: {
-        answers: JSON.stringify(answers),
+        answers: JSON.stringify(safeAnswers),
         status: "SUBMITTED",
         submittedAt: new Date(),
         score: score,
@@ -236,40 +240,58 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
     }
 
     if (studentId) {
-      // Automatically generate Tuition Invoice
-      const count = await prisma.invoice.count();
-      const invoiceNumber = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${(count + 1).toString().padStart(4, '0')}`;
-      const virtualAccountNumber = `8800${Math.floor(10000000 + Math.random() * 90000000)}`;
-      const dueDate = new Date();
-      dueDate.setHours(dueDate.getHours() + 24);
+      try {
+        // Automatically generate Tuition Invoice if not already created
+        const existingInvoice = await prisma.invoice.findFirst({
+          where: {
+            studentId,
+            itemId: targetCourseId,
+            itemType: "CLASS",
+          },
+        });
 
-      await prisma.invoice.create({
-        data: {
-          invoiceNumber,
-          studentId: studentId,
-          itemId: targetCourseId,
-          itemType: "CLASS",
-          amount: targetAmount,
-          virtualAccountNumber,
-          dueDate,
-        },
-      });
+        if (!existingInvoice) {
+          const count = await prisma.invoice.count();
+          const invoiceNumber = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${(count + 1).toString().padStart(4, '0')}`;
+          const virtualAccountNumber = `8800${Math.floor(10000000 + Math.random() * 90000000)}`;
+          const dueDate = new Date();
+          dueDate.setHours(dueDate.getHours() + 24);
+
+          await prisma.invoice.create({
+            data: {
+              invoiceNumber,
+              studentId: studentId,
+              itemId: targetCourseId,
+              itemType: "CLASS",
+              amount: targetAmount,
+              virtualAccountNumber,
+              dueDate,
+            },
+          });
+        }
+      } catch (invoiceErr) {
+        console.warn("Non-fatal invoice generation error during placement test submission:", invoiceErr);
+      }
     }
 
-    // Send result email to the parent
-    const { sendPlacementTestResultEmail } = await import("@/lib/email");
-    await sendPlacementTestResultEmail({
-      parentEmail: test.registration.parentEmail,
-      parentName: test.registration.parentName,
-      studentName: test.registration.studentName,
-      score: score,
-      qualificationStatus: qualificationStatus,
-    });
+    // Send result email to the parent (non-blocking)
+    try {
+      const { sendPlacementTestResultEmail } = await import("@/lib/email");
+      await sendPlacementTestResultEmail({
+        parentEmail: test.registration.parentEmail,
+        parentName: test.registration.parentName,
+        studentName: test.registration.studentName,
+        score: score,
+        qualificationStatus: qualificationStatus,
+      });
+    } catch (emailError) {
+      console.warn("Non-fatal email error during placement test submission:", emailError);
+    }
 
     return { success: true };
   } catch (error: any) {
     console.error("Submit test error:", error);
-    return { success: false, error: "Failed to submit test." };
+    return { success: false, error: error.message || "Failed to submit test." };
   }
 }
 

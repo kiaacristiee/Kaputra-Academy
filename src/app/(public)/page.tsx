@@ -448,7 +448,7 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/david.png"
+                        src="/david.PNG"
                         alt="David Wijaya - SASMO Silver Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"

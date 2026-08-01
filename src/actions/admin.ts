@@ -4,9 +4,17 @@ import prisma from "@/lib/db";
 import { generatePlacementTestCode } from "@/lib/idGenerator";
 import { sendEnrollmentConfirmationEmail } from "@/lib/email";
 import { revalidatePath } from "next/cache";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { canManageEnrollment } from "@/lib/permissions";
 
 export async function approveRegistration(registrationId: string) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.role) {
+      throw new Error("Unauthorized access");
+    }
+
     const registration = await prisma.registration.findUnique({
       where: { id: registrationId },
       include: { course: true, payment: true },
@@ -14,6 +22,11 @@ export async function approveRegistration(registrationId: string) {
 
     if (!registration) {
       throw new Error("Registration not found");
+    }
+
+    const learningMethod = registration.learningMethod || registration.course?.learningMethod || "SEMI_PRIVATE";
+    if (!canManageEnrollment(session.user.role, learningMethod)) {
+      throw new Error("This action requires super admin access for Private class enrollments");
     }
 
     // Find Student User
@@ -69,6 +82,8 @@ export async function approveRegistration(registrationId: string) {
         studentName: registration.studentName,
         studentId: studentIdStr,
         activationLink,
+        testCode,
+        learningMethod,
       });
 
       revalidatePath("/admin");
@@ -130,6 +145,7 @@ export async function approveRegistration(registrationId: string) {
         parentEmail: registration.parentEmail,
         studentName: registration.studentName,
         courseTitle: registration.course.title,
+        learningMethod,
       });
 
       revalidatePath("/admin");
@@ -145,10 +161,24 @@ export async function approveRegistration(registrationId: string) {
 
 export async function rejectRegistration(registrationId: string) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.role) {
+      throw new Error("Unauthorized access");
+    }
+
     const registration = await prisma.registration.findUnique({
       where: { id: registrationId },
-      include: { payment: true },
+      include: { course: true, payment: true },
     });
+
+    if (!registration) {
+      throw new Error("Registration not found");
+    }
+
+    const learningMethod = registration.learningMethod || registration.course?.learningMethod || "SEMI_PRIVATE";
+    if (!canManageEnrollment(session.user.role, learningMethod)) {
+      throw new Error("This action requires super admin access for Private class enrollments");
+    }
 
     if (registration?.payment) {
       await prisma.payment.update({
@@ -169,3 +199,4 @@ export async function rejectRegistration(registrationId: string) {
     return { success: false, error: error.message };
   }
 }
+

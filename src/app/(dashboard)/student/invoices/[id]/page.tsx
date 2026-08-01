@@ -36,7 +36,9 @@ export default async function StudentInvoiceDetailPage({ params }: { params: Pro
   }
 
   let itemTitle = invoice.itemId;
-  if (invoice.itemType === "CLASS" || invoice.itemType === "PLACEMENT_TEST") {
+  if (invoice.itemType === "PLACEMENT_TEST") {
+    itemTitle = "Placement Test Fee";
+  } else if (invoice.itemType === "CLASS") {
     const course = await prisma.course.findUnique({
       where: { id: invoice.itemId },
       select: { title: true },
@@ -63,8 +65,10 @@ export default async function StudentInvoiceDetailPage({ params }: { params: Pro
           itemType: invoice.itemType,
           amount: invoice.amount,
           virtualAccountNumber: invoice.virtualAccountNumber,
+          bank: (invoice as any).bank ?? null,
           status: invoice.status,
           receiptUrl: invoice.receiptUrl,
+          expiryTime: (invoice as any).expiryTime?.toISOString() ?? null,
           dueDate: invoice.dueDate.toISOString(),
           paidAt: invoice.paidAt?.toISOString() ?? null,
           createdAt: invoice.createdAt.toISOString(),

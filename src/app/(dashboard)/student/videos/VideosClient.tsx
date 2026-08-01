@@ -133,8 +133,10 @@ export default function VideosClient({
         setIsCmsOpen(false);
       }
     } else {
+      const isCamp = activeCourse.type === "CAMP PROGRAM";
       const res = await createVideo({
-        courseId: activeCourse.id,
+        courseId: isCamp ? undefined : activeCourse.id,
+        campProgramId: isCamp ? activeCourse.id : undefined,
         title: formData.title,
         videoUrl: formData.videoUrl,
         category: formData.category,

@@ -29,7 +29,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   }
 
   let itemTitle = invoice.itemId;
-  if (invoice.itemType === "CLASS" || invoice.itemType === "PLACEMENT_TEST") {
+  if (invoice.itemType === "PLACEMENT_TEST") {
+    itemTitle = "Placement Test Fee";
+  } else if (invoice.itemType === "CLASS") {
     const course = await prisma.course.findUnique({
       where: { id: invoice.itemId },
       select: { title: true },

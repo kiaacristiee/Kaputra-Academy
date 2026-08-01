@@ -104,7 +104,14 @@ export async function createSchedule(data: {
   type: string;
 }) {
   try {
-    await checkAdmin();
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !["ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized");
+    }
+
+    if (data.type === "PRIVATE" && session.user.role === "ADMIN") {
+       throw new Error("Admins are not allowed to create Private class schedules.");
+    }
     const schedule = await prisma.schedule.create({
       data: {
         teacherId: data.teacherId,
@@ -125,7 +132,17 @@ export async function createSchedule(data: {
 
 export async function deleteSchedule(id: string) {
   try {
-    await checkAdmin();
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !["ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized");
+    }
+
+    const schedule = await prisma.schedule.findUnique({ where: { id } });
+    if (!schedule) throw new Error("Schedule not found");
+
+    if (schedule.type === "PRIVATE" && session.user.role === "ADMIN") {
+      throw new Error("Admins are not allowed to delete Private class schedules.");
+    }
     await prisma.schedule.delete({ where: { id } });
     revalidatePath("/admin/schedules");
     return { success: true };
@@ -147,8 +164,18 @@ export async function updateSchedule(
   }
 ) {
   try {
-    await checkAdmin();
-    const schedule = await prisma.schedule.update({
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !["ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized");
+    }
+
+    const schedule = await prisma.schedule.findUnique({ where: { id } });
+    if (!schedule) throw new Error("Schedule not found");
+
+    if ((schedule.type === "PRIVATE" || data.type === "PRIVATE") && session.user.role === "ADMIN") {
+      throw new Error("Admins are not allowed to edit Private class schedules.");
+    }
+    const updatedSchedule = await prisma.schedule.update({
       where: { id },
       data: {
         teacherId: data.teacherId,
@@ -161,7 +188,7 @@ export async function updateSchedule(
       },
     });
     revalidatePath("/admin/schedules");
-    return { success: true, schedule };
+    return { success: true, schedule: updatedSchedule };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -403,4 +430,20 @@ export async function updatePlacementTestConfig(config: { passingScore: number; 
   }
 }
 
+export async function toggleStudentDisabled(userId: string, isDisabled: boolean) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
+      throw new Error("Unauthorized");
+    }
+    await (prisma.user as any).update({
+      where: { id: userId },
+      data: { isDisabled },
+    });
+    revalidatePath("/admin/students");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
 

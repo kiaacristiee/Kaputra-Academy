@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Play, 
   FileText, 
@@ -13,7 +13,8 @@ import {
   Clock,
   ChevronRight,
   HelpCircle,
-  Activity
+  Activity,
+  CheckSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -35,6 +36,7 @@ interface MockQuestion {
   options: string; // JSON Array string
   correctAnswer: string;
   explanation: string | null;
+  imageUrl?: string | null;
 }
 
 interface MockTest {
@@ -68,35 +70,91 @@ export default function TrialClient({
   const [activeTest, setActiveTest] = useState<MockTest | null>(null);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [testAnswers, setTestAnswers] = useState<Record<string, string>>({});
-  const [testResult, setTestResult] = useState<{ score: number; isPassed: boolean } | null>(null);
+  const [testResult, setTestResult] = useState<{ score: number; isPassed: boolean; correctCount: number; totalQuestions: number } | null>(null);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [timeSpentPerQuestion, setTimeSpentPerQuestion] = useState<Record<string, number>>({});
+  const [totalTimeSpent, setTotalTimeSpent] = useState(0);
 
   const isStaff = ["ADMIN", "TEACHER"].includes(userRole);
+
+  useEffect(() => {
+    if (activeTest && timeLeft > 0 && !testResult && !reviewMode) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current!);
+            handleSubmitTest(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+
+        const currentQ = activeTest.questions[currentQuestionIdx];
+        if (currentQ) {
+          setTimeSpentPerQuestion((prev) => ({
+            ...prev,
+            [currentQ.id]: (prev[currentQ.id] || 0) + 1
+          }));
+        }
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [activeTest, timeLeft, testResult, reviewMode, currentQuestionIdx]);
 
   const handleStartTest = (test: MockTest) => {
     setActiveTest(test);
     setCurrentQuestionIdx(0);
     setTestAnswers({});
+    setTimeSpentPerQuestion({});
+    setTotalTimeSpent(0);
+    setTimeLeft(test.timeLimit * 60);
     setTestResult(null);
+    setReviewMode(false);
   };
 
   const handleSelectAnswer = (questionId: string, option: string) => {
     setTestAnswers({ ...testAnswers, [questionId]: option });
   };
 
-  const handleSubmitTest = async () => {
+  const handleSubmitTest = async (skipConfirm = false) => {
     if (!activeTest) return;
     
     // Calculate locally for immediate feedback in Trial
+    const unansweredCount = activeTest.questions.filter(q => !testAnswers[q.id]).length;
+    if (!skipConfirm && unansweredCount > 0) {
+      const confirmed = confirm(`You have ${unansweredCount} unanswered question(s). Submit anyway?`);
+      if (!confirmed) return;
+    }
+
+    if (timerRef.current) clearInterval(timerRef.current);
+    const elapsed = activeTest.timeLimit * 60 - timeLeft;
+    setTotalTimeSpent(elapsed);
+
     let correct = 0;
     activeTest.questions.forEach((q) => {
-      if (testAnswers[q.id] === q.correctAnswer) {
+      if (testAnswers[q.id]?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim()) {
         correct++;
       }
     });
 
     const score = Math.round((correct / activeTest.questions.length) * 100);
     const isPassed = score >= activeTest.passingScore;
-    setTestResult({ score, isPassed });
+    setTestResult({ 
+       score, 
+       isPassed,
+       correctCount: correct,
+       totalQuestions: activeTest.questions.length
+    });
+  };
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
   // Filter items based on publication and staff status
@@ -460,129 +518,305 @@ export default function TrialClient({
 
         {/* Live Quiz Session UI */}
         {activeTab === "tests" && activeTest && (
-          <div className="bg-slate-950 border border-slate-800 p-6 md:p-8 rounded-3xl space-y-6 shadow-xl max-w-3xl mx-auto">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+          <div className="max-w-[900px] mx-auto bg-[#090E17] p-8 md:p-12 rounded-[40px] shadow-2xl">
+            {/* Top Header */}
+            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800/40">
               <div>
-                <h3 className="font-bold text-white text-lg">{activeTest.title}</h3>
-                <p className="text-xs text-slate-400">Question {currentQuestionIdx + 1} of {activeTest.questions.length}</p>
+                 <h3 className="font-black text-white text-2xl tracking-wide">{activeTest.title}</h3>
+                 <p className="text-sm text-slate-400 mt-1">
+                   {reviewMode ? "Review Mode (Trial)" : testResult ? `Trial Exam Completed` : `Question ${currentQuestionIdx + 1} of ${activeTest.questions.length}`}
+                 </p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setActiveTest(null)}
-                className="text-slate-400 hover:text-white flex items-center gap-1"
-              >
-                <X className="w-4 h-4" /> Exit
-              </Button>
+              {(testResult || reviewMode) ? (
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => { setActiveTest(null); setTestResult(null); setReviewMode(false); }}
+                   className="bg-[#1E293B]/50 hover:bg-[#1E293B] text-slate-300 hover:text-white rounded-xl px-5 py-2.5 h-auto text-[13px] font-bold"
+                 >
+                   <X className="w-4 h-4 mr-1.5" /> Exit
+                 </Button>
+              ) : (
+                 <div className="flex items-center gap-2 bg-[#121827] border border-slate-800 rounded-full px-4 py-2 shadow-inner">
+                   <Clock className="w-4 h-4 text-[#D89A2B]" />
+                   <span className="text-white font-bold font-mono tracking-wider">{formatTime(timeLeft)}</span>
+                 </div>
+              )}
             </div>
 
             {!testResult ? (
               <div className="space-y-6">
-                {/* Question */}
-                <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                  <p className="text-white text-base font-medium">
-                    {activeTest.questions[currentQuestionIdx]?.questionText}
-                  </p>
+                {/* Question Navigation Bar (Squares!) */}
+                {!reviewMode && (
+                  <div className="flex flex-wrap gap-3 mb-8 pb-8 border-b border-white/5">
+                    {activeTest.questions.map((q, idx) => {
+                       const isCurrent = idx === currentQuestionIdx;
+                       const isAnswered = !!testAnswers[q.id];
+                       return (
+                          <button
+                            key={q.id}
+                            onClick={() => setCurrentQuestionIdx(idx)}
+                            className={`w-11 h-11 rounded-[14px] text-sm font-black flex items-center justify-center transition-all ${
+                               isCurrent
+                                 ? "bg-[#D89A2B] text-black shadow-lg shadow-[#D89A2B]/20"
+                                 : isAnswered 
+                                   ? "bg-slate-700 text-white border border-slate-600 shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]" 
+                                   : "bg-[#1E293B] text-slate-400 hover:bg-slate-700 hover:text-white border border-transparent"
+                            }`}
+                          >
+                             {idx + 1}
+                          </button>
+                       )
+                    })}
+                  </div>
+                )}
+
+                {/* Main Question Box */}
+                <div className="bg-[#111827] border border-slate-800/80 rounded-[32px] p-8 md:p-10 shadow-xl">
+                   {reviewMode && (
+                     <div className="flex justify-between items-center mb-6">
+                        <span className="text-xs text-slate-500 uppercase font-black tracking-widest">
+                          Review Mode (Trial)
+                        </span>
+                        {(() => {
+                          const q = activeTest.questions[currentQuestionIdx];
+                          if (!q) return null;
+                          const spent = timeSpentPerQuestion[q.id] || 0;
+                          const min = Math.floor(spent / 60); const sec = spent % 60;
+                          return (
+                            <span className="text-[11px] uppercase font-bold tracking-widest px-4 py-2 rounded-xl text-slate-400 bg-slate-900 border border-slate-800 flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5" /> {min}:{sec.toString().padStart(2, "00")}
+                            </span>
+                          );
+                        })()}
+                     </div>
+                   )}
+
+                   {/* Question text + image */}
+                   <div>
+                      <h2 className="text-white text-lg font-medium leading-relaxed">
+                         {activeTest.questions[currentQuestionIdx]?.questionText}
+                      </h2>
+                      {activeTest.questions[currentQuestionIdx]?.imageUrl && (
+                         <div className="mt-8 mb-4 inline-block">
+                            <img
+                               src={activeTest.questions[currentQuestionIdx].imageUrl!}
+                               alt="Question Image"
+                               className="max-w-[320px] w-full rounded-[24px] shadow-lg object-cover border border-slate-800/50"
+                               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                         </div>
+                      )}
+                   </div>
+
+                   {/* Answer Options INSIDE the box */}
+                   <div className="mt-10 space-y-3">
+                      {(() => {
+                         const q = activeTest.questions[currentQuestionIdx];
+                         if (!q) return null;
+                         let opts: string[] = [];
+                         try { opts = JSON.parse(q.options); } catch { opts = []; }
+
+                         if (reviewMode) {
+                           const studentAns = testAnswers[q.id];
+                           const correctAns = q.correctAnswer;
+                           if (opts.length === 0) {
+                             const isCorrect = studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim();
+                             return (
+                               <div className="space-y-4 pt-2">
+                                  <div className={`w-full p-5 rounded-[20px] border ${isCorrect ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300" : "bg-[#121827] border-slate-800 text-slate-300"}`}>
+                                     {isCorrect && <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Your Answer (Correct)</p>}
+                                     <p className="text-sm font-medium pl-2">{studentAns || "(No answer)"}</p>
+                                  </div>
+                                  {!isCorrect && (
+                                    <div className="w-full p-5 rounded-[20px] border bg-emerald-950/20 border-emerald-900/40 text-emerald-300">
+                                      <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Correct Answer</p>
+                                      <p className="text-sm font-medium pl-2">{correctAns}</p>
+                                    </div>
+                                  )}
+                               </div>
+                             );
+                           }
+                           
+                           return (
+                             <div className="space-y-3 pt-2">
+                               {opts.map((opt, i) => {
+                                 const isStudentChoice = studentAns === opt;
+                                 const isCorrectChoice = correctAns === opt;
+                                 let style = "bg-transparent border-slate-700/70 text-slate-300";
+                                 if (isCorrectChoice) style = "bg-emerald-900/20 border-emerald-600/50 text-emerald-400";
+                                 else if (isStudentChoice && !isCorrectChoice) style = "bg-rose-900/10 border-rose-800/40 text-rose-400 opacity-60";
+                                 
+                                 return (
+                                   <div key={i} className={`w-full p-4 rounded-[16px] border text-sm font-medium flex items-center justify-between transition-colors ${style}`}>
+                                     <div className="flex items-center gap-4 pl-1">
+                                       <span>{opt}</span>
+                                     </div>
+                                     <div className="flex items-center gap-2 text-[10px] font-bold shrink-0">
+                                       {isCorrectChoice && <span className="text-emerald-400 tracking-widest hidden sm:inline">✓ CORRECT</span>}
+                                       {isStudentChoice && !isCorrectChoice && <span className="text-rose-400 tracking-widest hidden sm:inline opacity-70">✗ YOUR CHOICE</span>}
+                                     </div>
+                                   </div>
+                                 );
+                               })}
+                             </div>
+                           );
+                         }
+
+                         // Normal active quiz mode
+                         return (
+                           <div className="space-y-3 pt-2">
+                             {opts.length > 0 ? opts.map((opt, i) => {
+                               const isSelected = testAnswers[q.id] === opt;
+                               return (
+                                 <button
+                                   key={i}
+                                   onClick={() => handleSelectAnswer(q.id, opt)}
+                                   className={`w-full text-left p-4 rounded-[16px] border text-[15px] font-medium transition-all duration-200 flex items-center justify-between ${
+                                     isSelected
+                                       ? "bg-slate-800 border-slate-600 text-white"
+                                       : "bg-transparent border-slate-700/70 text-slate-300 hover:border-slate-500 hover:bg-slate-800/50"
+                                   }`}
+                                 >
+                                   <div className="flex items-center gap-4 pl-1">
+                                     <span>{opt}</span>
+                                   </div>
+                                 </button>
+                               );
+                             }) : (
+                                <div className="pt-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Type your answer here..."
+                                    value={testAnswers[q.id] || ""}
+                                    onChange={(e) => handleSelectAnswer(q.id, e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-700/70 rounded-[16px] px-5 py-4 text-[15px] text-white focus:outline-none focus:border-slate-500 placeholder:text-slate-600"
+                                  />
+                                </div>
+                             )}
+                           </div>
+                         )
+                      })()}
+                   </div>
                 </div>
 
-                {/* Options */}
-                <div className="grid grid-cols-1 gap-3">
-                  {(() => {
-                    const q = activeTest.questions[currentQuestionIdx];
-                    if (!q) return null;
-                    let opts: string[] = [];
-                    try {
-                      opts = JSON.parse(q.options);
-                    } catch (e) {
-                      opts = ["Option A", "Option B", "Option C", "Option D"];
-                    }
-                    return opts.map((opt, i) => {
-                      const isSelected = testAnswers[q.id] === opt;
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handleSelectAnswer(q.id, opt)}
-                          className={`w-full text-left p-4 rounded-xl border text-sm font-medium transition flex items-center justify-between ${
-                            isSelected
-                              ? "bg-[#CA8E25]/10 border-[#CA8E25] text-white"
-                              : "bg-slate-900 border-slate-850 text-slate-300 hover:border-slate-700"
-                          }`}
-                        >
-                          <span>{opt}</span>
-                          {isSelected && <Check className="w-4 h-4 text-[#CA8E25]" />}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-
-                {/* Navigation */}
-                <div className="flex justify-between items-center pt-4 border-t border-slate-850">
+                {/* Navigation buttons */}
+                <div className="flex justify-between items-center mt-12 pt-4">
                   <Button
                     disabled={currentQuestionIdx === 0}
                     onClick={() => setCurrentQuestionIdx(currentQuestionIdx - 1)}
                     variant="outline"
-                    className="border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs px-4"
+                    className={`rounded-xl px-6 h-14 font-bold border-0 bg-[#1E293B] text-slate-400 hover:bg-slate-700 hover:text-white ${currentQuestionIdx === 0 ? "opacity-0 pointer-events-none" : ""}`}
                   >
-                    Previous
+                    ←
                   </Button>
 
                   {currentQuestionIdx < activeTest.questions.length - 1 ? (
-                    <Button
-                      onClick={() => setCurrentQuestionIdx(currentQuestionIdx + 1)}
-                      className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs px-5"
+                     <Button
+                       onClick={() => setCurrentQuestionIdx(currentQuestionIdx + 1)}
+                       className="bg-[#D89A2B] hover:bg-[#c98319] text-black rounded-xl px-12 h-14 font-extrabold ml-auto text-[15px]"
+                     >
+                       Next →
+                     </Button>
+                  ) : reviewMode ? (
+                     <Button
+                       onClick={() => { setActiveTest(null); setTestResult(null); setReviewMode(false); }}
+                       className="bg-white hover:bg-slate-200 text-black rounded-xl px-10 h-14 font-black ml-auto text-[15px] uppercase tracking-wider"
                     >
-                      Next
+                       Finish Review
                     </Button>
                   ) : (
                     <Button
-                      onClick={handleSubmitTest}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs px-6 font-bold"
+                      onClick={() => {
+                        const unanswered = activeTest.questions.filter(q => !testAnswers[q.id]).length;
+                        if (unanswered > 0 && !confirm(`You have ${unanswered} unanswered questions. Submit anyway?`)) return;
+                        handleSubmitTest(true);
+                      }}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-black rounded-xl px-12 h-14 font-black tracking-widest ml-auto text-[15px] shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                     >
-                      Submit Exam
+                      SUBMIT
                     </Button>
                   )}
                 </div>
               </div>
             ) : (
-              // Results UI
-              <div className="text-center py-6 space-y-6 max-w-md mx-auto">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto border ${
-                  testResult.isPassed 
-                    ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400" 
-                    : "bg-red-500/10 border-red-500/25 text-red-400"
-                }`}>
-                  {testResult.isPassed ? <Check className="w-8 h-8" /> : <X className="w-8 h-8" />}
+              // ===== RESULTS SCREEN =====
+              <div className="max-w-[700px] mx-auto space-y-10 pb-8 pt-4">
+                {/* Checkmark and Pass Status */}
+                <div className="flex flex-col items-center justify-center space-y-5">
+                   <div className="w-[110px] h-[110px] rounded-full flex items-center justify-center bg-[#07241C] border-[4px] border-[#0E3D31] shadow-[0_0_60px_rgba(16,185,129,0.15)]">
+                      <Check className="w-[50px] h-[50px] text-[#2DD4BF]" strokeWidth={3} />
+                   </div>
+                   <h2 className="text-[72px] font-black text-white leading-none tracking-tighter">{testResult.score}%</h2>
+                   <div className={`px-4 py-1.5 rounded-lg bg-[#0A3225] flex items-center gap-2 border border-[#104D39]`}>
+                      <CheckSquare className="w-4 h-4 text-[#2DD4BF]" /> 
+                      <span className="text-[14px] font-black tracking-widest text-[#2DD4BF] uppercase">{testResult.isPassed ? "PASSED (TRIAL)" : "NOT PASSED"}</span>
+                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-2xl font-black text-white">{testResult.score}%</h4>
-                  <p className={`text-sm font-bold mt-1 ${testResult.isPassed ? "text-emerald-450" : "text-red-450"}`}>
-                    {testResult.isPassed ? "PASSED (Trial)" : "NOT PASSED (Trial)"}
-                  </p>
-                  <p className="text-xs text-slate-400 mt-2">
-                    Required Passing Score: {activeTest.passingScore}%
-                  </p>
+                {/* 4 Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+                   <div className="bg-[#051F19] border border-[#0A3D31] rounded-[24px] p-5 text-center shadow-lg py-7">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#568579] mb-4">Correct</p>
+                      <p className="text-[32px] font-black text-[#2DD4BF] leading-none">{testResult.correctCount} <span className="text-[#328D7D] text-xl font-bold mx-0.5">/</span> {testResult.totalQuestions}</p>
+                   </div>
+                   <div className="bg-[#1A0C16] border border-[#3E1A29] rounded-[24px] p-5 text-center shadow-lg py-7">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#88576C] mb-4">Wrong</p>
+                      <p className="text-[32px] font-black text-[#F43F5E] leading-none">{testResult.totalQuestions - testResult.correctCount} <span className="text-[#9E3E58] text-xl font-bold mx-0.5">/</span> {testResult.totalQuestions}</p>
+                   </div>
+                   <div className="bg-[#1D170A] border border-[#3C3012] rounded-[24px] p-5 text-center shadow-lg py-7">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#887754] mb-4">Time Taken</p>
+                      <p className="text-[32px] font-black text-[#FACC15] leading-none">
+                         {Math.floor(totalTimeSpent / 60)}m {totalTimeSpent % 60}s
+                      </p>
+                   </div>
+                   <div className="bg-[#1D170A] border border-[#3C3012] rounded-[24px] p-5 text-center shadow-lg py-7">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-[#887754] mb-4">Passing Score</p>
+                      <p className="text-[32px] font-black text-[#D8A741] leading-none">{activeTest.passingScore}%</p>
+                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-850 space-y-3">
-                  <p className="text-xs text-slate-450">
-                    Want to unlock full quizzes and receive complete review logs? Register for a premium course to get full credentials!
-                  </p>
-                  <div className="flex gap-2 justify-center">
-                    <Button 
-                      onClick={() => setActiveTest(null)} 
-                      variant="outline" 
-                      className="border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs"
-                    >
-                      Back to Trial Hub
-                    </Button>
-                    <Link href="/catalog">
-                      <Button className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-xl text-xs">
+                {/* Time per question table */}
+                <div className="bg-[#111827] border border-slate-800/80 rounded-[32px] p-8 shadow-xl mt-8">
+                   <h5 className="text-[12px] font-black text-slate-300 uppercase tracking-[0.2em] mb-6 px-1">TIME PER QUESTION</h5>
+                   <div className="space-y-[4px]">
+                      {activeTest.questions.map((q, idx) => {
+                         const spent = timeSpentPerQuestion[q.id] || 0;
+                         const isCorrect = testAnswers[q.id]?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim();
+                         return (
+                            <div key={q.id} className="flex items-center justify-between px-4 py-3.5 rounded-2xl hover:bg-[#1A2234] transition-colors bg-[#080d16] border border-slate-800/50">
+                               <div className="text-[14px] text-slate-200 truncate pr-6 max-w-sm md:max-w-md font-medium flex items-center gap-3">
+                                  <span className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-black ${isCorrect ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
+                                    {isCorrect ? "✓" : "✗"}
+                                  </span>
+                                  Q{idx + 1}. {q.questionText}
+                               </div>
+                               <div className="flex items-center gap-3 shrink-0">
+                                  <span className="text-slate-400 text-[14px] font-bold font-mono tracking-wider text-right">
+                                     {Math.floor(spent / 60)}:{Math.floor(spent % 60).toString().padStart(2, "0")}
+                                  </span>
+                               </div>
+                            </div>
+                         )
+                      })}
+                   </div>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-8 mt-8 border-t border-slate-800/40">
+                   <Button
+                      onClick={() => { setReviewMode(true); setCurrentQuestionIdx(0); }}
+                      className="bg-[#D89A2B] hover:bg-[#c98319] text-black font-black tracking-wider rounded-xl px-10 py-7 h-auto text-[14px] uppercase shadow-[0_0_20px_rgba(216,154,43,0.3)] w-full sm:w-auto"
+                   >
+                      Review All Answers
+                   </Button>
+                   <Link href="/catalog" className="w-full sm:w-auto">
+                     <Button
+                        className="bg-white hover:bg-slate-200 text-black font-black tracking-wider rounded-xl px-10 py-7 h-auto text-[14px] uppercase w-full sm:w-auto"
+                     >
                         View Course Programs
-                      </Button>
-                    </Link>
-                  </div>
+                     </Button>
+                   </Link>
                 </div>
               </div>
             )}

@@ -84,7 +84,7 @@ export default async function ParentInvoicesListPage() {
             {invoices.map((inv) => {
               const cfg = statusConfig[inv.status] || statusConfig.PENDING;
               const isPast = new Date(inv.dueDate) < new Date() && inv.status === "PENDING";
-              const courseTitle = courseMap.get(inv.itemId) || inv.itemId;
+              const courseTitle = inv.itemType === "PLACEMENT_TEST" ? "Placement Test Fee" : (courseMap.get(inv.itemId) || inv.itemId);
               return (
                 <div key={inv.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 hover:bg-slate-900/30 transition">
                   <div className="flex-1 space-y-0.5">
@@ -97,7 +97,7 @@ export default async function ParentInvoicesListPage() {
                       )}
                     </div>
                     <p className="text-xs text-slate-500">
-                      {inv.student.name} · {courseTitle} ({inv.itemType === "PLACEMENT_TEST" ? "Placement Test" : "Class Tuition"}) ·{" "}
+                      {inv.student.name} · {courseTitle} ·{" "}
                       {new Date(inv.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </p>
                     <p className="text-xs text-slate-600 font-mono">VA: {inv.virtualAccountNumber}</p>

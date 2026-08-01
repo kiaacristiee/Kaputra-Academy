@@ -19,7 +19,7 @@ export default function ParentDashboardClient({ children }: ParentDashboardClien
           {children}
         </div>
         {/* Terms modal blocking access */}
-        <TermsModal mode="session" onAccept={() => setTermsAccepted(true)} />
+        <TermsModal mode="persist" onAccept={() => setTermsAccepted(true)} />
       </div>
     );
   }

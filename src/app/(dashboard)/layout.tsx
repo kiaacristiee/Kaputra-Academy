@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { getUserTermsStatus } from "@/actions/dashboard";
 import TermsModal from "@/components/TermsModal";
+import DevAccountSwitcher from "@/components/DevAccountSwitcher";
 import {
   BookOpen,
   GraduationCap,
@@ -32,7 +33,8 @@ import {
   UserCheck,
   Megaphone,
   Plus,
-  ClipboardList
+  ClipboardList,
+  Mail
 } from "lucide-react";
 
 
@@ -81,9 +83,8 @@ export default function DashboardLayout({
       { name: "Register Class", href: "/student/enroll", icon: Plus },
       { name: "Placement Test", href: "/student/placement-test", icon: ClipboardList },
       { name: "Trial Content", href: "/student/trial", icon: Play },
-      { name: "Class Videos", href: "/student/videos", icon: Video },
-      { name: "Learning Materials", href: "/student/materials", icon: FileText },
-      { name: "Quizzes", href: "/student/mock-test", icon: Award },
+      { name: "Class", href: "/student/class", icon: BookOpen },
+      { name: "Camp Programs", href: "/student/camps", icon: Calendar },
       { name: "Academic Report", href: "/student/report", icon: BarChart2 },
       { name: "Attendance", href: "/student/attendance", icon: CheckSquare },
       { name: "Schedule", href: "/student/schedule", icon: Clock },
@@ -99,9 +100,8 @@ export default function DashboardLayout({
       { name: "Attendance CMS", href: "/teacher/attendance", icon: CheckSquare },
       { name: "Videos CMS", href: "/teacher/videos", icon: Video },
       { name: "Materials CMS", href: "/teacher/materials", icon: FileText },
-      { name: "Mock Tests CMS", href: "/teacher/mock-tests", icon: Award },
+      { name: "Quizzes CMS", href: "/teacher/mock-tests", icon: Award },
       { name: "Salary Details", href: "/teacher/salary", icon: DollarSign },
-      { name: "Student Progress CMS", href: "/teacher/progress-cms", icon: Sliders },
       { name: "Academic Report CMS", href: "/teacher/report-cms", icon: FileEdit },
     ] : []),
     ...(isAdmin ? [
@@ -110,9 +110,6 @@ export default function DashboardLayout({
       { name: "Teacher Assignment", href: "/admin/teacher-assignments", icon: UserCheck },
       { name: "Course CMS", href: "/admin/courses", icon: BookOpen },
       { name: "Camp Programs", href: "/admin/camps", icon: Calendar },
-      { name: "Videos CMS", href: "/admin/videos", icon: Video },
-      { name: "Materials CMS", href: "/admin/materials", icon: FileText },
-      { name: "Quizzes CMS", href: "/admin/mock-tests", icon: Award },
       { name: "Salary CMS", href: "/admin/salary", icon: DollarSign },
       { name: "Student Management", href: "/admin/students", icon: GraduationCap },
       { name: "Parent Management", href: "/admin/parents", icon: Users },
@@ -120,6 +117,7 @@ export default function DashboardLayout({
       { name: "Payment Management", href: "/admin/payments", icon: CreditCard },
       { name: "Schedule Management", href: "/admin/schedules", icon: Clock },
       { name: "CMS Content", href: "/admin/cms", icon: Layers },
+      { name: "Email Workflow", href: "/admin/emails", icon: Mail },
     ] : []),
     ...(isParent ? [
       { name: "Overview", href: "/parent", icon: LayoutDashboard },
@@ -188,6 +186,7 @@ export default function DashboardLayout({
             <Menu className="h-6 w-6" />
           </Button>
           <div className="flex items-center gap-4 ml-auto">
+            <DevAccountSwitcher />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-white">Dashboard</p>
               <p className="text-xs text-slate-400 capitalize">{isTeacher ? "Instructor" : isAdmin ? "Administrator" : isParent ? "Parent" : "Student"}</p>

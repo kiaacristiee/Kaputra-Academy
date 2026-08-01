@@ -16,11 +16,17 @@ export default async function TeacherAttendancePage() {
     redirect("/login");
   }
 
-  // Fetch attendance history
-  const records = await prisma.teacherAttendance.findMany({
-    where: { teacherId: session.user.id },
-    orderBy: { date: "desc" },
-  });
+  // Fetch attendance records and assignments concurrently
+  const [records, assignments] = await Promise.all([
+    prisma.teacherAttendance.findMany({
+      where: { teacherId: session.user.id },
+      orderBy: { date: "desc" },
+    }),
+    prisma.teacherAssignment.findMany({
+      where: { teacherId: session.user.id },
+      include: { course: true },
+    }),
+  ]);
 
   // Check today's status
   const now = new Date();
@@ -38,42 +44,39 @@ export default async function TeacherAttendancePage() {
     workingHours: r.workingHours,
   }));
 
-  // Fetch teacher's assigned courses
-  const assignments = await prisma.teacherAssignment.findMany({
-    where: { teacherId: session.user.id },
-    include: { course: true },
-  });
   const courses = assignments.map(a => ({
     id: a.course.id,
     title: a.course.title,
   }));
 
-  // Fetch active student enrollments for these courses
-  const enrollments = await prisma.enrollment.findMany({
-    where: {
-      itemId: { in: courses.map(c => c.id) },
-      itemType: "CLASS",
-      status: "ACTIVE",
-    },
-    include: { student: true },
-  });
+  // Fetch enrollments and student attendances concurrently
+  const [enrollments, studentAttendances] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: {
+        itemId: { in: courses.map(c => c.id) },
+        itemType: "CLASS",
+        status: "ACTIVE",
+      },
+      include: { student: true },
+    }),
+    prisma.attendance.findMany({
+      where: {
+        courseId: { in: courses.map(c => c.id) },
+      },
+      include: {
+        student: { select: { name: true } },
+        course: { select: { title: true } },
+      },
+      orderBy: { date: "desc" },
+    }),
+  ]);
+
   const students = enrollments.map(e => ({
     id: e.student.id,
     name: e.student.name,
     courseId: e.itemId,
   }));
 
-  // Fetch existing student attendances for these courses
-  const studentAttendances = await prisma.attendance.findMany({
-    where: {
-      courseId: { in: courses.map(c => c.id) },
-    },
-    include: {
-      student: { select: { name: true } },
-      course: { select: { title: true } },
-    },
-    orderBy: { date: "desc" },
-  });
   const formattedStudentAttendances = studentAttendances.map(a => ({
     id: a.id,
     studentId: a.studentId,

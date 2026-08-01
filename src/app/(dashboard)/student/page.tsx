@@ -37,20 +37,71 @@ export default async function StudentDashboardPage() {
     .filter((e) => e.itemType === "COURSE" || e.itemType === "CLASS" || e.itemType === "PROGRAM")
     .map((e) => e.itemId);
 
-  // Fetch course details, categories, and assigned teachers
-  const enrolledCourses = await prisma.course.findMany({
-    where: {
-      id: { in: courseIds },
-    },
-    include: {
-      category: true,
-      teachers: {
-        include: {
-          teacher: true,
+  // Fetch course details, camp programs, placement test, and announcements concurrently
+  const [enrolledCourses, camps, placementTest, latestAnnouncements] = await Promise.all([
+    prisma.course.findMany({
+      where: {
+        id: { in: courseIds },
+      },
+      include: {
+        category: true,
+        teachers: {
+          include: {
+            teacher: true,
+          },
         },
       },
-    },
-  });
+    }),
+    // Camp programs — resolve from unresolved enrollment IDs
+    (async () => {
+      const resolvedCourseIds_pre = await prisma.course.findMany({
+        where: { id: { in: courseIds } },
+        select: { id: true },
+      });
+      const resolvedIds = resolvedCourseIds_pre.map((c) => c.id);
+      const unresolvedEnrollments = student.enrollments.filter(
+        (e) => !resolvedIds.includes(e.itemId)
+      );
+      const campIds = unresolvedEnrollments
+        .filter((e) => e.itemType === "PROGRAM" || e.itemType === "CAMP")
+        .map((e) => e.itemId);
+      return prisma.campProgram.findMany({
+        where: { id: { in: campIds } },
+      });
+    })(),
+    // Placement test
+    student.studentIdStr
+      ? prisma.placementTest.findUnique({
+          where: { studentIdStr: student.studentIdStr },
+        })
+      : Promise.resolve(null),
+    // Announcements
+    prisma.announcement.findMany({
+      where: {
+        isPublished: true,
+        publishDate: { lte: new Date() },
+        targetAudience: { in: ["STUDENTS", "BOTH"] },
+        OR: [
+          { courseId: null },
+          { courseId: { in: courseIds } },
+        ],
+        AND: [
+          {
+            OR: [
+              { targetStudents: { none: {} } },
+              { targetStudents: { some: { id: session.user.id } } },
+            ],
+          },
+        ],
+      },
+      include: {
+        teacher: { select: { name: true } },
+        course: { select: { title: true } },
+      },
+      orderBy: { publishDate: "desc" },
+      take: 5,
+    }),
+  ]);
 
   const coursesWithDetails = enrolledCourses.map((course) => ({
     id: course.id,
@@ -72,14 +123,6 @@ export default async function StudentDashboardPage() {
     (e) => !resolvedCourseIds.includes(e.itemId)
   );
 
-  const campIds = unresolvedEnrollments
-    .filter((e) => e.itemType === "PROGRAM" || e.itemType === "CAMP")
-    .map((e) => e.itemId);
-
-  const camps = await prisma.campProgram.findMany({
-    where: { id: { in: campIds } },
-  });
-
   const campMap = new Map(camps.map((c) => [c.id, c]));
 
   const fallbackCourses = unresolvedEnrollments.map((e) => {
@@ -100,41 +143,6 @@ export default async function StudentDashboardPage() {
   });
 
   const allCoursesWithDetails = [...coursesWithDetails, ...fallbackCourses];
-
-  // Fetch entry placement test results
-  let placementTest = null;
-  if (student.studentIdStr) {
-    placementTest = await prisma.placementTest.findUnique({
-      where: { studentIdStr: student.studentIdStr },
-    });
-  }
-
-  // Fetch student active announcements
-  const latestAnnouncements = await prisma.announcement.findMany({
-    where: {
-      isPublished: true,
-      publishDate: { lte: new Date() },
-      targetAudience: { in: ["STUDENTS", "BOTH"] },
-      OR: [
-        { courseId: null },
-        { courseId: { in: courseIds } },
-      ],
-      AND: [
-        {
-          OR: [
-            { targetStudents: { none: {} } }, // Send to everyone
-            { targetStudents: { some: { id: session.user.id } } }, // Specific targeted student
-          ],
-        },
-      ],
-    },
-    include: {
-      teacher: { select: { name: true } },
-      course: { select: { title: true } },
-    },
-    orderBy: { publishDate: "desc" },
-    take: 5,
-  });
 
   const formattedAnnouncements = latestAnnouncements.map((a) => ({
     id: a.id,

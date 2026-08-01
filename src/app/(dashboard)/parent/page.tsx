@@ -54,29 +54,30 @@ export default async function ParentDashboardPage() {
   }
 
   const children = parent.children || [];
+  const childIds = children.map((c: any) => c.id);
 
-  // Fetch course mapping
-  const allCourses = await prisma.course.findMany({
-    select: { id: true, title: true, type: true },
-  });
-  const allCamps = await prisma.campProgram.findMany({
-    select: { id: true, name: true, type: true },
-  } as any);
+  // Fetch course mapping, camp programs, and child enrollments concurrently
+  const [allCourses, allCamps, childEnrollments] = await Promise.all([
+    prisma.course.findMany({
+      select: { id: true, title: true, type: true },
+    }),
+    prisma.campProgram.findMany({
+      select: { id: true, name: true, type: true },
+    } as any),
+    prisma.enrollment.findMany({
+      where: { studentId: { in: childIds }, status: "ACTIVE" },
+      select: { itemId: true },
+    }),
+  ]);
+
   const courseMap = new Map<string, { title: string; type: string }>([
     ...allCourses.map((c) => [c.id, { title: c.title, type: c.type === "COMPETITION" ? "COMPETITION" : "REGULAR" }] as [string, { title: string; type: string }]),
     ...allCamps.map((c) => [c.id, { title: c.name, type: (c as any).type || "CAMP" }] as [string, { title: string; type: string }]),
   ]);
 
-  // Get all active course IDs for all children
-  const childIds = children.map((c: any) => c.id);
-  const childEnrollments = await prisma.enrollment.findMany({
-    where: { studentId: { in: childIds }, status: "ACTIVE" },
-    select: { itemId: true },
-  });
   const courseIds = Array.from(new Set(childEnrollments.map((e) => e.itemId)));
 
-  // Fetch published announcements targeted to parents/both matching children's courses or general,
-  // AND either no specific targets or at least one of this parent's children is targeted
+  // Fetch announcements (depends on courseIds)
   const announcements = await prisma.announcement.findMany({
     where: {
       isPublished: true,
@@ -89,8 +90,8 @@ export default async function ParentDashboardPage() {
       AND: [
         {
           OR: [
-            { targetStudents: { none: {} } }, // Broadcast to all
-            { targetStudents: { some: { id: { in: childIds } } } }, // At least one child is targeted
+            { targetStudents: { none: {} } },
+            { targetStudents: { some: { id: { in: childIds } } } },
           ],
         },
       ],
