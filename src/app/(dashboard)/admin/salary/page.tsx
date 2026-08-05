@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getSalariesForAdmin, getTeachersList } from "@/actions/salaryAdmin";
 import AdminSalaryClient from "./AdminSalaryClient";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -12,7 +14,7 @@ export const metadata = {
 
 export default async function AdminSalaryPage() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 

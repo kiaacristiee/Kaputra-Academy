@@ -16,9 +16,9 @@ export default function AboutPage() {
             {/* Logo */}
             <div className="mb-6 flex justify-center">
               <img
-                src="/logo.png"
+                src="/icon.png"
                 alt="Kaputra Academy Logo"
-                className="h-28 w-auto"
+                className="h-28 w-auto object-contain"
               />
             </div>
 

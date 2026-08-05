@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/db";
 import EmailsClient from "./EmailsClient";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -12,7 +14,7 @@ export const metadata = {
 
 export default async function AdminEmailsPage() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 

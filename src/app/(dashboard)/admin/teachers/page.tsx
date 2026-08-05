@@ -4,13 +4,15 @@ import { redirect } from "next/navigation";
 import TeachersClient from "./TeachersClient";
 import { getTeachers } from "@/actions/teachers";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const metadata = {
   title: "Teacher Directory | Admin Dashboard",
 };
 
 export default async function AdminTeachersPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 

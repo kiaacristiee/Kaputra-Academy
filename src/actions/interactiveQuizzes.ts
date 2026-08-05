@@ -3,6 +3,7 @@
 import prisma from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 export async function getInteractiveQuizzes(videoId: string) {
   try {
@@ -31,7 +32,7 @@ export async function createInteractiveQuiz(data: {
 }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session || (!isAdminRole(session.user.role) && session.user.role !== "TEACHER")) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -48,7 +49,7 @@ export async function createInteractiveQuiz(data: {
 export async function updateInteractiveQuiz(id: string, data: any) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session || (!isAdminRole(session.user.role) && session.user.role !== "TEACHER")) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -66,7 +67,7 @@ export async function updateInteractiveQuiz(id: string, data: any) {
 export async function deleteInteractiveQuiz(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "TEACHER")) {
+    if (!session || (!isAdminRole(session.user.role) && session.user.role !== "TEACHER")) {
       return { success: false, error: "Unauthorized" };
     }
 

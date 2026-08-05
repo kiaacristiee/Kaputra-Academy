@@ -449,7 +449,7 @@ export default function Home() {
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
                         src="/david.PNG"
-                        alt="David Wijaya - SASMO Silver Medalist"
+                        alt="David - SASMO Silver Medalist"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />

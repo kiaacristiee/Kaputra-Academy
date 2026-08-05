@@ -496,28 +496,21 @@ export default function AdminPaymentsClient({ allInvoices }: Props) {
               )}
 
               {selectedInvoice.status === "WAITING_VERIFICATION" && (
-                canManage(selectedInvoice.learningMethod) ? (
-                  <div className="pt-4 border-t border-slate-900 flex gap-3">
-                    <Button
-                      onClick={() => handleApprove(selectedInvoice)}
-                      disabled={loading === selectedInvoice.id}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl"
-                    >
-                      {loading === selectedInvoice.id ? "Processing..." : "Approve Payment"}
-                    </Button>
-                    <Button
-                      onClick={() => { setRejectModal(selectedInvoice); setSelectedInvoice(null); }}
-                      className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl"
-                    >
-                      Reject Payment
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="pt-4 border-t border-slate-900 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-amber-400 text-sm font-semibold flex items-center justify-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    View Only: Super Admin access required for Private class invoices.
-                  </div>
-                )
+                <div className="pt-4 border-t border-slate-900 flex gap-3">
+                  <Button
+                    onClick={() => handleApprove(selectedInvoice)}
+                    disabled={loading === selectedInvoice.id}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl"
+                  >
+                    {loading === selectedInvoice.id ? "Processing..." : "Approve Payment"}
+                  </Button>
+                  <Button
+                    onClick={() => { setRejectModal(selectedInvoice); setSelectedInvoice(null); }}
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl"
+                  >
+                    Reject Payment
+                  </Button>
+                </div>
               )}
 
               {selectedInvoice.approvalStatus === "DRAFT_PENDING" && (

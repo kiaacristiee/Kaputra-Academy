@@ -116,14 +116,6 @@ export default async function ParentDashboardPage() {
           <h1 className="text-3xl font-black tracking-tight text-white">Welcome back, {parent.name}!</h1>
           <p className="text-slate-400">Parent Dashboard • Monitor your child's academic progress</p>
         </div>
-        <Link href="/api/auth/signout">
-          <Button
-            className="bg-red-600 text-white hover:bg-red-700 rounded-xl gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
-        </Link>
       </div>
 
       {children.length === 0 ? (

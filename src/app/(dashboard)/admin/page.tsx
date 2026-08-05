@@ -6,8 +6,18 @@ import {
   Users,
   GraduationCap,
   BookOpen,
-  CreditCard
+  CreditCard,
+  Mail,
+  MessageSquare,
+  Clock,
+  Shield,
+  DollarSign
 } from "lucide-react";
+
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { isAdminRole } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,36 +26,92 @@ export const metadata = {
 };
 
 export default async function AdminDashboard() {
-  // 1. Fetch Stats from DB
-  const totalStudents = await prisma.user.count({ where: { role: "STUDENT" } });
-  const totalTeachers = await prisma.user.count({ where: { role: "TEACHER" } });
-  const totalCourses = await prisma.course.count();
+  const session = await getServerSession(authOptions);
+  if (!session?.user || !isAdminRole(session.user.role)) {
+    redirect("/login");
+  }
 
-  const pendingRegistrationsCount = await prisma.registration.count({
-    where: {
-      status: {
-        in: ["VERIFYING", "VERIFYING_PT_PAYMENT", "VERIFYING_ENROLLMENT_PAYMENT"]
+  // Time metrics
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const todayDay = days[now.getDay()];
+
+  const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
+
+  // Fetch Stats from DB
+  const [
+    totalStudents,
+    totalTeachers,
+    pendingPayments,
+    pendingEmails,
+    todaysClasses,
+    todaysPrivateClasses,
+    revenueMonthAgg,
+    unreadChats
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: "STUDENT" } }),
+    prisma.user.count({ where: { role: "TEACHER" } }),
+    prisma.invoice.count({ 
+      where: { 
+        status: "WAITING_VERIFICATION",
+        ...(!isSuperAdmin && {
+          OR: [
+            { learningMethod: null },
+            { learningMethod: { not: "PRIVATE" } }
+          ]
+        }) 
+      } 
+    }),
+    prisma.emailDraft.count({ where: { status: "PENDING_APPROVAL" } }),
+    prisma.schedule.count({ 
+      where: { 
+        dayOfWeek: todayDay, 
+        ...(!isSuperAdmin && { type: { not: "PRIVATE" } })
+      } 
+    }),
+    isSuperAdmin ? prisma.privateSession.count({ where: { date: { gte: startOfDay, lte: endOfDay }, status: "SCHEDULED" } }) : Promise.resolve(0),
+    prisma.invoice.aggregate({
+      _sum: { amount: true },
+      where: { 
+        status: "PAID", 
+        paidAt: { gte: startOfMonth },
+        ...(!isSuperAdmin && {
+          OR: [
+            { learningMethod: null },
+            { learningMethod: { not: "PRIVATE" } }
+          ]
+        })
       }
-    }
-  });
+    }),
+    prisma.liveChatSession.count({ where: { status: { in: ["NEW", "WAITING_REPLY"] } } })
+  ]);
 
-  const pendingInvoicesCount = await prisma.invoice.count({
-    where: {
-      status: "WAITING_VERIFICATION"
-    }
-  });
-
-  const pendingApprovalsCount = pendingRegistrationsCount + pendingInvoicesCount;
+  const revenueMonth = revenueMonthAgg._sum.amount || 0;
 
   const stats = [
     { name: "Total Students", value: totalStudents.toString(), icon: GraduationCap, color: "from-blue-600 to-indigo-600" },
     { name: "Total Teachers", value: totalTeachers.toString(), icon: Users, color: "from-emerald-600 to-teal-600" },
-    { name: "Total Courses", value: totalCourses.toString(), icon: BookOpen, color: "from-amber-600 to-orange-600" },
-    { name: "Pending Verification", value: pendingApprovalsCount.toString(), icon: CreditCard, color: "from-rose-600 to-pink-600" },
+    { name: "Pending Payments", value: pendingPayments.toString(), icon: CreditCard, color: "from-rose-600 to-pink-600" },
+    { name: "Pending Emails", value: pendingEmails.toString(), icon: Mail, color: "from-purple-600 to-fuchsia-600" },
+    { name: "Today's Classes", value: todaysClasses.toString(), icon: Clock, color: "from-amber-600 to-orange-600" },
+    ...(isSuperAdmin ? [{ name: "Today's Private Classes", value: todaysPrivateClasses.toString(), icon: Shield, color: "from-cyan-600 to-blue-600" }] : []),
+    { name: "Revenue This Month", value: `Rp ${revenueMonth.toLocaleString()}`, icon: DollarSign, color: "from-emerald-600 to-emerald-800" },
+    { name: "Unread CS Chats", value: unreadChats.toString(), icon: MessageSquare, color: "from-pink-600 to-rose-800" },
   ];
 
-  // 2. Fetch Registrations
+  // Fetch Registrations
   const registrations = await prisma.registration.findMany({
+    where: {
+      ...(!isSuperAdmin && {
+        OR: [
+          { learningMethod: null },
+          { learningMethod: { not: "PRIVATE" } }
+        ]
+      })
+    },
     include: {
       course: true,
       payment: true,
@@ -78,13 +144,13 @@ export default async function AdminDashboard() {
           return (
             <div
               key={stat.name}
-              className="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex items-center justify-between"
+              className="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex items-center justify-between shadow-sm"
             >
               <div>
                 <p className="text-sm text-slate-400 font-medium">{stat.name}</p>
-                <h3 className="text-3xl font-bold text-white mt-1">{stat.value}</h3>
+                <h3 className="text-2xl font-bold text-white mt-1">{stat.value}</h3>
               </div>
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white`}>
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shrink-0 shadow-lg`}>
                 <Icon className="h-6 w-6" />
               </div>
             </div>
@@ -93,7 +159,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Pending Invoices Banner */}
-      {pendingInvoicesCount > 0 && (
+      {pendingPayments > 0 && (
         <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-amber-400">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
@@ -101,7 +167,7 @@ export default async function AdminDashboard() {
             </div>
             <div>
               <p className="font-bold text-white">Pending Invoice Payments</p>
-              <p className="text-xs text-slate-400 mt-0.5">There are {pendingInvoicesCount} invoice payments waiting for verification.</p>
+              <p className="text-xs text-slate-400 mt-0.5">There are {pendingPayments} invoice payments waiting for verification.</p>
             </div>
           </div>
           <Link href="/admin/payments">

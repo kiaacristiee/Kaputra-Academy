@@ -6,7 +6,7 @@ import {
   BookOpen, GraduationCap, TrendingUp, Users, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createStudentReport, updateAcademicReport, deleteAcademicReport } from "@/actions/progress";
+import { createStudentReport, updateAcademicReport, deleteAcademicReport, generateDraftReport } from "@/actions/progress";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Student {
@@ -32,6 +32,12 @@ interface ReportItem {
   teacherNotes: string | null;
   skillAssessment: string | null;
   completedModules: string | null;
+  status: string;
+  performanceSummary: string | null;
+  strengths: string | null;
+  improvements: string | null;
+  learningProgress: string | null;
+  nextSteps: string | null;
 }
 
 interface Props {
@@ -46,6 +52,7 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
   const [reports, setReports] = useState(initialReports);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -66,6 +73,12 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
     teacherNotes: "",
     skillAssessment: "",
     completedModules: "",
+    status: "DRAFT",
+    performanceSummary: "",
+    strengths: "",
+    improvements: "",
+    learningProgress: "",
+    nextSteps: "",
   });
 
   const showStatus = (t: "success" | "error", text: string) => {
@@ -81,6 +94,12 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
       teacherNotes: item.teacherNotes || "",
       skillAssessment: item.skillAssessment || "",
       completedModules: item.completedModules || "",
+      status: item.status || "DRAFT",
+      performanceSummary: item.performanceSummary || "",
+      strengths: item.strengths || "",
+      improvements: item.improvements || "",
+      learningProgress: item.learningProgress || "",
+      nextSteps: item.nextSteps || "",
     });
   };
 
@@ -92,21 +111,28 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
     setLoading(true);
     const res = await createStudentReport(createForm);
     if (res.success && res.item) {
+      const item = res.item as any;
       const student = students.find((s) => s.id === createForm.studentId);
       const course = courses.find((c) => c.id === createForm.courseId);
       setReports((prev) => [
         {
-          id: res.item!.id,
-          studentId: res.item!.studentId,
+          id: item.id,
+          studentId: item.studentId,
           studentName: student?.name || "",
           studentIdStr: student?.studentIdStr || "",
-          courseId: res.item!.courseId,
+          courseId: item.courseId,
           courseName: course?.title || "",
-          grade: res.item!.grade,
-          progress: res.item!.progress,
-          teacherNotes: res.item!.teacherNotes || null,
-          skillAssessment: res.item!.skillAssessment || null,
-          completedModules: res.item!.completedModules || null,
+          grade: item.grade,
+          progress: item.progress,
+          teacherNotes: item.teacherNotes || null,
+          skillAssessment: item.skillAssessment || null,
+          completedModules: item.completedModules || null,
+          status: item.status || "DRAFT",
+          performanceSummary: item.performanceSummary || null,
+          strengths: item.strengths || null,
+          improvements: item.improvements || null,
+          learningProgress: item.learningProgress || null,
+          nextSteps: item.nextSteps || null,
         },
         ...prev,
       ]);
@@ -115,6 +141,48 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
       setCreateForm(blankForm);
     } else {
       showStatus("error", res.error || "Failed to create report.");
+    }
+    setLoading(false);
+  };
+
+  const handleGenerate = async () => {
+    if (!createForm.studentId || !createForm.courseId) {
+      showStatus("error", "Please select a student and course for draft generation.");
+      return;
+    }
+    setLoading(true);
+    const res = await generateDraftReport(createForm.studentId, createForm.courseId);
+    if (res.success && res.item) {
+      const item = res.item as any;
+      const student = students.find((s) => s.id === createForm.studentId);
+      const course = courses.find((c) => c.id === createForm.courseId);
+      setReports((prev) => [
+        {
+          id: item.id,
+          studentId: item.studentId,
+          studentName: student?.name || "",
+          studentIdStr: student?.studentIdStr || "",
+          courseId: item.courseId,
+          courseName: course?.title || "",
+          grade: item.grade,
+          progress: item.progress,
+          teacherNotes: item.teacherNotes || null,
+          skillAssessment: item.skillAssessment || null,
+          completedModules: item.completedModules || null,
+          status: item.status || "DRAFT",
+          performanceSummary: item.performanceSummary || null,
+          strengths: item.strengths || null,
+          improvements: item.improvements || null,
+          learningProgress: item.learningProgress || null,
+          nextSteps: item.nextSteps || null,
+        },
+        ...prev,
+      ]);
+      showStatus("success", "Draft generated securely!");
+      setShowGenerate(false);
+      setCreateForm(blankForm);
+    } else {
+      showStatus("error", res.error || "Failed to generate draft report.");
     }
     setLoading(false);
   };
@@ -169,13 +237,22 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
             Create and edit student report cards with grades and evaluations.
           </p>
         </div>
-        <Button
-          onClick={() => { setShowCreate(true); setEditingId(null); }}
-          className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl px-5 flex items-center gap-2 self-start"
-        >
-          <Plus className="h-4 w-4" />
-          New Report
-        </Button>
+        <div className="flex gap-2 self-start">
+          <Button
+            onClick={() => { setShowGenerate(true); setShowCreate(false); setEditingId(null); }}
+            className="bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 font-bold rounded-xl px-5 flex items-center gap-2"
+          >
+            <TrendingUp className="h-4 w-4" />
+            Auto-Generate Draft
+          </Button>
+          <Button
+            onClick={() => { setShowCreate(true); setShowGenerate(false); setEditingId(null); }}
+            className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl px-5 flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New Manual Report
+          </Button>
+        </div>
       </div>
 
       {/* Status banner */}
@@ -193,6 +270,71 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
           >
             {message.type === "success" ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
             <span className="text-sm font-medium">{message.text}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showGenerate && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="bg-slate-950 border border-purple-500/30 rounded-2xl p-6 space-y-5"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-purple-400" /> Auto-Generate Draft
+              </h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowGenerate(false)} className="text-slate-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <p className="text-sm text-slate-400">
+              Select a student and course to intelligently analyze their mock test scores and attendance records. An automated draft will be created and saved in DRAFT mode for you to review and customize!
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-400 uppercase">Student</label>
+                <select
+                  value={createForm.studentId}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, studentId: e.target.value }))}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-400"
+                >
+                  <option value="">Select student...</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.studentIdStr || s.id.slice(0, 6)})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-400 uppercase">Course</label>
+                <select
+                  value={createForm.courseId}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, courseId: e.target.value }))}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-400"
+                >
+                  <option value="">Select course...</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button onClick={handleGenerate} disabled={loading}
+                className="bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl px-6 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                {loading ? "Generating..." : "Generate AI Draft"}
+              </Button>
+              <Button onClick={() => setShowGenerate(false)} variant="ghost"
+                className="rounded-xl border border-slate-800 text-slate-400">
+                Cancel
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -363,6 +505,50 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
                           className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
                         />
                       </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Performance Summary</label>
+                        <textarea rows={3} value={editForm.performanceSummary}
+                          onChange={(e) => setEditForm((p) => ({ ...p, performanceSummary: e.target.value }))}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Strengths</label>
+                        <textarea rows={3} value={editForm.strengths}
+                          onChange={(e) => setEditForm((p) => ({ ...p, strengths: e.target.value }))}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Areas for Improvement</label>
+                        <textarea rows={3} value={editForm.improvements}
+                          onChange={(e) => setEditForm((p) => ({ ...p, improvements: e.target.value }))}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Learning Progress</label>
+                        <textarea rows={3} value={editForm.learningProgress}
+                          onChange={(e) => setEditForm((p) => ({ ...p, learningProgress: e.target.value }))}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
+                        />
+                      </div>
+                      <div className="col-span-1 sm:col-span-2 space-y-1.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Suggested Next Steps</label>
+                        <textarea rows={2} value={editForm.nextSteps}
+                          onChange={(e) => setEditForm((p) => ({ ...p, nextSteps: e.target.value }))}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
+                        />
+                      </div>
+                      <div className="col-span-1 sm:col-span-2 space-y-1.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
+                        <select value={editForm.status}
+                          onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]">
+                          <option value="DRAFT">DRAFT</option>
+                          <option value="SUBMITTED">SUBMITTED</option>
+                        </select>
+                      </div>
                     </div>
                     <div className="flex gap-3">
                       <Button onClick={() => handleUpdate(item.id)} disabled={loading}
@@ -401,10 +587,19 @@ export default function ReportCMSClient({ reports: initialReports, students, cou
                       <div className="bg-gradient-to-r from-[#CA8E25] to-amber-400 h-1.5 rounded-full transition-all"
                         style={{ width: `${Math.min(item.progress, 100)}%` }} />
                     </div>
-                    <div className="space-y-1 text-xs text-slate-400">
-                      {item.completedModules && <p><span className="font-semibold text-slate-300">Modules:</span> {item.completedModules}</p>}
-                      {item.teacherNotes && <p><span className="font-semibold text-slate-300">Notes:</span> {item.teacherNotes}</p>}
-                      {item.skillAssessment && <p><span className="font-semibold text-slate-300">Skills:</span> {item.skillAssessment}</p>}
+                    <div className="flex items-center gap-2 mb-3 text-[10px] uppercase font-bold tracking-wider">
+                      <span className={`px-2 py-0.5 rounded-md ${item.status === "SUBMITTED" ? "bg-emerald-500/20 text-emerald-400" : "bg-purple-500/20 text-purple-400"}`}>
+                        {item.status}
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-xs text-slate-400 mt-3 pt-3 border-t border-slate-800">
+                      {item.performanceSummary && <p><span className="font-semibold text-slate-300 block mb-0.5">Performance Summary:</span> {item.performanceSummary}</p>}
+                      {item.strengths && <p><span className="font-semibold text-slate-300 block mb-0.5">Strengths:</span> {item.strengths}</p>}
+                      {item.improvements && <p><span className="font-semibold text-slate-300 block mb-0.5">Areas for Improvement:</span> {item.improvements}</p>}
+                      {item.learningProgress && <p><span className="font-semibold text-slate-300 block mb-0.5">Learning Progress:</span> {item.learningProgress}</p>}
+                      {item.nextSteps && <p><span className="font-semibold text-slate-300 block mb-0.5">Suggested Next Steps:</span> {item.nextSteps}</p>}
+                      {item.completedModules && <p><span className="font-semibold text-slate-300 block mb-0.5">Modules:</span> {item.completedModules}</p>}
+                      {item.skillAssessment && <p><span className="font-semibold text-slate-300 block mb-0.5">Skills:</span> {item.skillAssessment}</p>}
                     </div>
                   </div>
                 )}

@@ -431,7 +431,7 @@ export default function MockTestClient({
         const data = await uploadRes.json();
         imageUrl = data.url;
       } else {
-        alert("Gagal mengunggah gambar");
+        alert("Failed to upload image.");
         setIsBankSaving(false);
         return;
       }
@@ -450,7 +450,7 @@ export default function MockTestClient({
       });
       if (res.success && res.question) {
         setBankQuestions(bankQuestions.map(q => q.id === editingBankQuestionId ? (res.question as MockQuestion) : q));
-        alert("Soal berhasil diubah!");
+        alert("Question updated successfully!");
       }
     } else {
       res = await createBankQuestion({
@@ -465,7 +465,7 @@ export default function MockTestClient({
       });
       if (res.success && res.question) {
         setBankQuestions([res.question as MockQuestion, ...bankQuestions]);
-        alert("Soal berhasil ditambahkan ke Bank Soal!");
+        alert("Question successfully added to Question Bank!");
       }
     }
     
@@ -476,7 +476,7 @@ export default function MockTestClient({
         questionText: "", options: ["", ""], correctAnswer: "", explanation: "", topic: "", difficulty: "EASY", questionType: "MULTIPLE_CHOICE", imageFile: null
       });
     } else {
-      alert("Gagal menambahkan/mengubah soal: " + res.error);
+      alert("Failed to add/update question: " + res.error);
     }
     setIsBankSaving(false);
   };
@@ -486,7 +486,7 @@ export default function MockTestClient({
     if (confirm("Are you sure you want to delete this question?")) {
       const res = await deleteBankQuestion(id);
       if (res.success) setBankQuestions(bankQuestions.filter(q => q.id !== id));
-      else alert("Gagal menghapus soal: " + res.error);
+      else alert("Failed to delete questions: " + res.error);
     }
   };
 
@@ -505,7 +505,7 @@ export default function MockTestClient({
 
   const handleDeleteFolder = async (id: string, e: any) => {
     e.stopPropagation();
-    if (confirm("Hapus folder ini? Soal di dalamnya akan dikeluarkan ke luar folder.")) {
+    if (confirm("Delete this folder? Questions inside will be moved out of the folder.")) {
       const res = await deleteQuestionFolder(id);
       if (res.success) {
         if (activeFolderId === id) setActiveFolderId(null);
@@ -540,14 +540,14 @@ export default function MockTestClient({
 
   const handleDeleteAdminSelected = async () => {
     if (selectedAdminBankQuestionIds.length === 0) return;
-    if (confirm(`Hapus ${selectedAdminBankQuestionIds.length} soal terpilih?`)) {
+    if (confirm(`Delete \${selectedAdminBankQuestionIds.length} selected questions?`)) {
       const res = await deleteBankQuestionsInBulk(selectedAdminBankQuestionIds);
       if (res.success) {
         setBankQuestions(bankQuestions.filter(q => !selectedAdminBankQuestionIds.includes(q.id)));
         setSelectedAdminBankQuestionIds([]);
-        alert(`Berhasil menghapus ${res.deletedCount} soal.`);
+        alert(`Successfully deleted ${res.deletedCount} questions.`);
       } else {
-        alert("Gagal menghapus soal: " + res.error);
+        alert("Failed to delete questions: " + res.error);
       }
     }
   };
@@ -559,9 +559,9 @@ export default function MockTestClient({
       setBankQuestions(bankQuestions.map(q => selectedAdminBankQuestionIds.includes(q.id) ? { ...q, folderId: targetFolderId } : q));
       setSelectedAdminBankQuestionIds([]);
       // Update folder counts
-      alert(`Berhasil memindahkan soal.`);
+      alert(`Successfully moved questions.`);
     } else {
-      alert("Gagal memindahkan soal: " + res.error);
+      alert("Failed to move questions: " + res.error);
     }
   };
   if (!isUnlocked) {
@@ -595,7 +595,7 @@ export default function MockTestClient({
             </h1>
             <p className="text-slate-400 mt-1">
               {activeTab === "bankSoal"
-                ? "Kelola database soal, folder kategori, dan unggah soal sekaligus."
+                ? "Manage question database, categorized folders, and bulk upload questions."
                 : "Test your knowledge under real exam conditions with instant feedback."}
             </p>
           </div>
@@ -696,14 +696,14 @@ export default function MockTestClient({
                   <input
                     type="text"
                     required
-                    placeholder="Nama Folder..."
+                    placeholder="Folder Name..."
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                   />
                   <div className="flex gap-2 justify-end">
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setIsCreatingFolder(false)} className="text-slate-450 h-7 text-[10px] rounded-lg">Batal</Button>
-                    <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-[10px] rounded-lg">Buat</Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setIsCreatingFolder(false)} className="text-slate-450 h-7 text-[10px] rounded-lg">Cancel</Button>
+                    <Button type="submit" size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 text-[10px] rounded-lg">Create</Button>
                   </div>
                 </form>
               )}
@@ -715,23 +715,23 @@ export default function MockTestClient({
               {isBankFormOpen ? (
                 <div className="bg-slate-950 border border-slate-800 p-6 rounded-[2rem] space-y-4">
                   <h4 className="font-bold text-white text-base">
-                    {editingBankQuestionId ? "Ubah Soal" : "Tambah Soal Baru"}
+                    {editingBankQuestionId ? "Edit Question" : "Add New Question"}
                   </h4>
                   <form onSubmit={handleSaveBankQuestion} className="space-y-4">
                     <div>
-                      <label className="text-xs text-slate-400 font-bold block mb-1">Teks Soal</label>
+                      <label className="text-xs text-slate-400 font-bold block mb-1">Question Text</label>
                       <textarea
                         required
                         value={bankFormData.questionText}
                         onChange={(e) => setBankFormData({ ...bankFormData, questionText: e.target.value })}
-                        placeholder="Ketik soal di sini..."
+                        placeholder="Type question here..."
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none h-24 resize-y"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs text-slate-400 font-bold block mb-1">Tipe Soal</label>
+                        <label className="text-xs text-slate-400 font-bold block mb-1">Question Type</label>
                         <select
                           value={bankFormData.questionType}
                           onChange={(e) => {
@@ -751,30 +751,30 @@ export default function MockTestClient({
                       <div>
                         {bankFormData.questionType === "MULTIPLE_CHOICE" ? (
                           <>
-                            <label className="text-xs text-slate-400 font-bold block mb-1">Kunci Jawaban</label>
+                            <label className="text-xs text-slate-400 font-bold block mb-1">Correct Answer</label>
                             <select
                               required
                               value={bankFormData.correctAnswer}
                               onChange={(e) => setBankFormData({ ...bankFormData, correctAnswer: e.target.value })}
                               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
                             >
-                              <option value="" disabled>--- Pilih Opsi Kunci ---</option>
+                              <option value="" disabled>--- Select Correct Option ---</option>
                               {bankFormData.options.map((opt, idx) => (
                                 <option key={idx} value={opt}>
-                                  {`Opsi ${String.fromCharCode(65 + idx)}: ${opt || "(Kosong)"}`}
+                                  {`Option ${String.fromCharCode(65 + idx)}: ${opt || "(Empty)"}`}
                                 </option>
                               ))}
                             </select>
                           </>
                         ) : (
                           <>
-                            <label className="text-xs text-slate-400 font-bold block mb-1">Kunci Jawaban</label>
+                            <label className="text-xs text-slate-400 font-bold block mb-1">Correct Answer</label>
                             <input
                               type="text"
                               required
                               value={bankFormData.correctAnswer}
                               onChange={(e) => setBankFormData({ ...bankFormData, correctAnswer: e.target.value })}
-                              placeholder="Ketik kunci jawaban..."
+                              placeholder="Type exact answer..."
                               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
                             />
                           </>
@@ -784,7 +784,7 @@ export default function MockTestClient({
 
                     {bankFormData.questionType === "MULTIPLE_CHOICE" && (
                       <div className="space-y-3">
-                        <label className="text-xs text-slate-400 font-bold block">Pilihan Jawaban</label>
+                        <label className="text-xs text-slate-400 font-bold block">Answer Options</label>
                         {bankFormData.options.map((opt, i) => (
                           <div key={i} className="flex gap-2 items-center">
                             <span className="text-xs text-slate-500 font-bold">{String.fromCharCode(65 + i)}</span>
@@ -797,7 +797,7 @@ export default function MockTestClient({
                                 newOpts[i] = e.target.value;
                                 setBankFormData({ ...bankFormData, options: newOpts });
                               }}
-                              placeholder={`Opsi ${String.fromCharCode(65 + i)}`}
+                              placeholder={`Option ${String.fromCharCode(65 + i)}`}
                               className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
                             />
                             {bankFormData.options.length > 2 && (
@@ -820,7 +820,7 @@ export default function MockTestClient({
                             onClick={() => setBankFormData({ ...bankFormData, options: [...bankFormData.options, ""] })}
                             className="text-xs text-[#CA8E25] hover:underline flex items-center gap-1"
                           >
-                            <Plus className="w-3.5 h-3.5" /> Tambah Pilihan
+                            <Plus className="w-3.5 h-3.5" /> Add Option
                           </button>
                         )}
                       </div>
@@ -828,7 +828,7 @@ export default function MockTestClient({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs text-slate-400 font-bold block mb-1">Materi / Topik</label>
+                        <label className="text-xs text-slate-400 font-bold block mb-1">Topic / Subject</label>
                         <input
                           type="text"
                           value={bankFormData.topic}
@@ -838,7 +838,7 @@ export default function MockTestClient({
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-slate-400 font-bold block mb-1">Tingkat Kesulitan</label>
+                        <label className="text-xs text-slate-400 font-bold block mb-1">Difficulty</label>
                         <select
                           value={bankFormData.difficulty}
                           onChange={(e) => setBankFormData({ ...bankFormData, difficulty: e.target.value })}
@@ -852,17 +852,17 @@ export default function MockTestClient({
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-400 font-bold block mb-1">Penjelasan Kunci (Opsional)</label>
+                      <label className="text-xs text-slate-400 font-bold block mb-1">Explanation (Optional)</label>
                       <textarea
                         value={bankFormData.explanation}
                         onChange={(e) => setBankFormData({ ...bankFormData, explanation: e.target.value })}
-                        placeholder="Detail penjelasan jika diperlukan..."
+                        placeholder="Detailed explanation if needed..."
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none h-16 resize-y"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-400 font-bold block mb-1">Gambar Soal (Opsional)</label>
+                      <label className="text-xs text-slate-400 font-bold block mb-1">Question Image (Optional)</label>
                       <input
                         type="file"
                         accept="image/*"
@@ -888,7 +888,7 @@ export default function MockTestClient({
                         disabled={isBankSaving}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-5 font-bold"
                       >
-                        {isBankSaving ? "Menyimpan..." : "Simpan Soal"}
+                        {isBankSaving ? "Saving..." : "Save Question"}
                       </Button>
                     </div>
                   </form>
@@ -906,12 +906,12 @@ export default function MockTestClient({
                 <div className="relative z-10 w-full md:w-auto flex gap-3 flex-wrap">
                   {!isSelectingForTest && selectedAdminBankQuestionIds.length > 0 && (
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 p-1.5 rounded-xl">
-                       <span className="text-xs text-slate-400 font-bold px-2">{selectedAdminBankQuestionIds.length} Soal</span>
+                       <span className="text-xs text-slate-400 font-bold px-2">{selectedAdminBankQuestionIds.length} Questions</span>
                        <Button onClick={handleDeleteAdminSelected} className="bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white rounded-lg h-8 px-3 text-[10px] transition font-bold shadow-none border border-transparent">
                           Hapus
                        </Button>
                        <select onChange={(e) => handleMoveAdminSelected(e.target.value || null)} value="" className="bg-slate-800 text-slate-300 text-[10px] h-8 px-2 rounded-xl border-none focus:ring-0 font-bold cursor-pointer pr-8">
-                          <option value="" disabled>Pindah Ke...</option>
+                          <option value="" disabled>Move To...</option>
                           <option value="">[ All Unfiled ]</option>
                           {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                        </select>
@@ -919,20 +919,18 @@ export default function MockTestClient({
                   )}
                   {isSelectingForTest && selectedBankQuestionIds.length > 0 && (
                     <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 p-1.5 rounded-xl">
-                      <span className="text-xs text-slate-400 font-bold px-2">{selectedBankQuestionIds.length} Soal Terpilih</span>
+                      <span className="text-xs text-slate-400 font-bold px-2">{selectedBankQuestionIds.length} Questions Selected</span>
                       <Button onClick={() => { handleOpenCms(); setFormData({ ...formData, selectedQuestionIds: selectedBankQuestionIds }); }} className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg h-8 px-3 text-[10px] font-bold">
-                        Buat Ujian
+                        Create Exam
                       </Button>
                       <Button onClick={() => setIsSelectingForTest(false)} variant="ghost" className="text-slate-400 hover:text-white rounded-lg h-8 px-2 text-[10px]">
-                        Batal
+                        Cancel
                       </Button>
                     </div>
                   )}
-                  {!isSelectingForTest && (
-                    <Button onClick={() => { setIsSelectingForTest(true); setSelectedBankQuestionIds([]); }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-5 py-2.5 transition text-xs shadow-lg shadow-blue-600/20">Buat Ujian</Button>
-                  )}
+                  
                   <Button onClick={() => { setIsBankFormOpen(!isBankFormOpen); setEditingBankQuestionId(null); setBankFormData({ questionText: "", options: ["", ""], correctAnswer: "", explanation: "", topic: "", difficulty: "EASY", questionType: "MULTIPLE_CHOICE", imageFile: null }); }} className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl px-4 py-2.5 transition text-xs shadow-lg shadow-emerald-500/20">
-                    {isBankFormOpen && !editingBankQuestionId ? <X className="w-3.5 h-3.5 mr-1" /> : <Plus className="w-3.5 h-3.5 mr-1" />} {isBankFormOpen && !editingBankQuestionId ? "Batal" : "Tambah Soal"}
+                    {isBankFormOpen && !editingBankQuestionId ? <X className="w-3.5 h-3.5 mr-1" /> : <Plus className="w-3.5 h-3.5 mr-1" />} {isBankFormOpen && !editingBankQuestionId ? "Cancel" : "Add Question"}
                   </Button>
                 </div>
               </div>
@@ -942,7 +940,7 @@ export default function MockTestClient({
                 <Search className="w-4 h-4 text-slate-500 absolute left-4 top-3.5" />
                 <input
                   type="text"
-                  placeholder="Cari teks soal..."
+                  placeholder="Search question text..."
                   value={bankSearchQuery}
                   onChange={(e) => setBankSearchQuery(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-850 rounded-2xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-slate-700 transition"
@@ -982,7 +980,7 @@ export default function MockTestClient({
                              <p className="text-[15px] font-medium text-white leading-relaxed">{q.questionText}</p>
                              {(q as any).imageUrl && <img src={(q as any).imageUrl} className="max-h-40 rounded-xl border border-slate-800 mt-3 shadow-lg" />}
                              <div className="mt-3 flex gap-2">
-                               <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold rounded-lg inline-block">JAWABAN: {q.correctAnswer}</span>
+                               <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold rounded-lg inline-block">ANSWER: {q.correctAnswer}</span>
                              </div>
                            </div>
                         </div>
@@ -1013,7 +1011,7 @@ export default function MockTestClient({
                 })}
                 {filteredBankQuestions.length === 0 && (
                   <div className="py-20 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl">
-                    Belum ada soal dalam folder/kriteria pencarian ini.
+                    No questions found in this folder or search criteria.
                   </div>
                 )}
               </div>
@@ -1642,10 +1640,38 @@ export default function MockTestClient({
                 </select>
               </div>
 
-              {/* Questions Selection from Bank */}
+
+              {/* Folder Selection from Bank */}
               <div className="space-y-4 pt-3 border-t border-slate-800">
+                <div>
+                  <h4 className="font-bold text-white text-sm mb-2">Quick Import from Folders</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {folders.map(f => {
+                      const folderQuestionIds = bankQuestions.filter(q => (q as any).folderId === f.id).map(q => q.id);
+                      if (folderQuestionIds.length === 0) return null;
+                      const isFullySelected = folderQuestionIds.every(id => formData.selectedQuestionIds.includes(id));
+                      return (
+                        <div key={f.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] cursor-pointer font-medium transition ${isFullySelected ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"}`} onClick={() => {
+                          if (isFullySelected) {
+                            setFormData(prev => ({ ...prev, selectedQuestionIds: prev.selectedQuestionIds.filter(id => !folderQuestionIds.includes(id)) }));
+                          } else {
+                            const newIds = new Set([...formData.selectedQuestionIds, ...folderQuestionIds]);
+                            setFormData(prev => ({ ...prev, selectedQuestionIds: Array.from(newIds) }));
+                          }
+                        }}>
+                          <FolderOpen className="w-3.5 h-3.5" />
+                          <span>{f.name} ({folderQuestionIds.length} Qs)</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Individual Questions Selection */}
+              <div className="space-y-4 pt-4 border-t border-slate-800">
                 <div className="flex justify-between items-center">
-                  <h4 className="font-bold text-white text-sm">Select Questions from Bank ({formData.selectedQuestionIds.length} selected)</h4>
+                  <h4 className="font-bold text-white text-sm">Review & Select Questions ({formData.selectedQuestionIds.length} selected)</h4>
                 </div>
 
                 <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">

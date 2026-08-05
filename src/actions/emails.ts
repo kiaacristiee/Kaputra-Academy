@@ -24,13 +24,21 @@ function extractLearningMethodFromDraft(metadata: string | null): string | null 
   }
 }
 
-export async function getEmailDrafts() {
-  try {
-    await checkAdminAuth();
-    const drafts = await prisma.emailDraft.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    return { success: true, drafts };
+  export async function getEmailDrafts() {
+    try {
+      const user = await checkAdminAuth();
+      const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(user.role);
+
+      const allDrafts = await prisma.emailDraft.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Filter out PRIVATE learningMethod drafts for standard Admins
+      const drafts = isSuperAdmin 
+        ? allDrafts 
+        : allDrafts.filter(d => extractLearningMethodFromDraft(d.metadata) !== "PRIVATE");
+
+      return { success: true, drafts };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

@@ -9,7 +9,7 @@ import bcrypt from "bcryptjs";
 
 async function checkAdmin() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (!session?.user?.id || !["ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
   return session.user;
@@ -17,7 +17,13 @@ async function checkAdmin() {
 
 export async function createTeacherAssignment(data: { teacherId: string; courseId: string }) {
   try {
-    await checkAdmin();
+    const user = await checkAdmin();
+    
+    const course = await prisma.course.findUnique({ where: { id: data.courseId } });
+    if (course && course.learningMethod === "PRIVATE" && user.role === "ADMIN") {
+      throw new Error("Admins are not allowed to assign teachers to Private courses.");
+    }
+
     const assignment = await prisma.teacherAssignment.create({
       data: {
         teacherId: data.teacherId,
@@ -36,7 +42,16 @@ export async function createTeacherAssignment(data: { teacherId: string; courseI
 
 export async function deleteTeacherAssignment(id: string) {
   try {
-    await checkAdmin();
+    const user = await checkAdmin();
+    const assignment = await prisma.teacherAssignment.findUnique({
+      where: { id },
+      include: { course: true }
+    });
+    
+    if (assignment && assignment.course.learningMethod === "PRIVATE" && user.role === "ADMIN") {
+      throw new Error("Admins are not allowed to remove teacher assignments from Private courses.");
+    }
+
     await prisma.teacherAssignment.delete({ where: { id } });
     revalidatePath("/admin/teacher-assignments");
     return { success: true };
@@ -433,7 +448,7 @@ export async function updatePlacementTestConfig(config: { passingScore: number; 
 export async function toggleStudentDisabled(userId: string, isDisabled: boolean) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!session?.user?.id || !["ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
       throw new Error("Unauthorized");
     }
     await (prisma.user as any).update({

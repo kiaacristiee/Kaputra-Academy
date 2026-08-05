@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { getUserTermsStatus } from "@/actions/dashboard";
 import TermsModal from "@/components/TermsModal";
+import RoleSwitcher from "@/components/RoleSwitcher";
 import DevAccountSwitcher from "@/components/DevAccountSwitcher";
 import {
   BookOpen,
@@ -34,7 +35,8 @@ import {
   Megaphone,
   Plus,
   ClipboardList,
-  Mail
+  Mail,
+  HeadphonesIcon
 } from "lucide-react";
 
 
@@ -97,10 +99,12 @@ export default function DashboardLayout({
       { name: "Announcements", href: "/teacher/announcements", icon: Megaphone },
       { name: "Student List", href: "/teacher/students", icon: Users },
       { name: "Schedule", href: "/teacher/schedule", icon: Calendar },
+      { name: "Private Classes", href: "/teacher/private-classes", icon: Calendar },
       { name: "Attendance CMS", href: "/teacher/attendance", icon: CheckSquare },
       { name: "Videos CMS", href: "/teacher/videos", icon: Video },
       { name: "Materials CMS", href: "/teacher/materials", icon: FileText },
       { name: "Quizzes CMS", href: "/teacher/mock-tests", icon: Award },
+      { name: "Quiz Results", href: "/teacher/quiz-results", icon: ClipboardList },
       { name: "Salary Details", href: "/teacher/salary", icon: DollarSign },
       { name: "Academic Report CMS", href: "/teacher/report-cms", icon: FileEdit },
     ] : []),
@@ -118,6 +122,7 @@ export default function DashboardLayout({
       { name: "Schedule Management", href: "/admin/schedules", icon: Clock },
       { name: "CMS Content", href: "/admin/cms", icon: Layers },
       { name: "Email Workflow", href: "/admin/emails", icon: Mail },
+      { name: "Customer Service", href: "/admin/support", icon: HeadphonesIcon },
     ] : []),
     ...(isParent ? [
       { name: "Overview", href: "/parent", icon: LayoutDashboard },
@@ -187,6 +192,7 @@ export default function DashboardLayout({
           </Button>
           <div className="flex items-center gap-4 ml-auto">
             <DevAccountSwitcher />
+            <RoleSwitcher />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-white">Dashboard</p>
               <p className="text-xs text-slate-400 capitalize">{isTeacher ? "Instructor" : isAdmin ? "Administrator" : isParent ? "Parent" : "Student"}</p>

@@ -4,6 +4,8 @@ import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import TeacherAssignmentsClient from "./TeacherAssignmentsClient";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -12,9 +14,11 @@ export const metadata = {
 
 export default async function AdminTeacherAssignmentsPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
+
+  const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
 
   const [teachers, courses, assignments] = await Promise.all([
     prisma.user.findMany({
@@ -23,13 +27,19 @@ export default async function AdminTeacherAssignmentsPage() {
       orderBy: { name: "asc" },
     }),
     prisma.course.findMany({
-      select: { id: true, title: true },
+      where: {
+        ...(!isSuperAdmin && { learningMethod: { not: "PRIVATE" } })
+      },
+      select: { id: true, title: true, learningMethod: true },
       orderBy: { title: "asc" },
     }),
     prisma.teacherAssignment.findMany({
+      where: {
+        ...(!isSuperAdmin && { course: { learningMethod: { not: "PRIVATE" } } })
+      },
       include: {
         teacher: { select: { name: true } },
-        course: { select: { title: true } },
+        course: { select: { title: true, learningMethod: true } },
       },
       orderBy: { assignedAt: "desc" },
     }),
@@ -41,6 +51,7 @@ export default async function AdminTeacherAssignmentsPage() {
     teacherName: a.teacher.name,
     courseId: a.courseId,
     courseName: a.course.title,
+    learningMethod: a.course.learningMethod,
     assignedAt: a.assignedAt.toISOString(),
   }));
 

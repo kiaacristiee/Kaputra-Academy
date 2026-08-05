@@ -71,8 +71,11 @@ export default function DevAccountSwitcher() {
 
     if (result?.ok) {
       // Direct them to the correct dashboard based on role
-      const route = `/${role.toLowerCase()}`;
-      router.push(route);
+      const routePath = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(role) 
+        ? "/admin" 
+        : `/${role.toLowerCase()}`;
+        
+      router.push(routePath);
       router.refresh();
     } else {
       alert("Dev switch failed.");

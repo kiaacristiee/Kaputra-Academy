@@ -7,9 +7,11 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+import { isAdminRole } from "@/lib/permissions";
+
 async function checkAdmin() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     throw new Error("Unauthorized: Admin access required.");
   }
   return session;

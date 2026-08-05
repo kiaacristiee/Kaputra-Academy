@@ -7,6 +7,8 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export async function getCamps() {
   try {
     const camps = await prisma.campProgram.findMany({
@@ -34,7 +36,7 @@ export async function createCamp(data: {
 }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role !== "ADMIN") {
+    if (!session || !session.user || !isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -77,7 +79,7 @@ export async function updateCamp(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role !== "ADMIN") {
+    if (!session || !session.user || !isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -109,7 +111,7 @@ export async function updateCamp(
 export async function deleteCamp(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role !== "ADMIN") {
+    if (!session || !session.user || !isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -150,7 +152,7 @@ export async function getAvailableCamps(studentId: string) {
       if (session.user.id !== studentId) {
         return { success: false, error: "Unauthorized access" };
       }
-    } else if (session.user.role !== "ADMIN") {
+    } else if (!isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized role" };
     }
 
@@ -237,7 +239,7 @@ export async function enrollInCamp(studentId: string, campProgramId: string) {
       if (session.user.id !== studentId) {
         return { success: false, error: "Unauthorized access" };
       }
-    } else if (session.user.role !== "ADMIN") {
+    } else if (!isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized role" };
     }
 
@@ -349,7 +351,7 @@ export async function getPublishedCamps() {
 export async function uploadCampThumbnail(formData: FormData) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role !== "ADMIN") {
+    if (!session || !session.user || !isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized" };
     }
 

@@ -24,7 +24,7 @@ export default async function ReportPage() {
 
   // Student reports
   const reports = await prisma.academicReport.findMany({
-    where: { studentId: userId },
+    where: { studentId: userId, status: "SUBMITTED" },
     include: { course: true },
     orderBy: { updatedAt: "desc" },
   });
@@ -50,7 +50,7 @@ export default async function ReportPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8">
-          {reports.map((report) => (
+          {reports.map((report: any) => (
             <div key={report.id} className="bg-slate-950 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6">
               {/* Report Header */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-850 pb-4">
@@ -76,21 +76,28 @@ export default async function ReportPage() {
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <h4 className="text-sm font-bold text-slate-300 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-[#CA8E25]" /> Instructor Recommendations &amp; Notes
+                      <FileText className="w-4 h-4 text-[#CA8E25]" /> Comprehensive Overview
                     </h4>
-                    <div className="bg-slate-900/50 border border-slate-850 rounded-2xl p-4 text-xs text-slate-350 leading-relaxed min-h-[100px]">
-                      {report.teacherNotes || "No specific feedback has been recorded."}
+                    <div className="bg-slate-900/50 border border-slate-850 rounded-2xl p-4 text-xs text-slate-350 leading-relaxed space-y-4">
+                      {report.performanceSummary && <div><span className="font-bold text-slate-200">Performance:</span> {report.performanceSummary}</div>}
+                      {report.strengths && <div><span className="font-bold text-slate-200">Strengths:</span> {report.strengths}</div>}
+                      {report.improvements && <div><span className="font-bold text-slate-200">Areas to Improve:</span> {report.improvements}</div>}
+                      {report.learningProgress && <div><span className="font-bold text-slate-200">Learning Progress:</span> {report.learningProgress}</div>}
+                      {report.nextSteps && <div><span className="font-bold text-slate-200">Suggested Next Steps:</span> {report.nextSteps}</div>}
+                      {report.teacherNotes && <div><span className="font-bold text-slate-200">Teacher Notes:</span> {report.teacherNotes}</div>}
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-slate-300 flex items-center gap-1.5">
-                      <Award className="w-4 h-4 text-blue-450" /> Skill Assessment
-                    </h4>
-                    <div className="bg-slate-900/50 border border-slate-850 rounded-2xl p-4 text-xs text-slate-350 leading-relaxed">
-                      {report.skillAssessment || "Assessments will be published upon final module review."}
+                  {report.skillAssessment && (
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                        <Award className="w-4 h-4 text-blue-450" /> Skill Assessment
+                      </h4>
+                      <div className="bg-slate-900/50 border border-slate-850 rounded-2xl p-4 text-xs text-slate-350 leading-relaxed">
+                        {report.skillAssessment}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Right: Completed Modules */}
@@ -100,7 +107,7 @@ export default async function ReportPage() {
                   </h4>
                   <div className="bg-slate-900/50 border border-slate-850 rounded-2xl p-5 space-y-3">
                     {report.completedModules ? (
-                      report.completedModules.split(",").map((mod, idx) => (
+                      report.completedModules.split(",").map((mod: string, idx: number) => (
                         <div key={idx} className="flex items-center gap-2 text-xs text-slate-300">
                           <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
                           <span>{mod.trim()}</span>

@@ -40,6 +40,8 @@ model User {
   markedAttendances   Attendance[]        @relation("AttendanceMarker")
   teacherSchedules    Schedule[]          @relation("ScheduleTeacher")
   studentSchedules    Schedule[]          @relation("ScheduleStudent")
+  privateTeacherSessions PrivateSession[] @relation("SessionTeacher")
+  privateStudentSessions PrivateSession[] @relation("SessionStudent")
   salaries            Salary[]            @relation("SalaryTeacher")
   announcements       Announcement[]      @relation("AnnouncementTeacher")
   announcementReads   AnnouncementRead[]  @relation("AnnouncementReadStudent")
@@ -47,6 +49,8 @@ model User {
   targetedAnnouncements Announcement[]    @relation("AnnouncementTargets")
   reminders           Reminder[]          @relation("ReminderTeacher")
   campRegistrations   CampRegistration[]
+  liveChatSessions    LiveChatSession[]   @relation("ChatUser")
+  assignedChats       LiveChatSession[]   @relation("ChatAdmin")
 }
 
 model Category {
@@ -90,6 +94,7 @@ model Course {
   academicReports AcademicReport[]
   attendances   Attendance[]
   schedules     Schedule[]
+  privateSessions PrivateSession[]
   announcements Announcement[]
   reminders     Reminder[]
 }
@@ -355,19 +360,44 @@ model MockSubmission {
 }
 
 model AcademicReport {
-  id               String   @id @default(cuid())
-  studentId        String
-  courseId         String
-  grade            String
-  progress         Int      @default(0)
-  teacherNotes     String?  
-  skillAssessment  String?  
-  completedModules String?  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  studentId          String
+  courseId           String
+  grade              String
+  progress           Int      @default(0)
+  teacherNotes       String?  
+  skillAssessment    String?  
+  completedModules   String?  
+  status             String   @default("DRAFT") // DRAFT, SUBMITTED
+  performanceSummary String?
+  strengths          String?
+  improvements       String?
+  learningProgress   String?
+  nextSteps          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   student          User     @relation("ReportStudent", fields: [studentId], references: [id], onDelete: Cascade)
   course           Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model PrivateSession {
+  id          String   @id @default(cuid())
+  teacherId   String
+  studentId   String
+  courseId    String?  
+  date        DateTime
+  startTime   String
+  endTime     String
+  duration    Int?
+  status      String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, RESCHEDULED
+  attendance  String?  // PRESENT, ABSENT, EXCUSED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  teacher     User     @relation("SessionTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  student     User     @relation("SessionStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model Attendance {
@@ -533,4 +563,31 @@ model EmailDraft {
   metadata    String?  // JSON string
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model LiveChatSession {
+  id              String             @id @default(cuid())
+  userId          String?            // If logged in
+  guestName       String?            // If guest
+  guestEmail      String?            // If guest
+  guestPhone      String?            // If guest
+  status          String             @default("NEW") // "NEW", "WAITING_REPLY", "REPLIED", "CLOSED"
+  assignedAdminId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User?              @relation("ChatUser", fields: [userId], references: [id], onDelete: SetNull)
+  assignedAdmin   User?              @relation("ChatAdmin", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  messages        LiveChatMessage[]
+}
+
+model LiveChatMessage {
+  id         String          @id @default(cuid())
+  sessionId  String
+  senderType String          // "USER" or "ADMIN"
+  content    String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  session    LiveChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }

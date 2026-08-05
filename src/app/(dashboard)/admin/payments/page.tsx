@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/db";
 import AdminPaymentsClient from "./AdminPaymentsClient";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -12,12 +14,22 @@ export const metadata = {
 
 export default async function AdminPaymentsPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 
+  const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
+
   // Fetch ALL invoices with relations
   const allInvoices = await prisma.invoice.findMany({
+    where: {
+      ...(!isSuperAdmin && {
+        OR: [
+          { learningMethod: null },
+          { learningMethod: { not: "PRIVATE" } }
+        ]
+      })
+    },
     include: {
       student: {
         select: { id: true, name: true, studentIdStr: true, parent: { select: { name: true, email: true } } },

@@ -7,7 +7,13 @@ import { authOptions } from "@/lib/auth";
 
 export async function getCourses() {
   try {
+    const session = await getServerSession(authOptions);
+    const isSuperAdmin = session?.user?.role && ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
+
     const courses = await prisma.course.findMany({
+      where: {
+        ...(!isSuperAdmin && { learningMethod: { not: "PRIVATE" } })
+      },
       include: {
         category: true,
         teachers: {

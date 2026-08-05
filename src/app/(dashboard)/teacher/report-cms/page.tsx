@@ -59,6 +59,12 @@ export default async function TeacherReportCMSPage() {
     teacherNotes: r.teacherNotes,
     skillAssessment: r.skillAssessment,
     completedModules: r.completedModules,
+    status: r.status,
+    performanceSummary: r.performanceSummary,
+    strengths: r.strengths,
+    improvements: r.improvements,
+    learningProgress: r.learningProgress,
+    nextSteps: r.nextSteps,
   }));
 
   return (

@@ -408,7 +408,6 @@ export default function EmailsClient({ initialDrafts }: { initialDrafts: EmailDr
                     <div className="pt-6 border-t border-slate-800">
                       <h4 className="text-xs font-bold text-white mb-3">Workflow Actions</h4>
                       
-                      {canManage(getLearningMethod(selectedDraft.metadata)) ? (
                         <>
                           {selectedDraft.status === "PENDING_APPROVAL" && (
                             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -464,12 +463,6 @@ export default function EmailsClient({ initialDrafts }: { initialDrafts: EmailDr
                             <Trash2 className="w-4 h-4" /> Delete Draft
                           </Button>
                         </>
-                      ) : (
-                        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-amber-400 text-xs font-semibold flex items-center justify-center gap-2">
-                          <ShieldAlert className="h-4 w-4" />
-                          View Only: Super Admin access required for Private class emails.
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

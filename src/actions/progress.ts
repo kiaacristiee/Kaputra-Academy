@@ -60,6 +60,12 @@ export async function createStudentReport(data: {
         teacherNotes: data.teacherNotes,
         skillAssessment: data.skillAssessment,
         completedModules: data.completedModules,
+        status: "DRAFT",
+        performanceSummary: "",
+        strengths: "",
+        improvements: "",
+        learningProgress: "",
+        nextSteps: ""
       },
     });
     revalidatePath("/teacher/progress-cms");
@@ -78,6 +84,12 @@ export async function updateAcademicReport(
     teacherNotes: string;
     skillAssessment: string;
     completedModules: string;
+    performanceSummary?: string;
+    strengths?: string;
+    improvements?: string;
+    learningProgress?: string;
+    nextSteps?: string;
+    status?: string;
   }
 ) {
   try {
@@ -90,6 +102,12 @@ export async function updateAcademicReport(
         teacherNotes: data.teacherNotes,
         skillAssessment: data.skillAssessment,
         completedModules: data.completedModules,
+        performanceSummary: data.performanceSummary,
+        strengths: data.strengths,
+        improvements: data.improvements,
+        learningProgress: data.learningProgress,
+        nextSteps: data.nextSteps,
+        ...(data.status && { status: data.status })
       },
     });
     revalidatePath("/teacher/report-cms");
@@ -109,6 +127,72 @@ export async function deleteAcademicReport(reportId: string) {
     revalidatePath("/teacher/report-cms");
     revalidatePath("/teacher/progress-cms");
     return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function generateDraftReport(studentId: string, courseId: string) {
+  try {
+    await checkTeacher();
+
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      include: {
+        mockSubmissions: {
+          where: { mockTest: { courseId } }
+        },
+        attendanceRecords: {
+          where: { courseId }
+        }
+      }
+    });
+
+    if (!student) throw new Error("Student not found");
+
+    const submissions = student.mockSubmissions;
+    let avgScore = 0;
+    if (submissions.length > 0) {
+      avgScore = submissions.reduce((acc, sub) => acc + sub.score, 0) / submissions.length;
+    }
+
+    const attendances = student.attendanceRecords;
+    const present = attendances.filter(a => a.status === "PRESENT").length;
+    const attPercent = attendances.length > 0 ? (present / attendances.length) * 100 : 100;
+
+    let grade = "B";
+    if (avgScore >= 90) grade = "A";
+    else if (avgScore >= 80) grade = "A-";
+    else if (avgScore >= 70) grade = "B";
+    else if (avgScore >= 60) grade = "C";
+    else grade = "D";
+
+    const performanceSummary = `Based on the latest evaluations, ${student.name} maintains a solid ${Math.round(avgScore)}% average across recent mock test submissions, supported by a ${Math.round(attPercent)}% attendance record. Overall performance showcases steady engagement.`;
+    const strengths = avgScore > 80 ? "Exhibits excellent grasp of core concepts and maintains focus during sessions." : "Demonstrates willingness to learn and participates in class activities.";
+    const improvements = avgScore < 70 ? "Needs more time reviewing introductory components and practicing time management." : "Can further enhance critical thinking applications on advanced questions.";
+    const learningProgress = `Has consistently shown ${avgScore > 75 ? "strong" : "moderate"} upward trajectory in the curriculum, successfully grasping key learning objectives based on current module milestones.`;
+    const nextSteps = "We recommend continuing the current pace while assigning supplementary practice sets targeting weaker modules before the next summative assessment.";
+
+    const item = await prisma.academicReport.create({
+      data: {
+        studentId,
+        courseId,
+        grade,
+        progress: Math.min(100, Math.round(avgScore || 50)),
+        status: "DRAFT",
+        performanceSummary,
+        strengths,
+        improvements,
+        learningProgress,
+        nextSteps,
+        teacherNotes: "Generated draft structure.",
+        skillAssessment: "",
+        completedModules: ""
+      }
+    });
+
+    revalidatePath("/teacher/report-cms");
+    return { success: true, item };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

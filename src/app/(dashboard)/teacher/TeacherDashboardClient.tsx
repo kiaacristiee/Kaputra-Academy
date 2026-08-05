@@ -49,14 +49,6 @@ export default function TeacherDashboardClient({
           <p className="text-slate-400">Here's what's happening with your classes and students today.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/api/auth/signout">
-            <Button
-              className="bg-red-600 text-white hover:bg-red-700 rounded-xl gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </Link>
         </div>
       </div>
 

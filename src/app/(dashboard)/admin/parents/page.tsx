@@ -4,6 +4,8 @@ import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import ParentsClient from "./ParentsClient";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -12,7 +14,7 @@ export const metadata = {
 
 export default async function AdminParentsPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 

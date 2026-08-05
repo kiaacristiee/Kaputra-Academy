@@ -31,6 +31,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             email: user.email,
             role: user.role,
+            originalRole: user.role,
             studentIdStr: user.studentIdStr,
           };
         }
@@ -74,6 +75,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           role: user.role,
+          originalRole: user.role, // Set original role on login
           studentIdStr: user.studentIdStr,
         };
       }
@@ -84,6 +86,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.originalRole = (user as any).originalRole;
         token.studentIdStr = user.studentIdStr;
       }
       
@@ -126,6 +129,10 @@ export const authOptions: NextAuthOptions = {
             token.viewingAsStudentId = null;
             token.studentIdStr = null;
           }
+        } else if (session.action === "SWITCH_TO_TEACHER" && ["OWNER", "CO_OWNER", "SUPER_ADMIN"].includes(token.originalRole as string)) {
+          token.role = "TEACHER";
+        } else if (session.action === "SWITCH_TO_SUPER_ADMIN" && ["OWNER", "CO_OWNER", "SUPER_ADMIN"].includes(token.originalRole as string)) {
+          token.role = "SUPER_ADMIN"; // Or the original high role, but they requested SUPER_ADMIN dashboard specifically
         }
       }
       
@@ -135,6 +142,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.originalRole = token.originalRole as string | null | undefined;
         session.user.studentIdStr = token.studentIdStr as string | null | undefined;
         
         session.user.viewingAsStudentId = token.viewingAsStudentId as string | null | undefined;

@@ -4,13 +4,15 @@ import { redirect } from "next/navigation";
 import CmsClient from "./CmsClient";
 import { getContentBlocks } from "@/actions/cms";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const metadata = {
   title: "CMS Settings | Admin Dashboard",
 };
 
 export default async function AdminCmsPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 

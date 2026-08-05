@@ -47,7 +47,7 @@ export default function LoginContent() {
             setLoading(false);
             
             const role = sessionData?.user?.role;
-            if (role === "ADMIN") {
+            if (role === "ADMIN" || role === "SUPER_ADMIN") {
                 router.push("/admin");
             } else if (role === "TEACHER") {
                 router.push("/teacher");

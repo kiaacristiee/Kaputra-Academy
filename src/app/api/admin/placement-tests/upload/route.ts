@@ -5,10 +5,12 @@ import prisma from "@/lib/db";
 import * as xlsx from "xlsx";
 import AdmZip from "adm-zip";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

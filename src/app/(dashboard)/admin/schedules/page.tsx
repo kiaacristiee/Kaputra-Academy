@@ -4,6 +4,8 @@ import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import SchedulesClient from "./SchedulesClient";
 
+import { isAdminRole } from "@/lib/permissions";
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -12,12 +14,17 @@ export const metadata = {
 
 export default async function AdminSchedulesPage() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || session.user.role !== "ADMIN") {
+  if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 
+  const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
+
   // Fetch lists
   const schedules = await prisma.schedule.findMany({
+    where: {
+      ...(!isSuperAdmin && { type: { not: "PRIVATE" } })
+    },
     include: {
       course: { select: { title: true } },
       teacher: { select: { name: true } },

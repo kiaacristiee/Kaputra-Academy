@@ -21,3 +21,18 @@ export function canManageEnrollment(
 
   return false;
 }
+
+export function isAdminRole(userRole?: string | null): boolean {
+  if (!userRole) return false;
+  const normalized = userRole.toUpperCase();
+  return ["ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(normalized);
+}
+
+// Determines if an admin model is authorized to manage strictly private classes & payments
+export function canManagePrivateClasses(userRole?: string | null): boolean {
+  if (!userRole) return false;
+  const normalized = userRole.toUpperCase();
+  // Standard ADMIN is locked out of this.
+  return ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(normalized);
+}
+

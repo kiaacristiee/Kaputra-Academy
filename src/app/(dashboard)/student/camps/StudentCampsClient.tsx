@@ -326,7 +326,7 @@ export default function StudentCampsClient({
                         Enter Camp <ChevronRight className="w-4 h-4" />
                       </Button>
                     ) : (
-                      <Link href={`/catalog`} className="w-full">
+                      <Link href={`/student/enroll`} className="w-full">
                         <Button 
                           variant="outline"
                           className="w-full border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white rounded-xl py-2 text-xs flex items-center justify-center gap-2"

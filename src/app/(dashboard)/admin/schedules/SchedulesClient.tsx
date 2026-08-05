@@ -5,6 +5,7 @@ import { Calendar, Plus, Trash2, Edit2, CheckCircle2, AlertCircle, CalendarRange
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { createSchedule, updateSchedule, deleteSchedule, saveHolidays } from "@/actions/adminExtra";
+import { useCanManageEnrollment } from "@/hooks/usePermissions";
 
 interface Course {
   id: string;
@@ -59,6 +60,7 @@ export default function SchedulesClient({
   students,
   initialHolidays,
 }: Props) {
+  const { canManage, isSuperAdmin } = useCanManageEnrollment();
   const [activeTab, setActiveTab] = useState<"calendar" | "holidays">("calendar");
   const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
   const [holidays, setHolidays] = useState<Holiday[]>(initialHolidays);
@@ -364,29 +366,31 @@ export default function SchedulesClient({
                           </div>
 
                           <div className="flex justify-end gap-2 pt-3 border-t border-slate-900 mt-4">
-                            <button
-                              onClick={() => {
-                                setScheduleForm({
-                                  courseId: slot.courseId || "",
-                                  teacherId: slot.teacherId,
-                                  studentId: slot.studentId || "",
-                                  dayOfWeek: slot.dayOfWeek,
-                                  startTime: slot.startTime,
-                                  endTime: slot.endTime,
-                                  type: slot.type,
-                                });
-                                setEditModal(slot);
-                              }}
-                              className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-950 transition"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSchedule(slot.id)}
-                              className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => {
+                                  setScheduleForm({
+                                    courseId: slot.courseId || "",
+                                    teacherId: slot.teacherId,
+                                    studentId: slot.studentId || "",
+                                    dayOfWeek: slot.dayOfWeek,
+                                    startTime: slot.startTime,
+                                    endTime: slot.endTime,
+                                    type: slot.type,
+                                  });
+                                  setEditModal(slot);
+                                }}
+                                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-950 transition"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSchedule(slot.id)}
+                                className="text-red-400 hover:text-red-300 p-1.5 rounded-lg hover:bg-red-500/10 transition"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
                           </div>
                         </div>
                       ))}
@@ -508,7 +512,7 @@ export default function SchedulesClient({
                     onChange={(e) => setScheduleForm((p) => ({ ...p, type: e.target.value }))}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
                   >
-                    <option value="PRIVATE">PRIVATE</option>
+                    {isSuperAdmin && <option value="PRIVATE">PRIVATE</option>}
                     <option value="SEMI_PRIVATE">SEMI PRIVATE</option>
                   </select>
                 </div>

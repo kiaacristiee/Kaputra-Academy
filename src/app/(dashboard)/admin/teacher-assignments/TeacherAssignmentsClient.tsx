@@ -5,6 +5,7 @@ import { UserCheck, BookOpen, Plus, Trash2, CheckCircle2, AlertCircle } from "lu
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { createTeacherAssignment, deleteTeacherAssignment } from "@/actions/adminExtra";
+import { useCanManageEnrollment } from "@/hooks/usePermissions";
 
 interface Teacher {
   id: string;
@@ -16,6 +17,7 @@ interface Teacher {
 interface Course {
   id: string;
   title: string;
+  learningMethod: string;
 }
 
 interface Assignment {
@@ -24,6 +26,7 @@ interface Assignment {
   teacherName: string;
   courseId: string;
   courseName: string;
+  learningMethod: string;
   assignedAt: string;
 }
 
@@ -34,6 +37,7 @@ interface Props {
 }
 
 export default function TeacherAssignmentsClient({ teachers, courses, assignments: initialAssignments }: Props) {
+  const { canManage } = useCanManageEnrollment();
   const [assignments, setAssignments] = useState(initialAssignments);
   const [form, setForm] = useState({ teacherId: "", courseId: "" });
   const [loading, setLoading] = useState(false);
@@ -66,6 +70,7 @@ export default function TeacherAssignmentsClient({ teachers, courses, assignment
           teacherName: teacher?.name || "",
           courseId: form.courseId,
           courseName: course?.title || "",
+          learningMethod: course?.learningMethod || "SEMI_PRIVATE",
           assignedAt: new Date(res.assignment!.assignedAt).toISOString(),
         },
         ...prev,
@@ -144,7 +149,7 @@ export default function TeacherAssignmentsClient({ teachers, courses, assignment
               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
             >
               <option value="">Select course...</option>
-              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+              {courses.filter(c => canManage(c.learningMethod)).map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </div>
         </div>

@@ -20,6 +20,7 @@ export default async function ParentReportsPage() {
     where: { parentId: session.user.id },
     include: {
       academicReports: {
+        where: { status: "SUBMITTED" },
         include: { course: { select: { title: true } } },
         orderBy: { updatedAt: "desc" },
       },
@@ -40,7 +41,7 @@ export default async function ParentReportsPage() {
 
       {children.length > 0 ? (
         <div className="space-y-10">
-          {children.map((child) => (
+          {children.map((child: any) => (
             <div key={child.id} className="space-y-5">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
@@ -54,7 +55,7 @@ export default async function ParentReportsPage() {
 
               {child.academicReports.length > 0 ? (
                 <div className="space-y-4">
-                  {child.academicReports.map((r) => (
+                  {child.academicReports.map((r: any) => (
                     <div key={r.id} className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-800">
                         <div>
@@ -83,14 +84,44 @@ export default async function ParentReportsPage() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {r.performanceSummary && (
+                          <div className="col-span-1 sm:col-span-2 bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Performance Summary</p>
+                            <p className="text-sm text-slate-300 leading-relaxed">{r.performanceSummary}</p>
+                          </div>
+                        )}
+                        {r.strengths && (
+                          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Strengths</p>
+                            <p className="text-xs text-slate-300 leading-relaxed">{r.strengths}</p>
+                          </div>
+                        )}
+                        {r.improvements && (
+                          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Areas for Improvement</p>
+                            <p className="text-xs text-slate-300 leading-relaxed">{r.improvements}</p>
+                          </div>
+                        )}
+                        {r.learningProgress && (
+                          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Learning Progress</p>
+                            <p className="text-xs text-slate-300 leading-relaxed">{r.learningProgress}</p>
+                          </div>
+                        )}
+                        {r.nextSteps && (
+                          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase">Suggested Next Steps</p>
+                            <p className="text-xs text-slate-300 leading-relaxed">{r.nextSteps}</p>
+                          </div>
+                        )}
                         {r.completedModules && (
-                          <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
                             <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Completed Modules</p>
                             <p className="text-xs text-slate-300">{r.completedModules}</p>
                           </div>
                         )}
                         {r.skillAssessment && (
-                          <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
                             <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Skill Assessment</p>
                             <p className="text-xs text-slate-300">{r.skillAssessment}</p>
                           </div>
@@ -98,8 +129,8 @@ export default async function ParentReportsPage() {
                       </div>
 
                       {r.teacherNotes && (
-                        <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-1">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase">Teacher's Notes</p>
+                        <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-1 mt-4">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">Teacher's Additional Notes</p>
                           <p className="text-sm text-slate-300 leading-relaxed">"{r.teacherNotes}"</p>
                         </div>
                       )}
