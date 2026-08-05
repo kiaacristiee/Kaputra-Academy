@@ -124,7 +124,8 @@ export default async function AdminDashboard() {
     },
     orderBy: {
       createdAt: "desc"
-    }
+    },
+    take: 50 // Limit to avoid massive DB pull on dashboard
   });
 
   return (

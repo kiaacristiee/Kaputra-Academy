@@ -20,6 +20,7 @@ export default async function AdminEmailsPage() {
 
   const drafts = await prisma.emailDraft.findMany({
     orderBy: { createdAt: "desc" },
+    take: 50,
   });
 
   return <EmailsClient initialDrafts={drafts} />;

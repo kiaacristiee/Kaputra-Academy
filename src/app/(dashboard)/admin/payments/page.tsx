@@ -41,6 +41,7 @@ export default async function AdminPaymentsPage() {
       },
     },
     orderBy: { updatedAt: "desc" },
+    take: 100, // Limit invoices to recent 100 to prevent slow load times
   });
 
   const courses = await prisma.course.findMany({
