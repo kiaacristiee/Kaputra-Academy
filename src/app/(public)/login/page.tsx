@@ -8,7 +8,7 @@ export default async function Login() {
   const session = await getServerSession(authOptions);
   if (session?.user) {
     const role = session.user.role;
-    if (role === "ADMIN") redirect("/admin");
+    if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "OWNER" || role === "CO_OWNER") redirect("/admin");
     if (role === "TEACHER") redirect("/teacher");
     if (role === "PARENT") redirect("/parent");
     if (role === "STUDENT") redirect("/student");

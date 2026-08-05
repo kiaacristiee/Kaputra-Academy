@@ -47,19 +47,17 @@ export default function LoginContent() {
             setLoading(false);
             
             const role = sessionData?.user?.role;
-            if (role === "ADMIN" || role === "SUPER_ADMIN") {
-                router.push("/admin");
+            if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "OWNER" || role === "CO_OWNER") {
+                window.location.href = "/admin";
             } else if (role === "TEACHER") {
-                router.push("/teacher");
+                window.location.href = "/teacher";
             } else if (role === "PARENT") {
-                router.push("/parent");
+                window.location.href = "/parent";
             } else if (role === "STUDENT") {
-                router.push("/student");
+                window.location.href = "/student";
             } else {
-                router.push("/");
+                window.location.href = "/";
             }
-            
-            router.refresh();
         }
     };
 

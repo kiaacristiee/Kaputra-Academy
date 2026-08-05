@@ -75,8 +75,7 @@ export default function DevAccountSwitcher() {
         ? "/admin" 
         : `/${role.toLowerCase()}`;
         
-      router.push(routePath);
-      router.refresh();
+      window.location.href = routePath;
     } else {
       alert("Dev switch failed.");
     }

@@ -38,12 +38,11 @@ export default function RoleSwitcher() {
 
     if (role === "TEACHER") {
       await update({ action: "SWITCH_TO_TEACHER" });
-      router.push("/teacher");
+      window.location.href = "/teacher";
     } else {
       await update({ action: "SWITCH_TO_SUPER_ADMIN" });
-      router.push("/admin");
+      window.location.href = "/admin";
     }
-    router.refresh();
   };
 
   return (

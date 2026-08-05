@@ -62,8 +62,7 @@ export default function DashboardLayout({
 
   const handleReturnToParent = async () => {
     await update({ action: "SWITCH_TO_PARENT" });
-    router.push("/parent");
-    router.refresh();
+    window.location.href = "/parent";
   };
 
   useEffect(() => {
