@@ -1,5 +1,23 @@
 import { transporter } from "@/lib/transporter";
 import prisma from "@/lib/db";
+import { headers } from "next/headers";
+
+async function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  
+  try {
+    const headerStore = await headers();
+    const host = headerStore.get('x-forwarded-host') || headerStore.get('host');
+    const protocol = headerStore.get('x-forwarded-proto') || (host?.includes('localhost') ? 'http' : 'https');
+    if (host) return `${protocol}://${host}`;
+  } catch (e) {
+    // headers() might throw outside of request context
+  }
+  
+  return process.env.NEXTAUTH_URL || "http://localhost:3000";
+}
 
 export interface ActivationEmailParams {
   parentEmail: string;
@@ -12,7 +30,7 @@ export interface ActivationEmailParams {
 }
 
 export async function sendActivationEmail(params: ActivationEmailParams) {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const baseUrl = await getBaseUrl();
   const placementTestLink = params.testCode
     ? `${baseUrl}/placement-test?studentId=${encodeURIComponent(params.studentId)}&code=${encodeURIComponent(params.testCode)}`
     : null;
@@ -516,7 +534,7 @@ export async function sendCampEnrollmentConfirmationEmail(
 }
 
 export async function sendAdminActivationEmail(email: string, name: string, token: string) {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const baseUrl = await getBaseUrl();
   const activationLink = `${baseUrl}/activate-admin?token=${token}`;
 
   const emailHtml = `
@@ -560,7 +578,7 @@ export async function sendAdminActivationEmail(email: string, name: string, toke
 }
 
 export async function sendAdminPasswordResetEmail(email: string, name: string, token: string) {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const baseUrl = await getBaseUrl();
   const resetLink = `${baseUrl}/activate-admin?token=${token}`; // Utilizing the same page for password setup
 
   const emailHtml = `
