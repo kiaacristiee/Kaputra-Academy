@@ -36,7 +36,8 @@ import {
   Plus,
   ClipboardList,
   Mail,
-  HeadphonesIcon
+  HeadphonesIcon,
+  Shield
 } from "lucide-react";
 
 
@@ -57,6 +58,9 @@ export default function DashboardLayout({
   const isAdmin = pathname.startsWith("/admin");
   const isStudent = pathname.startsWith("/student");
   const isParent = pathname.startsWith("/parent");
+
+  const role = session?.user?.role || "";
+  const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(role);
 
   const isViewingAsStudent = !!session?.user?.viewingAsStudentId;
 
@@ -121,7 +125,8 @@ export default function DashboardLayout({
       { name: "Schedule Management", href: "/admin/schedules", icon: Clock },
       { name: "CMS Content", href: "/admin/cms", icon: Layers },
       { name: "Email Workflow", href: "/admin/emails", icon: Mail },
-      { name: "Customer Service", href: "/admin/support", icon: HeadphonesIcon },
+      { name: "Support", href: "/admin/support", icon: HeadphonesIcon },
+      ...(isSuperAdmin ? [{ name: "Admin Management", href: "/admin/manage-admins", icon: Shield }] : []),
     ] : []),
     ...(isParent ? [
       { name: "Overview", href: "/parent", icon: LayoutDashboard },

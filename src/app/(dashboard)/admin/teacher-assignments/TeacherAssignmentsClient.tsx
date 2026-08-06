@@ -17,7 +17,6 @@ interface Teacher {
 interface Course {
   id: string;
   title: string;
-  learningMethod: string;
 }
 
 interface Assignment {
@@ -26,7 +25,6 @@ interface Assignment {
   teacherName: string;
   courseId: string;
   courseName: string;
-  learningMethod: string;
   assignedAt: string;
 }
 
@@ -70,7 +68,6 @@ export default function TeacherAssignmentsClient({ teachers, courses, assignment
           teacherName: teacher?.name || "",
           courseId: form.courseId,
           courseName: course?.title || "",
-          learningMethod: course?.learningMethod || "SEMI_PRIVATE",
           assignedAt: new Date(res.assignment!.assignedAt).toISOString(),
         },
         ...prev,
@@ -149,7 +146,7 @@ export default function TeacherAssignmentsClient({ teachers, courses, assignment
               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
             >
               <option value="">Select course...</option>
-              {courses.filter(c => canManage(c.learningMethod)).map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+              {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </div>
         </div>

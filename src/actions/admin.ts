@@ -24,7 +24,7 @@ export async function approveRegistration(registrationId: string) {
       throw new Error("Registration not found");
     }
 
-    const learningMethod = registration.learningMethod || registration.course?.learningMethod || "SEMI_PRIVATE";
+    const learningMethod = registration.learningMethod || "SEMI_PRIVATE";
     if (!canManageEnrollment(session.user.role, learningMethod)) {
       throw new Error("This action requires super admin access for Private class enrollments");
     }
@@ -175,7 +175,7 @@ export async function rejectRegistration(registrationId: string) {
       throw new Error("Registration not found");
     }
 
-    const learningMethod = registration.learningMethod || registration.course?.learningMethod || "SEMI_PRIVATE";
+    const learningMethod = registration.learningMethod || "SEMI_PRIVATE";
     if (!canManageEnrollment(session.user.role, learningMethod)) {
       throw new Error("This action requires super admin access for Private class enrollments");
     }

@@ -4,6 +4,8 @@ import prisma from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
+import { randomBytes } from "crypto";
+import { sendAdminActivationEmail } from "@/lib/email";
 
 export async function getSuperAdminDashboardData() {
   const session = await getServerSession(authOptions);
@@ -459,5 +461,213 @@ export async function getSuperAdminDashboardData() {
       success: false,
       error: err.message || "Failed to load dashboard data."
     };
+  }
+}
+
+export async function createSuperAdmin(data: { name: string; email: string }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Only owners can create Super Admins.");
+    }
+
+    const { name, email } = data;
+    if (!name || !email) throw new Error("Name and Email are required.");
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      throw new Error("A user with this email already exists.");
+    }
+
+    const token = randomBytes(32).toString("hex");
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24); // 24 hours validity
+
+    const bcrypt = require("bcryptjs");
+    const temporaryPassword = randomBytes(8).toString("hex");
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+    const newAdmin = await prisma.user.create({
+      data: {
+        name,
+        email,
+        role: "SUPER_ADMIN",
+        isActive: false, // Inactive until password is set
+        activationToken: token,
+        activationExpires: expires,
+        passwordHash: passwordHash,
+      },
+    });
+
+    await sendAdminActivationEmail(newAdmin.email, newAdmin.name, token);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Failed to create super admin:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ----------------------------------------------------
+// STANDARD ADMIN MANAGEMENT
+// ----------------------------------------------------
+
+export async function getStandardAdmins() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+    throw new Error("Unauthorized access.");
+  }
+  
+  const admins = await prisma.user.findMany({
+    where: { role: "ADMIN" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      isActive: true,
+      isDisabled: true,
+      createdAt: true,
+      // last login could be inferred from sessions or generic. For now just include standard fields.
+    },
+    orderBy: { createdAt: "desc" }
+  });
+  
+  return { success: true, admins };
+}
+
+export async function createStandardAdmin(data: { name: string; email: string; phone?: string; position?: string }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized access.");
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) {
+      throw new Error("User with this email already exists.");
+    }
+
+    const { name, email, phone } = data;
+    const bcrypt = require("bcryptjs");
+    const temporaryPassword = randomBytes(8).toString("hex");
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    const token = randomBytes(32).toString("hex");
+    
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24);
+
+    const newAdmin = await prisma.user.create({
+      data: {
+        name,
+        email,
+        phone,
+        role: "ADMIN",
+        isActive: false,
+        passwordHash,
+        activationToken: token,
+        activationExpires: expires,
+      }
+    });
+
+    await sendAdminActivationEmail(newAdmin.email, newAdmin.name, token);
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function updateStandardAdmin(id: string, data: { name: string; email: string; phone?: string }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized access.");
+    }
+    
+    // Prevent affecting non-ADMIN users
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+      }
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function toggleAdminStatus(id: string, isDisabled: boolean) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized access.");
+    }
+    
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+
+    await prisma.user.update({
+      where: { id },
+      data: { isDisabled }
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+export async function deleteStandardAdmin(id: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized access.");
+    }
+    
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+
+    await prisma.user.delete({ where: { id } });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+import { sendAdminPasswordResetEmail } from "@/lib/email";
+
+export async function adminPasswordReset(id: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Unauthorized access.");
+    }
+
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+
+    const token = randomBytes(32).toString("hex");
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24);
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        activationToken: token,
+        activationExpires: expires,
+      }
+    });
+
+    await sendAdminPasswordResetEmail(target.email, target.name, token);
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
 }

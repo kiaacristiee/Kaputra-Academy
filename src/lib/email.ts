@@ -514,3 +514,91 @@ export async function sendCampEnrollmentConfirmationEmail(
 
   return { success: true };
 }
+
+export async function sendAdminActivationEmail(email: string, name: string, token: string) {
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const activationLink = `${baseUrl}/activate-admin?token=${token}`;
+
+  const emailHtml = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;background:#0F172A;color:#E2E8F0;border-radius:12px;border:1px solid #1E293B;">
+  <h2 style="color:#CA8E25;margin:0 0 5px 0;">Kaputra Academy</h2>
+  <p style="color:#94A3B8;margin:0 0 20px 0;font-size:13px;">Admin Account Activation</p>
+  <hr style="border-color:#1E293B;margin-bottom:20px;"/>
+
+  <p>Dear ${name},</p>
+  <p>You have been invited to join the <strong>Kaputra Academy</strong> administrative team.</p>
+
+  <div style="background-color:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;margin:20px 0;">
+    <h3 style="margin:0 0 14px 0;color:#CA8E25;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">
+      🔑 Account Activation
+    </h3>
+    <p style="color:#CBD5E1;font-size:13px;margin:0 0 14px 0;">
+      Click the button below to set your password and activate your admin account. This link expires in 24 hours.
+    </p>
+    <a href="${activationLink}" style="display:inline-block;background-color:#10B981;color:#FFF;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+      Activate Admin Account
+    </a>
+  </div>
+
+  <p style="margin-top:25px;color:#94A3B8;font-size:13px;">
+    If you did not expect this invitation, please ignore this email.
+  </p>
+</div>
+`;
+
+  await prisma.emailDraft.create({
+    data: {
+      type: "ACCOUNT_ACTIVATION",
+      recipient: email,
+      subject: "Action Required: Activate Your Kaputra Admin Account",
+      bodyHtml: emailHtml,
+      status: "PENDING_APPROVAL",
+    },
+  });
+
+  return { success: true };
+}
+
+export async function sendAdminPasswordResetEmail(email: string, name: string, token: string) {
+  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const resetLink = `${baseUrl}/activate-admin?token=${token}`; // Utilizing the same page for password setup
+
+  const emailHtml = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;background:#0F172A;color:#E2E8F0;border-radius:12px;border:1px solid #1E293B;">
+  <h2 style="color:#CA8E25;margin:0 0 5px 0;">Kaputra Academy</h2>
+  <p style="color:#94A3B8;margin:0 0 20px 0;font-size:13px;">Admin Password Reset</p>
+  <hr style="border-color:#1E293B;margin-bottom:20px;"/>
+
+  <p>Dear ${name},</p>
+  <p>A password reset was requested for your <strong>Kaputra Academy</strong> administrative account.</p>
+
+  <div style="background-color:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;margin:20px 0;">
+    <h3 style="margin:0 0 14px 0;color:#CA8E25;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">
+      🔑 Reset Password
+    </h3>
+    <p style="color:#CBD5E1;font-size:13px;margin:0 0 14px 0;">
+      Click the button below to set a new password. This link expires in 24 hours.
+    </p>
+    <a href="${resetLink}" style="display:inline-block;background-color:#CA8E25;color:#000;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+      Reset Password
+    </a>
+  </div>
+
+  <p style="margin-top:25px;color:#94A3B8;font-size:13px;">
+    If you did not request this, please contact the Super Admin immediately.
+  </p>
+</div>
+`;
+
+  await prisma.emailDraft.create({
+    data: {
+      type: "ACCOUNT_ACTIVATION",
+      recipient: email,
+      subject: "Admin Password Reset - Kaputra Academy",
+      bodyHtml: emailHtml,
+      status: "PENDING_APPROVAL",
+    },
+  });
+
+  return { success: true };
+}

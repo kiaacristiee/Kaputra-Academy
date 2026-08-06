@@ -21,6 +21,8 @@ model User {
   isDisabled    Boolean   @default(false) // For admin disable/enable feature
   acceptedTerms Boolean   @default(false) // For terms & conditions requirement
   dateOfBirth   DateTime?
+  activationToken String? @unique
+  activationExpires DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -70,14 +72,16 @@ model Course {
   objectives       String   
   learningOutcomes String   
   schedule         String
-  price            Float
+  price            Float    // Base or "Starting from" price for catalog display
+  pricePrivateOnce       Float    @default(0)
+  pricePrivateTwice      Float    @default(0)
+  priceSemiPrivateOnce   Float    @default(0)
+  priceSemiPrivateTwice  Float    @default(0)
   registrationFee  Float    @default(0)
   thumbnailUrl     String?
   categoryId       String
   isPublished      Boolean  @default(false)
   type             String   @default("REGULAR") // "REGULAR" or "COMPETITION"
-  learningMethod   String   @default("SEMI_PRIVATE") // "PRIVATE" or "SEMI_PRIVATE"
-  sessionsPerWeek  Int      @default(1) // 1 or 2
   settlementAccount String  @default("COMPANY") // "PERSONAL" or "COMPANY"
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -121,6 +125,7 @@ model Registration {
   parentEmail       String
   courseId          String
   learningMethod    String?            // "SEMI_PRIVATE" or "PRIVATE"
+  sessionsPerWeek   Int?               // 1 or 2
   scheduleId        String?            // Selected private schedule slot id
   status            String             @default("PENDING_PAYMENT")
   createdAt         DateTime           @default(now())

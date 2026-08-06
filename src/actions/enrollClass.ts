@@ -197,8 +197,13 @@ export async function enrollInClass(
 
     let invoice;
     if (isRegular) {
-      // Price = pricePerSession * sessionsPerWeek + registrationFee
-      const tuitionAmount = course.price * sessions;
+      // Calculate Tuition dynamically based on method and frequency
+      let tuitionAmount = 0;
+      if (learningMethod === "PRIVATE") {
+        tuitionAmount = sessions === 1 ? course.pricePrivateOnce : course.pricePrivateTwice;
+      } else {
+        tuitionAmount = sessions === 1 ? course.priceSemiPrivateOnce : course.priceSemiPrivateTwice;
+      }
       const amount = tuitionAmount + course.registrationFee;
 
       invoice = await prisma.invoice.create({

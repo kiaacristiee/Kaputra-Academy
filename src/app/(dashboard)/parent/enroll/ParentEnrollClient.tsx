@@ -19,10 +19,22 @@ interface Course {
   title: string;
   type: string;
   price: number;
+  pricePrivateOnce: number;
+  pricePrivateTwice: number;
+  priceSemiPrivateOnce: number;
+  priceSemiPrivateTwice: number;
   registrationFee: number;
   schedule: string;
   category: { name: string };
   teachers: { teacher: { name: string } }[];
+}
+
+function getCoursePrice(course: Course, method: "PRIVATE" | "SEMI_PRIVATE", frequency: 1 | 2) {
+  if (method === "PRIVATE") {
+    return frequency === 1 ? course.pricePrivateOnce : course.pricePrivateTwice;
+  } else {
+    return frequency === 1 ? course.priceSemiPrivateOnce : course.priceSemiPrivateTwice;
+  }
 }
 
 interface Camp {
@@ -104,7 +116,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
       ]);
 
       if (courseRes.success && courseRes.courses) {
-        setCourses(courseRes.courses as Course[]);
+        setCourses(courseRes.courses as unknown as Course[]);
       } else {
         setError(courseRes.error || "Failed to load courses.");
       }
@@ -147,7 +159,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
     setError(null);
 
     const wasRegular = selectedCourse.type === "REGULAR";
-    const amount = wasRegular ? (selectedCourse.price * sessionsPerWeek + selectedCourse.registrationFee) : 300000;
+    const amount = wasRegular ? (getCoursePrice(selectedCourse, learningMethod, sessionsPerWeek) + selectedCourse.registrationFee) : 300000;
 
     const res = await enrollInClass(
       selectedChildId, 
@@ -383,7 +395,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
 
                       <div className="pt-4 border-t border-slate-900 space-y-3">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-xs text-slate-500">Price</span>
+                          <span className="text-xs text-slate-500">From</span>
                           <span className="text-[#CA8E25] font-black text-lg font-mono">
                             {formatCurrency(course.price)}
                           </span>
@@ -526,7 +538,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
 
                         <div className="pt-4 border-t border-slate-900 space-y-3">
                           <div className="flex justify-between items-baseline">
-                            <span className="text-xs text-slate-500">Price</span>
+                            <span className="text-xs text-slate-500">From</span>
                             <span className="text-[#CA8E25] font-black text-lg font-mono">
                               {formatCurrency(course.price)}
                             </span>
@@ -706,7 +718,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
                     >
                       <span className="text-sm font-bold text-white">{n} Session{n > 1 ? "s" : ""} / Week</span>
                       <span className="text-[10px] text-slate-400">
-                        {selectedCourse && formatCurrency(selectedCourse.price * n + selectedCourse.registrationFee)} total
+                        {selectedCourse && formatCurrency(getCoursePrice(selectedCourse, learningMethod, n) + selectedCourse.registrationFee)} total
                       </span>
                     </button>
                   ))}

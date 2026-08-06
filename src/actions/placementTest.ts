@@ -178,7 +178,18 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
         });
         if (regularCourse) {
           targetCourseId = regularCourse.id;
-          targetAmount = (regularCourse.price || 0) + (regularCourse.registrationFee || 0);
+          
+          let tuition = 0;
+          const method = test.registration.learningMethod;
+          const freq = test.registration.sessionsPerWeek || 1;
+          
+          if (method === "PRIVATE") {
+            tuition = freq === 1 ? (regularCourse.pricePrivateOnce ?? 0) : (regularCourse.pricePrivateTwice ?? 0);
+          } else {
+            tuition = freq === 1 ? (regularCourse.priceSemiPrivateOnce ?? 0) : (regularCourse.priceSemiPrivateTwice ?? 0);
+          }
+          
+          targetAmount = tuition + (regularCourse.registrationFee || 0);
 
           // Update the Registration record's courseId
           await prisma.registration.update({
@@ -196,7 +207,18 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
         });
         if (competitionCourse) {
           targetCourseId = competitionCourse.id;
-          targetAmount = (competitionCourse.price || 0) + (competitionCourse.registrationFee || 0);
+          
+          let tuition = 0;
+          const method = test.registration.learningMethod;
+          const freq = test.registration.sessionsPerWeek || 1;
+          
+          if (method === "PRIVATE") {
+            tuition = freq === 1 ? (competitionCourse.pricePrivateOnce ?? 0) : (competitionCourse.pricePrivateTwice ?? 0);
+          } else {
+            tuition = freq === 1 ? (competitionCourse.priceSemiPrivateOnce ?? 0) : (competitionCourse.priceSemiPrivateTwice ?? 0);
+          }
+          
+          targetAmount = tuition + (competitionCourse.registrationFee || 0);
 
           // Update the Registration record's courseId
           await prisma.registration.update({
@@ -263,6 +285,8 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
               studentId: studentId,
               itemId: targetCourseId,
               itemType: "CLASS",
+              learningMethod: test.registration.learningMethod,
+              sessionsPerWeek: test.registration.sessionsPerWeek || 1,
               amount: targetAmount,
               virtualAccountNumber,
               dueDate,

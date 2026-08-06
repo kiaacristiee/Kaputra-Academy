@@ -20,9 +20,6 @@ export async function createTeacherAssignment(data: { teacherId: string; courseI
     const user = await checkAdmin();
     
     const course = await prisma.course.findUnique({ where: { id: data.courseId } });
-    if (course && course.learningMethod === "PRIVATE" && user.role === "ADMIN") {
-      throw new Error("Admins are not allowed to assign teachers to Private courses.");
-    }
 
     const assignment = await prisma.teacherAssignment.create({
       data: {
@@ -47,10 +44,6 @@ export async function deleteTeacherAssignment(id: string) {
       where: { id },
       include: { course: true }
     });
-    
-    if (assignment && assignment.course.learningMethod === "PRIVATE" && user.role === "ADMIN") {
-      throw new Error("Admins are not allowed to remove teacher assignments from Private courses.");
-    }
 
     await prisma.teacherAssignment.delete({ where: { id } });
     revalidatePath("/admin/teacher-assignments");

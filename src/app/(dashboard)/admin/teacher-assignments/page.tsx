@@ -27,19 +27,13 @@ export default async function AdminTeacherAssignmentsPage() {
       orderBy: { name: "asc" },
     }),
     prisma.course.findMany({
-      where: {
-        ...(!isSuperAdmin && { learningMethod: { not: "PRIVATE" } })
-      },
-      select: { id: true, title: true, learningMethod: true },
+      select: { id: true, title: true },
       orderBy: { title: "asc" },
     }),
     prisma.teacherAssignment.findMany({
-      where: {
-        ...(!isSuperAdmin && { course: { learningMethod: { not: "PRIVATE" } } })
-      },
       include: {
         teacher: { select: { name: true } },
-        course: { select: { title: true, learningMethod: true } },
+        course: { select: { title: true } },
       },
       orderBy: { assignedAt: "desc" },
     }),
@@ -51,7 +45,6 @@ export default async function AdminTeacherAssignmentsPage() {
     teacherName: a.teacher.name,
     courseId: a.courseId,
     courseName: a.course.title,
-    learningMethod: a.course.learningMethod,
     assignedAt: a.assignedAt.toISOString(),
   }));
 

@@ -13,10 +13,22 @@ interface Course {
   title: string;
   type: string;
   price: number;
+  pricePrivateOnce: number;
+  pricePrivateTwice: number;
+  priceSemiPrivateOnce: number;
+  priceSemiPrivateTwice: number;
   registrationFee: number;
   schedule: string;
   category: { name: string };
   teachers: { teacher: { name: string } }[];
+}
+
+function getCoursePrice(course: Course, method: "PRIVATE" | "SEMI_PRIVATE", frequency: 1 | 2) {
+  if (method === "PRIVATE") {
+    return frequency === 1 ? course.pricePrivateOnce : course.pricePrivateTwice;
+  } else {
+    return frequency === 1 ? course.priceSemiPrivateOnce : course.priceSemiPrivateTwice;
+  }
 }
 
 interface Camp {
@@ -73,6 +85,7 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
   const [successAmount, setSuccessAmount] = useState(300000);
 
   const [learningMethod, setLearningMethod] = useState<"SEMI_PRIVATE" | "PRIVATE">("SEMI_PRIVATE");
+  const [sessionFrequency, setSessionFrequency] = useState<1 | 2>(1);
   const [availableSchedules, setAvailableSchedules] = useState<any[]>([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("");
   const [loadingSchedules, setLoadingSchedules] = useState(false);
@@ -106,13 +119,14 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
     setError(null);
 
     const wasRegular = selectedCourse.type === "REGULAR";
-    const amount = wasRegular ? (selectedCourse.price + selectedCourse.registrationFee) : 300000;
+    const amount = wasRegular ? (getCoursePrice(selectedCourse, learningMethod, sessionFrequency) + selectedCourse.registrationFee) : 300000;
 
     const res = await enrollInClass(
       studentId, 
       selectedCourse.id, 
       learningMethod, 
-      learningMethod === "PRIVATE" ? selectedScheduleId : undefined
+      learningMethod === "PRIVATE" ? selectedScheduleId : undefined,
+      sessionFrequency
     );
     if (res.success && res.invoiceId) {
       setSuccessType(wasRegular ? "CLASS" : "PLACEMENT_TEST");
@@ -286,7 +300,7 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
 
                   <div className="pt-4 border-t border-slate-900 space-y-3">
                     <div className="flex justify-between items-baseline">
-                      <span className="text-xs text-slate-500">Price</span>
+                      <span className="text-xs text-slate-500">From</span>
                       <span className="text-[#CA8E25] font-black text-lg font-mono">
                         {formatCurrency(course.price)}
                       </span>
@@ -425,7 +439,7 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
 
                     <div className="pt-4 border-t border-slate-900 space-y-3">
                       <div className="flex justify-between items-baseline">
-                        <span className="text-xs text-slate-500">Price</span>
+                        <span className="text-xs text-slate-500">From</span>
                         <span className="text-[#CA8E25] font-black text-lg font-mono">
                           {formatCurrency(course.price)}
                         </span>
@@ -564,6 +578,41 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
                       Choose your preferred schedule and teacher.
                     </span>
                   </button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Session Frequency</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSessionFrequency(1)}
+                    className={`p-3 rounded-xl border text-center transition ${
+                      sessionFrequency === 1
+                        ? "border-[#CA8E25] bg-[#CA8E25]/5 text-[#CA8E25]"
+                        : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-sm font-bold">1 Session / Week</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSessionFrequency(2)}
+                    className={`p-3 rounded-xl border text-center transition ${
+                      sessionFrequency === 2
+                        ? "border-[#CA8E25] bg-[#CA8E25]/5 text-[#CA8E25]"
+                        : "border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-sm font-bold">2 Sessions / Week</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 bg-slate-900 border border-slate-850 p-4 rounded-xl">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-400">
+                  <span>Tuition Pricing</span>
+                  <span className="text-[#CA8E25] font-mono text-base">{formatCurrency(getCoursePrice(selectedCourse, learningMethod, sessionFrequency))}</span>
                 </div>
               </div>
 

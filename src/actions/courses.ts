@@ -11,9 +11,6 @@ export async function getCourses() {
     const isSuperAdmin = session?.user?.role && ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
 
     const courses = await prisma.course.findMany({
-      where: {
-        ...(!isSuperAdmin && { learningMethod: { not: "PRIVATE" } })
-      },
       include: {
         category: true,
         teachers: {
@@ -67,13 +64,15 @@ export async function createCourse(data: {
   learningOutcomes: string;
   schedule: string;
   price: number;
+  pricePrivateOnce?: number;
+  pricePrivateTwice?: number;
+  priceSemiPrivateOnce?: number;
+  priceSemiPrivateTwice?: number;
   registrationFee: number;
   thumbnailUrl?: string;
   categoryId: string;
   isPublished: boolean;
   type: string;
-  learningMethod?: string;
-  sessionsPerWeek?: number;
   settlementAccount?: string;
   teacherIds?: string[];
 }) {
@@ -84,11 +83,6 @@ export async function createCourse(data: {
       return { success: false, error: "Unauthorized" };
     }
     
-    // RBAC: Only OWNER/CO_OWNER can create Private Classes
-    if (data.learningMethod === "PRIVATE" && role === "ADMIN") {
-      return { success: false, error: "Admins are not allowed to create Private Classes." };
-    }
-
     // Check if slug is unique
     const existing = await prisma.course.findUnique({
       where: { slug: data.slug },
@@ -131,13 +125,15 @@ export async function updateCourse(
     learningOutcomes: string;
     schedule: string;
     price: number;
+    pricePrivateOnce?: number;
+    pricePrivateTwice?: number;
+    priceSemiPrivateOnce?: number;
+    priceSemiPrivateTwice?: number;
     registrationFee: number;
     thumbnailUrl?: string;
     categoryId: string;
     isPublished: boolean;
     type: string;
-    learningMethod?: string;
-    sessionsPerWeek?: number;
     settlementAccount?: string;
     teacherIds?: string[];
   }
@@ -154,11 +150,6 @@ export async function updateCourse(
       return { success: false, error: "Course not found" };
     }
     
-    // RBAC: Only OWNER/CO_OWNER can edit Private Classes
-    if (((existingCourse as any).learningMethod === "PRIVATE" || data.learningMethod === "PRIVATE") && role === "ADMIN") {
-      return { success: false, error: "Admins are not allowed to edit Private Classes." };
-    }
-
     // Check slug uniqueness excluding this course
     const existing = await prisma.course.findFirst({
       where: {
@@ -212,11 +203,6 @@ export async function deleteCourse(id: string) {
       return { success: false, error: "Course not found" };
     }
     
-    // RBAC: Only OWNER/CO_OWNER can delete Private Classes
-    if ((existingCourse as any).learningMethod === "PRIVATE" && role === "ADMIN") {
-      return { success: false, error: "Admins are not allowed to delete Private Classes." };
-    }
-
     // Delete relations first
     await prisma.teacherAssignment.deleteMany({
       where: { courseId: id },

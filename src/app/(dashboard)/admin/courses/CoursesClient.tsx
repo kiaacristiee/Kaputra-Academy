@@ -40,12 +40,14 @@ export default function CoursesClient({
   const [learningOutcomes, setLearningOutcomes] = useState("");
   const [schedule, setSchedule] = useState("");
   const [price, setPrice] = useState("0");
+  const [pricePrivateOnce, setPricePrivateOnce] = useState("0");
+  const [pricePrivateTwice, setPricePrivateTwice] = useState("0");
+  const [priceSemiPrivateOnce, setPriceSemiPrivateOnce] = useState("0");
+  const [priceSemiPrivateTwice, setPriceSemiPrivateTwice] = useState("0");
   const [registrationFee, setRegistrationFee] = useState("0");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [isPublished, setIsPublished] = useState(true);
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
-  const [learningMethod, setLearningMethod] = useState("SEMI_PRIVATE");
-  const [sessionsPerWeek, setSessionsPerWeek] = useState(1);
   const [settlementAccount, setSettlementAccount] = useState("COMPANY");
 
   const handleTitleChange = (val: string) => {
@@ -71,12 +73,14 @@ export default function CoursesClient({
     setLearningOutcomes("");
     setSchedule("");
     setPrice("0");
+    setPricePrivateOnce("0");
+    setPricePrivateTwice("0");
+    setPriceSemiPrivateOnce("0");
+    setPriceSemiPrivateTwice("0");
     setRegistrationFee("0");
     setThumbnailUrl("");
     setIsPublished(true);
     setSelectedTeacherIds([]);
-    setLearningMethod("SEMI_PRIVATE");
-    setSessionsPerWeek(1);
     setSettlementAccount("COMPANY");
     setError(null);
     setIsModalOpen(true);
@@ -93,13 +97,15 @@ export default function CoursesClient({
     setObjectives(course.objectives);
     setLearningOutcomes(course.learningOutcomes);
     setSchedule(course.schedule);
-    setPrice(course.price.toString());
-    setRegistrationFee(course.registrationFee.toString());
+    setPrice(course.price?.toString() || "0");
+    setPricePrivateOnce(course.pricePrivateOnce?.toString() || "0");
+    setPricePrivateTwice(course.pricePrivateTwice?.toString() || "0");
+    setPriceSemiPrivateOnce(course.priceSemiPrivateOnce?.toString() || "0");
+    setPriceSemiPrivateTwice(course.priceSemiPrivateTwice?.toString() || "0");
+    setRegistrationFee(course.registrationFee?.toString() || "0");
     setThumbnailUrl(course.thumbnailUrl || "");
     setIsPublished(course.isPublished);
     setSelectedTeacherIds(course.teachers.map((ta: any) => ta.teacherId));
-    setLearningMethod(course.learningMethod || "SEMI_PRIVATE");
-    setSessionsPerWeek(course.sessionsPerWeek || 1);
     setSettlementAccount(course.settlementAccount || "COMPANY");
     setError(null);
     setIsModalOpen(true);
@@ -123,13 +129,15 @@ export default function CoursesClient({
       learningOutcomes,
       schedule,
       price: parseFloat(price) || 0,
+      pricePrivateOnce: parseFloat(pricePrivateOnce) || 0,
+      pricePrivateTwice: parseFloat(pricePrivateTwice) || 0,
+      priceSemiPrivateOnce: parseFloat(priceSemiPrivateOnce) || 0,
+      priceSemiPrivateTwice: parseFloat(priceSemiPrivateTwice) || 0,
       registrationFee: parseFloat(registrationFee) || 0,
       thumbnailUrl: thumbnailUrl || undefined,
       categoryId,
       isPublished,
       type,
-      learningMethod,
-      sessionsPerWeek: Number(sessionsPerWeek),
       settlementAccount,
       teacherIds: selectedTeacherIds,
     };
@@ -289,10 +297,7 @@ export default function CoursesClient({
                     {course.type}
                   </span>
                   <span className="text-xs px-2 py-1 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700 font-mono">
-                    {course.learningMethod || "SEMI_PRIVATE"}
-                  </span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-slate-800/80 text-slate-400 border border-slate-700 font-mono">
-                    {course.sessionsPerWeek || 1}×/wk
+                    Flexible Sessions
                   </span>
                 </div>
 
@@ -326,7 +331,7 @@ export default function CoursesClient({
                 <div className="flex items-center gap-2.5 text-xs text-slate-400">
                   <DollarSign className="h-4 w-4 text-[#CA8E25]" />
                   <span>
-                    Price: <span className="text-[#CA8E25] font-bold">Rp {course.price.toLocaleString("id-ID")}</span>
+                    From: <span className="text-[#CA8E25] font-bold">Rp {course.price.toLocaleString("id-ID")}</span>
                   </span>
                 </div>
               </div>
@@ -469,30 +474,46 @@ export default function CoursesClient({
                     </select>
                   </div>
 
-                  {/* Learning Method */}
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">Learning Method</Label>
-                    <select
-                      value={learningMethod}
-                      onChange={(e) => setLearningMethod(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
-                    >
-                      <option value="SEMI_PRIVATE">Semi-Private</option>
-                      <option value="PRIVATE">Private</option>
-                    </select>
-                  </div>
+                  <div className="space-y-4 col-span-full border border-slate-800 rounded-xl p-4 bg-slate-900/50">
+                    <Label className="text-slate-300 font-bold block mb-2">Program Pricing (Rp)</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="pricePrivateOnce" className="text-xs text-slate-400">Private - 1 Session/Week</Label>
+                        <Input
+                          id="pricePrivateOnce" type="number" value={pricePrivateOnce}
+                          onChange={(e) => setPricePrivateOnce(e.target.value)}
+                          className="bg-slate-950 border-slate-800 text-white rounded-xl focus:border-blue-600 h-9"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="pricePrivateTwice" className="text-xs text-slate-400">Private - 2 Sessions/Week</Label>
+                        <Input
+                          id="pricePrivateTwice" type="number" value={pricePrivateTwice}
+                          onChange={(e) => setPricePrivateTwice(e.target.value)}
+                          className="bg-slate-950 border-slate-800 text-white rounded-xl focus:border-blue-600 h-9"
+                        />
+                      </div>
 
-                  {/* Sessions Per Week */}
-                  <div className="space-y-2">
-                    <Label className="text-slate-300">Sessions / Week</Label>
-                    <select
-                      value={sessionsPerWeek}
-                      onChange={(e) => setSessionsPerWeek(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
-                    >
-                      <option value={1}>1 Session / Week</option>
-                      <option value={2}>2 Sessions / Week</option>
-                    </select>
+                      <div className="space-y-2">
+                        <Label htmlFor="priceSemiPrivateOnce" className="text-xs text-slate-400">Semi-Private - 1 Session/Week</Label>
+                        <Input
+                          id="priceSemiPrivateOnce" type="number" value={priceSemiPrivateOnce}
+                          onChange={(e) => setPriceSemiPrivateOnce(e.target.value)}
+                          className="bg-slate-950 border-slate-800 text-white rounded-xl focus:border-blue-600 h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="priceSemiPrivateTwice" className="text-xs text-slate-400">Semi-Private - 2 Sessions/Week</Label>
+                        <Input
+                          id="priceSemiPrivateTwice" type="number" value={priceSemiPrivateTwice}
+                          onChange={(e) => setPriceSemiPrivateTwice(e.target.value)}
+                          className="bg-slate-950 border-slate-800 text-white rounded-xl focus:border-blue-600 h-9"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Settlement Account */}
@@ -508,10 +529,10 @@ export default function CoursesClient({
                     </select>
                   </div>
 
-                  {/* Price */}
+                  {/* Base Display Price */}
                   <div className="space-y-2">
                     <Label htmlFor="price" className="text-slate-300">
-                      Price per Session (Rp)
+                      Catalog Display Price (Starting from)
                     </Label>
                     <Input
                       id="price"
