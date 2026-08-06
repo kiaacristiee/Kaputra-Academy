@@ -12,6 +12,7 @@ interface AdminUser {
   name: string;
   email: string;
   phone: string | null;
+  role: string;
   isActive: boolean;
   isDisabled: boolean;
   createdAt: string;
@@ -32,7 +33,7 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
   
   // Form State
-  const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", role: "ADMIN" });
 
   const showStatus = (t: "success" | "error", text: string) => {
     setMessage({ type: t, text });
@@ -55,13 +56,14 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
+      role: formData.role,
     });
     setLoading(false);
 
     if (res.success) {
-      showStatus("success", "Standard admin created. Activation email has been sent.");
+      showStatus("success", `${formData.role === "SUPER_ADMIN" ? "Super Admin" : "Standard Admin"} created. Activation email sent.`);
       setIsAddModalOpen(false);
-      setFormData({ name: "", email: "", phone: "" });
+      setFormData({ name: "", email: "", phone: "", role: "ADMIN" });
       // In a real app we'd re-fetch, but here we can just reload the page to get fresh data
       window.location.reload();
     } else {
@@ -77,6 +79,7 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
+      role: formData.role,
     });
     setLoading(false);
 
@@ -137,10 +140,10 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
           <p className="text-slate-400 mt-2 font-medium">Create and manage your Standard Administrators. Secure access only.</p>
         </div>
         <Button 
-          onClick={() => { setFormData({ name: "", email: "", phone: "" }); setIsAddModalOpen(true); }}
+          onClick={() => { setFormData({ name: "", email: "", phone: "", role: "ADMIN" }); setIsAddModalOpen(true); }}
           className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-extrabold px-6 rounded-xl gap-2 transition-all shadow-lg hover:shadow-[#CA8E25]/20"
         >
-          <Plus className="h-4 w-4" /> Add Standard Admin
+          <Plus className="h-4 w-4" /> Add Administrator
         </Button>
       </div>
 
@@ -215,8 +218,15 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
                           {admin.name.charAt(0)}
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-white">{admin.name}</div>
-                          <div className="text-xs text-slate-500">Admin Staff</div>
+                          <div className="text-sm font-bold text-white flex items-center gap-2">
+                            {admin.name}
+                            {admin.role === "SUPER_ADMIN" ? (
+                              <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-md font-extrabold">SUPER ADMIN</span>
+                            ) : (
+                              <span className="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md font-medium">STANDARD ADMIN</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-500">{admin.role === "SUPER_ADMIN" ? "Super Executive" : "Admin Staff"}</div>
                         </div>
                       </div>
                     </td>
@@ -247,7 +257,7 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
                         <button 
                           onClick={() => {
                             setCurrentAdmin(admin);
-                            setFormData({ name: admin.name, email: admin.email, phone: admin.phone || "" });
+                            setFormData({ name: admin.name, email: admin.email, phone: admin.phone || "", role: admin.role });
                             setIsEditModalOpen(true);
                           }}
                           className="p-2 text-slate-400 hover:text-[#CA8E25] hover:bg-[#CA8E25]/10 rounded-lg transition"
@@ -317,6 +327,17 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
               <input required type="email" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-[#CA8E25] focus:outline-none focus:ring-1 focus:ring-[#CA8E25]" placeholder="admin@kaputra.com" />
             </div>
             <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase">Admin Role</label>
+              <select 
+                value={formData.role} 
+                onChange={(e) => setFormData(p => ({ ...p, role: e.target.value }))}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-[#CA8E25] focus:outline-none focus:ring-1 focus:ring-[#CA8E25] text-white"
+              >
+                <option value="ADMIN">Standard Admin</option>
+                <option value="SUPER_ADMIN">Super Admin</option>
+              </select>
+            </div>
+            <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase">Phone Number</label>
               <input value={formData.phone} onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-[#CA8E25] focus:outline-none focus:ring-1 focus:ring-[#CA8E25]" placeholder="+62 8..." />
             </div>
@@ -343,6 +364,17 @@ export default function AdminManagementClient({ initialAdmins }: { initialAdmins
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase">Email Address</label>
               <input required type="email" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-[#CA8E25] focus:outline-none focus:ring-1 focus:ring-[#CA8E25]" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase">Admin Role</label>
+              <select 
+                value={formData.role} 
+                onChange={(e) => setFormData(p => ({ ...p, role: e.target.value }))}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-[#CA8E25] focus:outline-none focus:ring-1 focus:ring-[#CA8E25] text-white"
+              >
+                <option value="ADMIN">Standard Admin</option>
+                <option value="SUPER_ADMIN">Super Admin</option>
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase">Phone Number</label>

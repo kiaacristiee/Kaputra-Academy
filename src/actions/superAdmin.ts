@@ -519,16 +519,16 @@ export async function getStandardAdmins() {
   }
   
   const admins = await prisma.user.findMany({
-    where: { role: "ADMIN" },
+    where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
     select: {
       id: true,
       name: true,
       email: true,
       phone: true,
+      role: true,
       isActive: true,
       isDisabled: true,
       createdAt: true,
-      // last login could be inferred from sessions or generic. For now just include standard fields.
     },
     orderBy: { createdAt: "desc" }
   });
@@ -536,11 +536,18 @@ export async function getStandardAdmins() {
   return { success: true, admins };
 }
 
-export async function createStandardAdmin(data: { name: string; email: string; phone?: string; position?: string }) {
+export async function createStandardAdmin(data: { name: string; email: string; phone?: string; role?: string; position?: string }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
       throw new Error("Unauthorized access.");
+    }
+
+    const targetRole = data.role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "ADMIN";
+
+    // Only OWNER / CO_OWNER / SUPER_ADMIN can create SUPER_ADMIN
+    if (targetRole === "SUPER_ADMIN" && !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
+      throw new Error("Only Super Admins or Owners can create Super Admins.");
     }
 
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
@@ -562,13 +569,17 @@ export async function createStandardAdmin(data: { name: string; email: string; p
         name,
         email,
         phone,
-        role: "ADMIN",
+        role: targetRole,
         isActive: false,
         passwordHash,
         activationToken: token,
         activationExpires: expires,
       }
     });
+
+    console.log("[CREATE_ADMIN] Token generated:", token);
+    console.log("[CREATE_ADMIN] Token length:", token.length);
+    console.log("[CREATE_ADMIN] Admin created:", newAdmin.email, "| Stored token:", newAdmin.activationToken);
 
     await sendAdminActivationEmail(newAdmin.email, newAdmin.name, token);
 
@@ -578,24 +589,29 @@ export async function createStandardAdmin(data: { name: string; email: string; p
   }
 }
 
-export async function updateStandardAdmin(id: string, data: { name: string; email: string; phone?: string }) {
+export async function updateStandardAdmin(id: string, data: { name: string; email: string; phone?: string; role?: string }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || !["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
       throw new Error("Unauthorized access.");
     }
     
-    // Prevent affecting non-ADMIN users
+    // Prevent affecting non-admin users
     const target = await prisma.user.findUnique({ where: { id } });
-    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+    if (!target || !["ADMIN", "SUPER_ADMIN"].includes(target.role)) throw new Error("Target user is not an Admin.");
+
+    const updateData: any = {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+    };
+    if (data.role && ["ADMIN", "SUPER_ADMIN"].includes(data.role)) {
+      updateData.role = data.role;
+    }
 
     await prisma.user.update({
       where: { id },
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-      }
+      data: updateData
     });
     return { success: true };
   } catch (err: any) {
@@ -611,7 +627,7 @@ export async function toggleAdminStatus(id: string, isDisabled: boolean) {
     }
     
     const target = await prisma.user.findUnique({ where: { id } });
-    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+    if (!target || !["ADMIN", "SUPER_ADMIN"].includes(target.role)) throw new Error("Target user is not an Admin.");
 
     await prisma.user.update({
       where: { id },
@@ -631,7 +647,7 @@ export async function deleteStandardAdmin(id: string) {
     }
     
     const target = await prisma.user.findUnique({ where: { id } });
-    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+    if (!target || !["ADMIN", "SUPER_ADMIN"].includes(target.role)) throw new Error("Target user is not an Admin.");
 
     await prisma.user.delete({ where: { id } });
     return { success: true };
@@ -650,7 +666,7 @@ export async function adminPasswordReset(id: string) {
     }
 
     const target = await prisma.user.findUnique({ where: { id } });
-    if (!target || target.role !== "ADMIN") throw new Error("Target user is not a Standard Admin.");
+    if (!target || !["ADMIN", "SUPER_ADMIN"].includes(target.role)) throw new Error("Target user is not an Admin.");
 
     const token = randomBytes(32).toString("hex");
     const expires = new Date();

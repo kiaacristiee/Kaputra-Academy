@@ -6,7 +6,7 @@ async function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  
+
   try {
     const headerStore = await headers();
     const host = headerStore.get('x-forwarded-host') || headerStore.get('host');
@@ -15,7 +15,7 @@ async function getBaseUrl() {
   } catch (e) {
     // headers() might throw outside of request context
   }
-  
+
   return process.env.NEXTAUTH_URL || "http://localhost:3000";
 }
 
@@ -249,15 +249,15 @@ function buildProfessionalEmailTemplate(params: DetailedEnrollmentEmailParams): 
   const invoiceNum = params.invoiceNumber || "INV-OFFICIAL";
   const payDateStr = params.paymentDate
     ? new Date(params.paymentDate).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    })
     : new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      });
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
 
   const payMethod = params.paymentMethod || "Virtual Account Payment";
   const formattedPaid = params.totalPaid ? `Rp ${params.totalPaid.toLocaleString("id-ID")}` : "Paid";
@@ -537,6 +537,10 @@ export async function sendAdminActivationEmail(email: string, name: string, toke
   const baseUrl = await getBaseUrl();
   const activationLink = `${baseUrl}/activate-admin?token=${token}`;
 
+  console.log("[ADMIN_EMAIL] baseUrl resolved to:", baseUrl);
+  console.log("[ADMIN_EMAIL] Full activation link:", activationLink);
+  console.log("[ADMIN_EMAIL] Token in email:", token);
+
   const emailHtml = `
 <div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;background:#0F172A;color:#E2E8F0;border-radius:12px;border:1px solid #1E293B;">
   <h2 style="color:#CA8E25;margin:0 0 5px 0;">Kaputra Academy</h2>
@@ -564,17 +568,41 @@ export async function sendAdminActivationEmail(email: string, name: string, toke
 </div>
 `;
 
-  await prisma.emailDraft.create({
-    data: {
-      type: "ACCOUNT_ACTIVATION",
-      recipient: email,
+  try {
+    const info = await transporter.sendMail({
+      from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+      to: email,
       subject: "Action Required: Activate Your Kaputra Admin Account",
-      bodyHtml: emailHtml,
-      status: "PENDING_APPROVAL",
-    },
-  });
+      html: emailHtml,
+    });
 
-  return { success: true };
+    await prisma.emailDraft.create({
+      data: {
+        type: "ACCOUNT_ACTIVATION",
+        recipient: email,
+        subject: "Action Required: Activate Your Kaputra Admin Account",
+        bodyHtml: emailHtml,
+        status: "SENT",
+      },
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Failed to directly send Admin Activation Email:", error);
+
+    // Fallback to draft if sending fails directly
+    await prisma.emailDraft.create({
+      data: {
+        type: "ACCOUNT_ACTIVATION",
+        recipient: email,
+        subject: "Action Required: Activate Your Kaputra Admin Account",
+        bodyHtml: emailHtml,
+        status: "FAILED",
+      },
+    });
+
+    return { success: false, error: error.message };
+  }
 }
 
 export async function sendAdminPasswordResetEmail(email: string, name: string, token: string) {
@@ -608,15 +636,39 @@ export async function sendAdminPasswordResetEmail(email: string, name: string, t
 </div>
 `;
 
-  await prisma.emailDraft.create({
-    data: {
-      type: "ACCOUNT_ACTIVATION",
-      recipient: email,
+  try {
+    const info = await transporter.sendMail({
+      from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+      to: email,
       subject: "Admin Password Reset - Kaputra Academy",
-      bodyHtml: emailHtml,
-      status: "PENDING_APPROVAL",
-    },
-  });
+      html: emailHtml,
+    });
 
-  return { success: true };
+    await prisma.emailDraft.create({
+      data: {
+        type: "ACCOUNT_ACTIVATION",
+        recipient: email,
+        subject: "Admin Password Reset - Kaputra Academy",
+        bodyHtml: emailHtml,
+        status: "SENT",
+      },
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Failed to directly send Admin Password Reset Email:", error);
+
+    // Fallback
+    await prisma.emailDraft.create({
+      data: {
+        type: "ACCOUNT_ACTIVATION",
+        recipient: email,
+        subject: "Admin Password Reset - Kaputra Academy",
+        bodyHtml: emailHtml,
+        status: "FAILED",
+      },
+    });
+
+    return { success: false, error: error.message };
+  }
 }

@@ -6,25 +6,53 @@ import bcrypt from "bcryptjs";
 export async function activateAdminAccount(token: string, password: string) {
   try {
     if (!token || !password) {
-      throw new Error("Token and password are required.");
+      return { success: false, error: "Token and password are required." };
     }
 
     if (password.length < 8) {
-      throw new Error("Password must be at least 8 characters long.");
+      return { success: false, error: "Password must be at least 8 characters long." };
     }
 
-    // Find the user with this token
-    const user = await prisma.user.findUnique({
-      where: { activationToken: token },
+    const trimmedToken = token.trim();
+
+    console.log("[ACTIVATION] Token received from URL:", trimmedToken);
+    console.log("[ACTIVATION] Token length:", trimmedToken.length);
+
+    // Use findFirst instead of findUnique to avoid potential Prisma unique constraint lookup issues
+    const user = await prisma.user.findFirst({
+      where: { activationToken: trimmedToken },
     });
 
+    console.log("[ACTIVATION] Database lookup result:", user ? `Found user: ${user.email} (role: ${user.role})` : "No user found");
+
     if (!user) {
-      throw new Error("Invalid activation token.");
+      // Additional debug: check if ANY user has a non-null activationToken
+      const usersWithTokens = await prisma.user.findMany({
+        where: { activationToken: { not: null } },
+        select: { id: true, email: true, activationToken: true, activationExpires: true },
+      });
+      console.log("[ACTIVATION] Users with active tokens:", JSON.stringify(usersWithTokens.map(u => ({
+        email: u.email,
+        tokenPrefix: u.activationToken?.substring(0, 8) + "...",
+        tokenLength: u.activationToken?.length,
+        expires: u.activationExpires,
+      }))));
+
+      return { success: false, error: "Invalid activation token. Please request a new activation link." };
     }
 
-    if (user.activationExpires && new Date() > user.activationExpires) {
-      throw new Error("Activation token has expired.");
+    // Check if token was already used (account already active)
+    if (user.isActive && !user.activationToken) {
+      return { success: false, error: "This activation link has already been used. Your account is already active." };
     }
+
+    // Check expiration
+    if (user.activationExpires && new Date() > user.activationExpires) {
+      console.log("[ACTIVATION] Token expired. Expires:", user.activationExpires, "Now:", new Date());
+      return { success: false, error: "Activation token has expired. Please request a new activation link from your Super Admin." };
+    }
+
+    console.log("[ACTIVATION] Token valid. Activating account for:", user.email);
 
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -38,8 +66,11 @@ export async function activateAdminAccount(token: string, password: string) {
       },
     });
 
+    console.log("[ACTIVATION] Account activated successfully for:", user.email);
+
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error("[ACTIVATION] Unexpected error:", error);
+    return { success: false, error: "An unexpected error occurred. Please try again." };
   }
 }
