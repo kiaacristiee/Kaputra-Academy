@@ -35,6 +35,10 @@ export async function getUserTermsStatus() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: true, acceptedTerms: true };
+    const role = session.user.role;
+    if (["ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(role)) {
+      return { success: true, acceptedTerms: true };
+    }
     const dbUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { acceptedTerms: true },

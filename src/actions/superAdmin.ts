@@ -493,6 +493,7 @@ export async function createSuperAdmin(data: { name: string; email: string }) {
         email,
         role: "SUPER_ADMIN",
         isActive: false, // Inactive until password is set
+        acceptedTerms: true,
         activationToken: token,
         activationExpires: expires,
         passwordHash: passwordHash,
@@ -571,6 +572,7 @@ export async function createStandardAdmin(data: { name: string; email: string; p
         phone,
         role: targetRole,
         isActive: false,
+        acceptedTerms: true,
         passwordHash,
         activationToken: token,
         activationExpires: expires,

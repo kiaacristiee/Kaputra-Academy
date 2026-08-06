@@ -72,14 +72,15 @@ export default function DashboardLayout({
   useEffect(() => {
     async function checkTerms() {
       // Parents have their own per-visit terms modal in ParentDashboardClient
-      if (isParent) return;
+      // Admins and Super Admins do not need to be shown TnC
+      if (isParent || isAdmin || isSuperAdmin) return;
       const res = await getUserTermsStatus();
       if (res.success && !res.acceptedTerms) {
         setShowTerms(true);
       }
     }
     checkTerms();
-  }, [isParent]);
+  }, [isParent, isAdmin, isSuperAdmin]);
 
   const menuItems = [
     ...(isStudent ? [

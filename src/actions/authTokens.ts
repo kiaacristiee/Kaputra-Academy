@@ -61,6 +61,7 @@ export async function activateAdminAccount(token: string, password: string) {
       data: {
         passwordHash,
         isActive: true,
+        acceptedTerms: true,
         activationToken: null,
         activationExpires: null,
       },
