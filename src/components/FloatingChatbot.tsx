@@ -86,7 +86,7 @@ export default function FloatingChatbot() {
       getActiveUserSession().then((res) => {
         if (res.success && res.session) {
           setLiveSessionId(res.session.id);
-          setLiveMessages(res.session.messages);
+          setLiveMessages(res.session.messages as any);
         }
       });
     } else {
@@ -171,21 +171,23 @@ export default function FloatingChatbot() {
     if (!currentSessionId) {
       if (isLoggedIn) {
         const res = await createAuthSession({ initialMessage: liveInput });
-        if (res.success) currentSessionId = res.session.id;
+        if (res.success && res.session) currentSessionId = res.session.id;
       } else {
         if (!guestForm.name.trim() || !guestForm.email.trim()) {
           setIsLiveLoading(false);
           return;
         }
         const res = await createGuestSession({ name: guestForm.name, email: guestForm.email, initialMessage: liveInput });
-        if (res.success) {
+        if (res.success && res.session) {
           currentSessionId = res.session.id;
           localStorage.setItem("kaputra_guest_chat_id", currentSessionId as string);
         }
       }
       setLiveSessionId(currentSessionId);
     } else {
-      await sendChatMessage(currentSessionId, liveInput, "USER");
+      if (currentSessionId) {
+        await sendChatMessage(currentSessionId, liveInput, "USER");
+      }
     }
     
     // Optimistic UI

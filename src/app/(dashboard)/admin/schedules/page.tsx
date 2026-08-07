@@ -39,7 +39,7 @@ export default async function AdminSchedulesPage() {
   });
 
   const teachers = await prisma.user.findMany({
-    where: { role: "TEACHER" },
+    where: { role: { in: ["TEACHER", "SUPER_ADMIN", "OWNER", "CO_OWNER"] } },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });

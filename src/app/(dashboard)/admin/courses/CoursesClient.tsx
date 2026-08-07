@@ -265,7 +265,6 @@ export default function CoursesClient({
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="bg-slate-900 border border-slate-800 text-slate-300 rounded-xl px-4 py-2.5 text-sm focus:border-blue-600 focus:outline-none"
           >
-            <option value="ALL">All Categories</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
@@ -322,7 +321,7 @@ export default function CoursesClient({
               <div className="mt-4 pt-4 border-t border-slate-900 space-y-2.5">
                 <div className="flex items-center gap-2.5 text-xs text-slate-400">
                   <Layers className="h-4 w-4 text-[#CA8E25]" />
-                  <span>Category: <span className="text-white">{course.category?.name || "General"}</span></span>
+                  <span>Category: <span className="text-white">{course.category?.name || "Mathematics"}</span></span>
                 </div>
                 <div className="flex items-center gap-2.5 text-xs text-slate-400">
                   <Calendar className="h-4 w-4 text-[#CA8E25]" />

@@ -576,8 +576,10 @@ model LiveChatSession {
   guestName       String?            // If guest
   guestEmail      String?            // If guest
   guestPhone      String?            // If guest
-  status          String             @default("NEW") // "NEW", "WAITING_REPLY", "REPLIED", "CLOSED"
+  status          String             @default("OPEN") // "OPEN", "IN_PROGRESS", "CLOSED"
   assignedAdminId String?
+  assignedAt      DateTime?
+  lastReplyAt     DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 

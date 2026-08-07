@@ -32,23 +32,39 @@ export async function getCourses() {
 
 export async function getCategories() {
   try {
-    let categories = await prisma.category.findMany();
-    
-    // If no categories exist, seed some basic ones
-    if (categories.length === 0) {
-      const defaultCategories = [
-        { name: "Mathematics", slug: "mathematics", description: "Singapore Math and Olympiad preparation" },
-        { name: "Science", slug: "science", description: "Basic and advanced physics, chemistry, biology" },
-        { name: "English", slug: "english", description: "General English and academic writing" },
-      ];
-      
-      for (const cat of defaultCategories) {
-        await prisma.category.create({ data: cat });
-      }
-      categories = await prisma.category.findMany();
+    // Ensure "Mathematics" category exists
+    let mathCategory = await prisma.category.findFirst({
+      where: { name: "Mathematics" },
+    });
+
+    if (!mathCategory) {
+      mathCategory = await prisma.category.create({
+        data: {
+          name: "Mathematics",
+          slug: "mathematics",
+          description: "Singapore Math and Olympiad preparation",
+        },
+      });
     }
-    
-    return { success: true, categories };
+
+    // Migrate any existing courses to the Mathematics category
+    await prisma.course.updateMany({
+      where: {
+        NOT: { categoryId: mathCategory.id },
+      },
+      data: {
+        categoryId: mathCategory.id,
+      },
+    });
+
+    // Delete any other categories from database
+    await prisma.category.deleteMany({
+      where: {
+        NOT: { id: mathCategory.id },
+      },
+    });
+
+    return { success: true, categories: [mathCategory] };
   } catch (error: any) {
     console.error("Failed to fetch categories:", error);
     return { success: false, error: error.message };

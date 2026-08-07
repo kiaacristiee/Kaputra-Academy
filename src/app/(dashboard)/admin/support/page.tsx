@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import AdminSupportClient from "./AdminSupportClient";
-import { getAdminChatSessions } from "@/actions/chat";
+import { getAdminChatSessions, getAvailableAdminsForSupport } from "@/actions/chat";
+import { isAdminRole } from "@/lib/permissions";
 
 export const metadata: Metadata = {
   title: "Customer Support | Admin Dashboard | Kaputra Academy",
@@ -12,11 +13,21 @@ export const metadata: Metadata = {
 export default async function AdminSupportPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user || !["ADMIN", "SUPER_ADMIN", "OWNER"].includes(session.user.role)) {
+  if (!session?.user || !isAdminRole(session.user.role)) {
     redirect("/login");
   }
 
   const { sessions = [] } = await getAdminChatSessions();
+  
+  const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
+  let availableAdmins: any[] = [];
+  
+  if (isSuperAdmin) {
+    const adminRes = await getAvailableAdminsForSupport();
+    if (adminRes.success) {
+      availableAdmins = adminRes.admins || [];
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -28,6 +39,8 @@ export default async function AdminSupportPage() {
       <AdminSupportClient 
         initialSessions={sessions as any} 
         adminId={session.user.id} 
+        userRole={session.user.role}
+        availableAdmins={availableAdmins}
       />
     </div>
   );

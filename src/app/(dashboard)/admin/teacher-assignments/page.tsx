@@ -22,8 +22,8 @@ export default async function AdminTeacherAssignmentsPage() {
 
   const [teachers, courses, assignments] = await Promise.all([
     prisma.user.findMany({
-      where: { role: "TEACHER", isActive: true },
-      select: { id: true, name: true, email: true, studentIdStr: true },
+      where: { role: { in: ["TEACHER", "SUPER_ADMIN", "OWNER", "CO_OWNER"] } },
+      select: { id: true, name: true, email: true, studentIdStr: true, role: true },
       orderBy: { name: "asc" },
     }),
     prisma.course.findMany({
