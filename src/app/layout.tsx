@@ -82,6 +82,9 @@ export const metadata: Metadata = {
     images: ["/icon.png"],
     creator: "@kaputraacademy",
   },
+  verification: {
+    google: "YUsFoxDi9j_Uo7oEKn9TjnvZcgHWixjJqJ6OO7q7HYM",
+  },
   robots: {
     index: true,
     follow: true,
