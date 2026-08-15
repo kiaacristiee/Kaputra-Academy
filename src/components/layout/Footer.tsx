@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { FaFacebookF, FaInstagram, FaLinkedinIn } from "react-icons/fa";
 import prisma from "@/lib/db";
 
@@ -34,7 +35,8 @@ export async function Footer() {
       <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Company Info */}
         <div>
-          <h3 className="text-xl font-bold text-white mb-4">
+          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Image src="/logo.png" alt="Kaputra Academy Logo" width={32} height={32} className="rounded-sm" />
             Kaputra Academy
           </h3>
           <p className="text-sm text-slate-400">

@@ -21,10 +21,12 @@ model User {
   isDisabled    Boolean   @default(false) // For admin disable/enable feature
   acceptedTerms Boolean   @default(false) // For terms & conditions requirement
   dateOfBirth   DateTime?
-  activationToken String? @unique
+  activationToken String?  @unique
   activationExpires DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  resetToken      String?  @unique
+  resetTokenExpires DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   parent              User?               @relation("ParentChild", fields: [parentId], references: [id])

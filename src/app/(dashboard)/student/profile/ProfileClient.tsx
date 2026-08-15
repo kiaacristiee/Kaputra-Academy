@@ -4,6 +4,7 @@ import { useState } from "react";
 import { User, Phone, Mail, Calendar, Key, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { updatePassword } from "@/actions/profile";
 
@@ -195,9 +196,8 @@ export default function ProfileClient({ user }: ProfileClientProps) {
           <form onSubmit={handlePasswordUpdate} className="space-y-4 text-slate-300">
             <div className="space-y-1.5">
               <Label htmlFor="currentPass" className="text-slate-400 text-xs font-semibold">Current Password</Label>
-              <Input
+              <PasswordInput
                 id="currentPass"
-                type="password"
                 required
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
@@ -208,9 +208,8 @@ export default function ProfileClient({ user }: ProfileClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="newPass" className="text-slate-400 text-xs font-semibold">New Password</Label>
-              <Input
+              <PasswordInput
                 id="newPass"
-                type="password"
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -221,9 +220,8 @@ export default function ProfileClient({ user }: ProfileClientProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="confirmPass" className="text-slate-400 text-xs font-semibold">Confirm New Password</Label>
-              <Input
+              <PasswordInput
                 id="confirmPass"
-                type="password"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

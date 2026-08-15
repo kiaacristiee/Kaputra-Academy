@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { ChevronDown } from "lucide-react";
@@ -30,7 +31,8 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#CA8E25]/20 bg-[#072147]/85 backdrop-blur-xl shadow-lg">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center" onClick={() => setIsOpen(false)}>
+        <Link href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
+          <Image src="/logo.png" alt="Kaputra Academy Logo" width={40} height={40} className="rounded-sm" />
           <div className="flex flex-col leading-none">
             <span className="text-xl font-bold tracking-wide text-white">
               KAPUTRA

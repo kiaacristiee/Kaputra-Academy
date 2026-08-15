@@ -2,6 +2,7 @@ import prisma from "@/lib/db";
 import { activateAccounts } from "@/actions/activate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { ShieldAlert, KeyRound, CheckCircle, ArrowRight } from "lucide-react";
@@ -108,10 +109,9 @@ export default async function ActivatePage({
 
             <div className="space-y-1.5">
               <Label htmlFor="studentPassword">Create Student Password</Label>
-              <Input
+              <PasswordInput
                 id="studentPassword"
                 name="studentPassword"
-                type="password"
                 required
                 placeholder="••••••••"
                 className="bg-slate-900 border-slate-800 text-white rounded-xl focus-visible:ring-[#CA8E25]"
@@ -138,10 +138,9 @@ export default async function ActivatePage({
 
               <div className="space-y-1.5">
                 <Label htmlFor="parentPassword">Create Parent Password</Label>
-                <Input
+                <PasswordInput
                   id="parentPassword"
                   name="parentPassword"
-                  type="password"
                   required
                   placeholder="••••••••"
                   className="bg-slate-900 border-slate-800 text-white rounded-xl focus-visible:ring-[#CA8E25]"

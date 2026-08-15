@@ -147,7 +147,9 @@ function buildSystemPrompt(
 - We have two main class types: Regular Class and Competition Class.
 - Competition Class requires passing a Placement Test (minimum score: 60%).
 - Students who do not pass the Placement Test are recommended for Regular Class.
-- Learning methods available: Semi-Private (instructor-assigned schedule) and Private (student-chosen schedule).
+- Learning methods available: Semi-Private and Private.
+  - Semi-Private: Group class located on-site at the Spazio Building campus. Students must travel to the academy. (Instructor-assigned schedule).
+  - Private: 1-on-1 tutoring, primarily at the student's home where the teacher will come to the student. Online options may be accommodated upon request, but mostly on-site. (Student-chosen schedule).
 - Camp Programs are available for seasonal intensive learning experiences.
 - Students register through the Student Dashboard or Parent Dashboard.
 - Payment is done via Virtual Account (Midtrans) for BCA, BNI, BRI, Permata, and Mandiri banks.

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Users, Plus, Trash2, Edit2, Link2, Unlink, CheckCircle2, AlertCircle, Search, ToggleLeft, ToggleRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/ui/password-input";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   createParentAccount,
@@ -349,8 +350,8 @@ export default function ParentsClient({ initialParents }: Props) {
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-400 uppercase">Password (Optional)</label>
-                <input
-                  type="password" placeholder="Default: password123" value={createForm.password}
+                <PasswordInput
+                  placeholder="Default: password123" value={createForm.password}
                   onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#CA8E25]"
                 />

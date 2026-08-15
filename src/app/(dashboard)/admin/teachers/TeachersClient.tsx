@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Search, Edit2, Trash2, X, Users, Phone, Mail, Lock, Shield, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { createTeacher, updateTeacher, deleteTeacher } from "@/actions/teachers";
 import { useRouter } from "next/navigation";
@@ -331,9 +332,8 @@ export default function TeachersClient({
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input
+                      <PasswordInput
                         id="pass"
-                        type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder={editingTeacher ? "Enter new password" : "Enter temporary password (min 6 chars)"}

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { UserRound, Users, Star } from "lucide-react";
+import Image from "next/image";
 
 export default function AboutPage() {
   return (
@@ -15,10 +16,12 @@ export default function AboutPage() {
           >
             {/* Logo */}
             <div className="mb-6 flex justify-center">
-              <img
-                src="/icon.png"
+              <Image
+                src="/logo.png"
                 alt="Kaputra Academy Logo"
-                className="h-28 w-auto object-contain"
+                width={112}
+                height={112}
+                className="object-contain"
               />
             </div>
 

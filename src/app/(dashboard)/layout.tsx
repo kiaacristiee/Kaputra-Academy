@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -151,8 +152,8 @@ export default function DashboardLayout({
       {/* Sidebar for Desktop */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform transform md:translate-x-0 md:relative ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} bg-slate-950 border-r border-slate-800`}>
         <div className="h-16 flex items-center px-6 justify-between border-b border-slate-800">
-          <Link href="/" className="text-xl font-bold flex items-center gap-2 text-white">
-            <GraduationCap className="h-6 w-6 text-[#CA8E25]" />
+          <Link href="/" className="text-xl font-bold flex items-center gap-3 text-white">
+            <Image src="/logo.png" alt="Kaputra Academy Logo" width={28} height={28} className="rounded-sm" />
             <span>Kaputra Academy <span className="text-xs bg-[#CA8E25]/20 text-[#CA8E25] px-2 py-0.5 rounded-full capitalize">{isTeacher ? "Teacher" : isAdmin ? "Admin" : isParent ? "Parent" : "Student"}</span></span>
           </Link>
           <Button variant="ghost" size="icon" className="md:hidden text-slate-400 hover:text-white" onClick={() => setSidebarOpen(false)}>

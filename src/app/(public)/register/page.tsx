@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, Mail, ShieldCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -82,7 +83,8 @@ export default async function RegisterPage({
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Image src="/logo.png" alt="Kaputra Academy Logo" width={48} height={48} className="mb-2 rounded-sm" />
           <span className="text-2xl font-black tracking-wide text-[#072147] block">
             KAPUTRA
           </span>

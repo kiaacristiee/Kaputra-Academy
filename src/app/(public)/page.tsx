@@ -704,7 +704,7 @@ export default function Home() {
                 </motion.div>
               </div>
 
-              {/* Slide 8 */}
+              {/* Slide 9 */}
               <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
                 <motion.div
                   whileHover={{ y: -6 }}
@@ -714,8 +714,8 @@ export default function Home() {
                   <div className="p-6 pb-0">
                     <div className="relative w-full h-52 rounded-2xl overflow-hidden">
                       <Image
-                        src="/Hugo Levinson .PNG"
-                        alt="Hugo - JISMO Ruby Medalist"
+                        src="/1.png"
+                        alt=""
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -730,18 +730,853 @@ export default function Home() {
                           <Sparkles className="w-5 h-5" />
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
-                          Japan International Science & Mathematics Olympiad (JISMO) Ruby Award
+                          Silver Medalist in International Junior Math Olympiad (IJMO)
                         </h3>
                       </div>
 
                       <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                        Achieved the Ruby Award in Japan International Science & Mathematics Olympiad (JISMO - Math)                      </p>
+                        Achieved a Silver Medal in International Junior Math (IJMO)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Roy Alexander Rusli</p>
+                        <p className="text-xs text-slate-500">IJMO 2025</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 10 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/2.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Bronze Medalist in World Mathematics Invitationals (WMI)
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in World Mathematics Invitationals (WMI)                      </p>
+                    </div>
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Emma Jayde</p>
+                        <p className="text-xs text-slate-500">WMI 2025</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 11 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/3.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Southeast Asian Mathematical Olympiad (SEAMO X 2026) Bronze Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in Southeast Asian Mathematical Olympiad (SEAMO X 2026)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Roy Alexander Rusli</p>
+                        <p className="text-xs text-slate-500">SEAMO X 2026</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 12 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/4.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Junior International Science & Mathematics Olympiad (JISMO) Emerald Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Emerald Medal in Junior International Science & Mathematics Olympiad (JISMO - Math)                      </p>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                       <div>
                         <p className="font-bold text-slate-900 text-sm">Hugo Levinson Susanto</p>
-                        <p className="text-xs text-slate-500">Grade 4 Student</p>
+                        <p className="text-xs text-slate-500">JISMO 2025</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 13 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/5.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          American Mathematics Olympiad Bronze Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in American Mathematics Olympiad (AMO)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Evan Jacob Kuncoro</p>
+                        <p className="text-xs text-slate-500">AMO 2025</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 14 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/6.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore Math Challenge (SMC) Bronze Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in Singapore Math Challenge (SMC)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Mayer Sugijanto</p>
+                        <p className="text-xs text-slate-500">SMC 2025</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 15 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/7.PNG"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          World Mathematics Invitationals (WMI) Silver Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Silver Medal in World Mathematics Invitationals (WMI)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">David Vincent</p>
+                        <p className="text-xs text-slate-500">WMI 2025</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 16 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/8.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore and Asian Schools Math Olympiad (SASMO) Bronze Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in Singapore and Asian Schools Math Olympiad (SASMO)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Evan Jacob Kuncoro</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 17 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/9.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore and Asian Schools Math Olympiad (SASMO) Bronze Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in Singapore and Asian Schools Math Olympiad (SASMO)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Matthew Wayne Louis</p>
+                        <p className="text-xs text-slate-500">Grade 3 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 18 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/10.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore Math Global Finals (SMGF) Bronze Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in Singapore Math Global Finals (SMGF)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Ray Rusli</p>
+                        <p className="text-xs text-slate-500">Grade 8 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 19 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/11.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore Math Global FInals (SMGF) Bronze Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Bronze Medal in Singapore Math Global Finals (SMGF)                      </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">David Vincent</p>
+                        <p className="text-xs text-slate-500">Grade 8 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 20 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/12.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Southeast Asian Mathematical Olympiad (SEAMO X 2026) Silver Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Silver Medal in Southeast Asian Mathematical Olympiad (SEAMO X 2026)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">David Vincent Sugia</p>
+                        <p className="text-xs text-slate-500">SEAMO X 2026</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 21 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/13.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore and Asian Math Olympiad (SASMO) Silver Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Silver Medal in Singapore and Asian Math Olympiad (SASMO)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Aldrin Avery Adipratomo</p>
+                        <p className="text-xs text-slate-500">Grade 1 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 22 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/14.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          World Mathematics Invitationals (WMI) Gold Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Gold Medal in World Mathematics Invitationals (WMI)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">David Vincent Sugia</p>
+                        <p className="text-xs text-slate-500">Grade 3 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 23 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/15.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore and Asian Schools Math Olympiad (SASMO) Silver Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Silver Medal in Singapore and Asian Schools Math Olympiad (SASMO)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">David Vincent Sugia</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 24 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/16.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore and Asian Schools Math Olympiad (SASMO) Gold Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Gold Medal in Singapore and Asian Schools Math Olympiad (SASMO)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">David Vincent Sugia</p>
+                        <p className="text-xs text-slate-500">SEAMO X 2026</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 25 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/17.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Japan International Science & Mathematics Olympiad Ruby Award
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Ruby Award in Japan International Science & Mathematics Olympiad                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">David Vincent Sugia</p>
+                        <p className="text-xs text-slate-500">SEAMO X 2026</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 26 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/18.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          World Mathematics Invitationals (WMI) Gold Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Gold Medal in World Mathematics Invitationals (WMI)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Matthew Wayne Louis</p>
+                        <p className="text-xs text-slate-500">Grade 3 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 27 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/19.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore and Asian Schools Math Olympiad (SASMO) Silver Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Silver Medal in Singapore and Asian Schools Math Olympiad (SASMO)                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Roy Alexander Rusli</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Slide 28 */}
+              <div className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.333%] min-w-0 pl-6">
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  className="h-full bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group"
+                >
+                  {/* Local Image Container */}
+                  <div className="p-6 pb-0">
+                    <div className="relative w-full h-52 rounded-2xl overflow-hidden">
+                      <Image
+                        src="/20.png"
+                        alt=""
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-6 flex flex-col justify-between flex-1">
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform duration-300">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-900 transition-colors">
+                          Singapore Math Challenge (SMC) Gold Medalist
+                        </h3>
+                      </div>
+
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                        Achieved the Gold Medal in Singapore Math Challenge (SMC) Gold Medal                     </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Roy Alexander Rusli</p>
+                        <p className="text-xs text-slate-500">Grade 7 Student</p>
                       </div>
                     </div>
                   </div>

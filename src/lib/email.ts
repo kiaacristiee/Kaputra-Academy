@@ -672,3 +672,62 @@ export async function sendAdminPasswordResetEmail(email: string, name: string, t
     return { success: false, error: error.message };
   }
 }
+
+export async function sendUserPasswordResetEmail(email: string, name: string, token: string) {
+  const baseUrl = await getBaseUrl();
+  const resetLink = `${baseUrl}/reset-password?token=${token}`; 
+
+  const emailHtml = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;background:#0F172A;color:#E2E8F0;border-radius:12px;border:1px solid #1E293B;">
+  <div style="text-align:center;margin-bottom:20px;">
+    <h2 style="color:#CA8E25;margin:0 0 5px 0;font-size:24px;">KAPUTRA</h2>
+    <span style="color:#CA8E25;font-size:12px;letter-spacing:2px;font-weight:bold;">ACADEMY</span>
+  </div>
+  <p style="color:#94A3B8;margin:0 0 20px 0;font-size:13px;text-align:center;">Password Reset Request</p>
+  <hr style="border-color:#1E293B;margin-bottom:20px;"/>
+
+  <p>Dear ${name},</p>
+  <p>We received a request to reset your Kaputra Academy password.</p>
+
+  <div style="background-color:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;margin:20px 0;text-align:center;">
+    <p style="color:#CBD5E1;font-size:13px;margin:0 0 14px 0;">
+      Click the button below to securely reset your password.
+    </p>
+    <a href="${resetLink}" style="display:inline-block;background-color:#CA8E25;color:#000;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+      Reset Password
+    </a>
+    <p style="margin:14px 0 0 0;color:#ef4444;font-size:11px;font-weight:bold;">
+      This link expires in 1 hour.
+    </p>
+  </div>
+
+  <p style="margin-top:25px;color:#94A3B8;font-size:13px;">
+    If you did not request this password reset, please safely ignore this email. Your password will remain unchanged.
+  </p>
+</div>
+`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Reset Your Password - Kaputra Academy",
+      html: emailHtml,
+    });
+
+    await prisma.emailDraft.create({
+      data: {
+        type: "PASSWORD_RESET",
+        recipient: email,
+        subject: "Reset Your Password - Kaputra Academy",
+        bodyHtml: emailHtml,
+        status: "SENT",
+      },
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Failed to send User Password Reset Email:", error);
+    return { success: false, error: error.message };
+  }
+}

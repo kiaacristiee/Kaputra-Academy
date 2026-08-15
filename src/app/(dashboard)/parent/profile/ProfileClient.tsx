@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { User, Mail, Phone, Lock, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/ui/password-input";
 import { updatePassword } from "@/actions/profile";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -116,8 +117,7 @@ export default function ParentProfileClient({ user }: { user: ParentUser }) {
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400 uppercase">Current Password</label>
-            <input
-              type="password"
+            <PasswordInput
               value={pwForm.current}
               onChange={(e) => setPwForm((p) => ({ ...p, current: e.target.value }))}
               required
@@ -128,8 +128,7 @@ export default function ParentProfileClient({ user }: { user: ParentUser }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-400 uppercase">New Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={pwForm.newPass}
                 onChange={(e) => setPwForm((p) => ({ ...p, newPass: e.target.value }))}
                 required
@@ -140,8 +139,7 @@ export default function ParentProfileClient({ user }: { user: ParentUser }) {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-400 uppercase">Confirm Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={pwForm.confirm}
                 onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))}
                 required
