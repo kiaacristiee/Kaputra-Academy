@@ -35,11 +35,11 @@ interface Props {
 }
 
 const SUPPORTED_BANKS: { id: MidtransBank; name: string; logoText: string; color: string; bg: string }[] = [
-  { id: "bca", name: "BCA Virtual Account", logoText: "BCA", color: "text-blue-400", bg: "bg-blue-600/10 border-blue-500/20" },
-  { id: "bni", name: "BNI Virtual Account", logoText: "BNI", color: "text-orange-400", bg: "bg-orange-600/10 border-orange-500/20" },
-  { id: "bri", name: "BRI Virtual Account", logoText: "BRI", color: "text-blue-500", bg: "bg-blue-700/10 border-blue-600/20" },
-  { id: "mandiri", name: "Mandiri Bill Payment", logoText: "MANDIRI", color: "text-amber-400", bg: "bg-amber-600/10 border-amber-500/20" },
-  { id: "permata", name: "Permata Virtual Account", logoText: "PERMATA", color: "text-emerald-400", bg: "bg-emerald-600/10 border-emerald-500/20" },
+  { id: "bca", name: "BCA", logoText: "BCA", color: "text-blue-400", bg: "bg-blue-600/10 border-blue-500/20" },
+  { id: "bni", name: "BNI", logoText: "BNI", color: "text-orange-400", bg: "bg-orange-600/10 border-orange-500/20" },
+  { id: "bri", name: "BRI", logoText: "BRI", color: "text-blue-500", bg: "bg-blue-700/10 border-blue-600/20" },
+  { id: "mandiri", name: "Mandiri", logoText: "MANDIRI", color: "text-amber-400", bg: "bg-amber-600/10 border-amber-500/20" },
+  { id: "permata", name: "Permata", logoText: "PERMATA", color: "text-emerald-400", bg: "bg-emerald-600/10 border-emerald-500/20" },
 ];
 
 const BANK_INSTRUCTIONS: Record<string, { atm: string[]; mobile: string[]; internet: string[] }> = {
@@ -371,7 +371,7 @@ export default function VirtualAccountPayment({ invoice, studentName, onRefresh 
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Virtual Account Number:</p>
+                  <p className="text-xs text-slate-400 mb-1">Bank Account Number (a.n. ANDI JULIO KAPUTRA):</p>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <div className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-5 py-3 flex items-center justify-between">
                       <span className="font-mono text-xl sm:text-2xl font-black text-white tracking-widest">
