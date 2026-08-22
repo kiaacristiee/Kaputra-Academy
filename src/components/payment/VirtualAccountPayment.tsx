@@ -367,7 +367,6 @@ export default function VirtualAccountPayment({ invoice, studentName, onRefresh 
                   <span className={`text-xs font-black px-2.5 py-1 rounded-lg border uppercase ${currentBankObj.bg} ${currentBankObj.color}`}>
                     {currentBankObj.name}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Midtrans Core API</span>
                 </div>
 
                 <div>
@@ -403,18 +402,6 @@ export default function VirtualAccountPayment({ invoice, studentName, onRefresh 
                   <span>Amount to Transfer:</span>
                   <span className="font-mono font-bold text-white text-base">Rp {invoice.amount.toLocaleString("id-ID")}</span>
                 </div>
-              </div>
-
-              {/* Re-generate another bank option */}
-              <div className="flex items-center justify-between pt-1 text-xs">
-                <span className="text-slate-400">Need to pay via a different bank?</span>
-                <button
-                  type="button"
-                  onClick={() => handleGenerateVa(selectedBank === "bca" ? "bni" : "bca")}
-                  className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1"
-                >
-                  <RefreshCw className="h-3 w-3" /> Change Bank
-                </button>
               </div>
 
               {/* Step-by-Step Payment Instructions Accordion */}
