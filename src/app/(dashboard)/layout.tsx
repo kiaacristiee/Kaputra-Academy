@@ -153,8 +153,8 @@ export default function DashboardLayout({
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform transform md:translate-x-0 md:relative ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} bg-slate-950 border-r border-slate-800`}>
         <div className="h-16 flex items-center px-6 justify-between border-b border-slate-800">
           <Link href="/" className="text-xl font-bold flex items-center gap-3 text-white">
-            <Image src="/logo.png" alt="Kaputra Academy Logo" width={28} height={28} className="rounded-sm" />
-            <span>Kaputra Academy <span className="text-xs bg-[#CA8E25]/20 text-[#CA8E25] px-2 py-0.5 rounded-full capitalize">{isTeacher ? "Teacher" : isAdmin ? "Admin" : isParent ? "Parent" : "Student"}</span></span>
+            <Image src="/cream.png" alt="Kaputra Academy Logo" width={180} height={48} className="h-12 w-auto object-contain hover:opacity-90 scale-[1.75] origin-left transition" />
+            <span className="text-xs bg-[#CA8E25]/20 text-[#CA8E25] px-2 py-0.5 rounded-full capitalize shrink-0 z-10 ml-6">{isTeacher ? "Teacher" : isAdmin ? "Admin" : isParent ? "Parent" : "Student"}</span>
           </Link>
           <Button variant="ghost" size="icon" className="md:hidden text-slate-400 hover:text-white" onClick={() => setSidebarOpen(false)}>
             &times;

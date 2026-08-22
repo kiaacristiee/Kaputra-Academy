@@ -8,7 +8,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        username: { label: "Student ID or Email", type: "text" },
+        username: { label: "Identifier", type: "text" },
         password: { label: "Password", type: "password" },
         isDevSwitch: { label: "Dev Switch", type: "text" },
         userId: { label: "User ID", type: "text" }
@@ -54,13 +54,19 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Enforce Student ID and Active account rules for students
+        // Enforce active account rules for all users
+        if (!user.isActive) {
+          return null; 
+        }
+
+        if (user.isDisabled) {
+          return null;
+        }
+
+        // Additional checks specific to STUDENTS
         if (user.role === "STUDENT") {
           // Students must log in using Student ID, not email
           if (credentials.username.includes("@")) {
-            return null;
-          }
-          if (!user.isActive) {
             return null;
           }
         }

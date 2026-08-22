@@ -35,12 +35,17 @@ export default async function TeacherDashboardPage() {
 
   const courseIds = teacher.teachingAssignments.map((ta) => ta.courseId);
 
-  // Fetch active enrollments for these courses to count students
+  // Fetch active enrollments for these courses to count students per course
   const enrollments = await prisma.enrollment.findMany({
     where: {
       itemId: { in: courseIds },
       status: "ACTIVE",
     },
+  });
+
+  // Count directly assigned students via new StudentTeacherAssignment model
+  const assignedStudentCount = await (prisma as any).studentTeacherAssignment.count({
+    where: { teacherId: session.user.id },
   });
 
   // Map courses with their specific enrollment counts
@@ -57,7 +62,7 @@ export default async function TeacherDashboardPage() {
     };
   });
 
-  const totalStudents = enrollments.length;
+  const totalStudents = assignedStudentCount || enrollments.length;
   const activeClassesCount = coursesWithStats.filter((c) => c.isPublished).length;
 
   return (
@@ -69,3 +74,4 @@ export default async function TeacherDashboardPage() {
     />
   );
 }
+

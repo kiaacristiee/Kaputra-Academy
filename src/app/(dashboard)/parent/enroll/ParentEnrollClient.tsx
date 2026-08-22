@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, BookOpen, Calendar, DollarSign, PlusCircle, CheckCircle2, ChevronRight, AlertCircle, Sparkles, Loader2, Clock } from "lucide-react";
+import { Users, BookOpen, Calendar, DollarSign, PlusCircle, CheckCircle2, ChevronRight, AlertCircle, Sparkles, Loader2, Clock, UserCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAvailableCourses, enrollInClass, getAvailablePrivateSchedules } from "@/actions/enrollClass";
 import { getAvailableCamps, enrollInCamp } from "@/actions/camps";
@@ -37,6 +37,17 @@ function getCoursePrice(course: Course, method: "PRIVATE" | "SEMI_PRIVATE", freq
   }
 }
 
+interface ScheduleSlot {
+  id: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  className: string;
+  capacity: number;
+  teacher?: { id: string; name: string } | null;
+  _count?: { registrationSlots: number };
+}
+
 interface Camp {
   id: string;
   name: string;
@@ -47,9 +58,14 @@ interface Camp {
   endDate: string | Date;
   registrationDeadline: string | Date;
   price: number;
+  allow1xWeek: boolean;
+  price1xWeek: number;
+  allow2xWeek: boolean;
+  price2xWeek: number;
   capacity: number | null;
   status: string;
   visibility: string;
+  schedules?: ScheduleSlot[];
 }
 
 interface ParentEnrollClientProps {
@@ -82,9 +98,14 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
   
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedCamp, setSelectedCamp] = useState<Camp | null>(null);
+
+  // Camp selection state inside registration modal
+  const [campFrequency, setCampFrequency] = useState<"1x_WEEK" | "2x_WEEK">("1x_WEEK");
+  const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
   
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [successInvoiceId, setSuccessInvoiceId] = useState<string | null>(null);
   const [successType, setSuccessType] = useState<"CLASS" | "PLACEMENT_TEST" | "CAMP">("CLASS");
   const [successAmount, setSuccessAmount] = useState(300000);
@@ -122,7 +143,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
       }
 
       if (campRes.success && campRes.camps) {
-        setCamps(campRes.camps as Camp[]);
+        setCamps(campRes.camps as unknown as Camp[]);
       } else {
         setError((prev) => prev || campRes.error || "Failed to load camp programs.");
       }
@@ -183,21 +204,56 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
     setSubmitting(false);
   };
 
+  const openCampModal = (camp: Camp) => {
+    setSelectedCamp(camp);
+    setModalError(null);
+    const defaultFreq = camp.allow1xWeek ? "1x_WEEK" : "2x_WEEK";
+    setCampFrequency(defaultFreq);
+    setSelectedScheduleIds([]);
+  };
+
+  const toggleCampScheduleSelection = (schedId: string) => {
+    const isAlreadySelected = selectedScheduleIds.includes(schedId);
+    const maxAllowed = campFrequency === "1x_WEEK" ? 1 : 2;
+
+    if (isAlreadySelected) {
+      setSelectedScheduleIds(selectedScheduleIds.filter((id) => id !== schedId));
+    } else {
+      if (maxAllowed === 1) {
+        setSelectedScheduleIds([schedId]);
+      } else {
+        if (selectedScheduleIds.length >= 2) {
+          setSelectedScheduleIds([selectedScheduleIds[1], schedId]);
+        } else {
+          setSelectedScheduleIds([...selectedScheduleIds, schedId]);
+        }
+      }
+    }
+  };
+
   const handleCampEnroll = async () => {
     if (!selectedCamp || !selectedChildId) return;
-    setSubmitting(true);
-    setError(null);
 
-    const res = await enrollInCamp(selectedChildId, selectedCamp.id);
+    setModalError(null);
+
+    const requiredCount = campFrequency === "1x_WEEK" ? 1 : 2;
+    if (selectedScheduleIds.length !== requiredCount) {
+      setModalError(`Please select exactly ${requiredCount} class schedule slot(s) for your ${campFrequency === "1x_WEEK" ? "1 Session/Week" : "2 Sessions/Week"} frequency.`);
+      return;
+    }
+
+    setSubmitting(true);
+    const price = campFrequency === "1x_WEEK" ? selectedCamp.price1xWeek : selectedCamp.price2xWeek;
+
+    const res = await enrollInCamp(selectedChildId, selectedCamp.id, campFrequency, selectedScheduleIds);
     if (res.success && res.invoiceId) {
       setSuccessType("CAMP");
-      setSuccessAmount(selectedCamp.price);
+      setSuccessAmount(price);
       setSuccessInvoiceId(res.invoiceId);
       setCamps(camps.filter((c) => c.id !== selectedCamp.id));
       setSelectedCamp(null);
     } else {
-      setError(res.error || "Failed to register camp program. Please try again.");
-      setSelectedCamp(null);
+      setModalError(res.error || "Failed to register camp program. Please try again.");
     }
     setSubmitting(false);
   };
@@ -345,86 +401,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
         </div>
       ) : (
         <>
-          {activeTab === "class" && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold text-white">Available Classes</h2>
-              {courses.length === 0 ? (
-                <div className="py-20 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-3">
-                  <BookOpen className="w-12 h-12 text-slate-700 mx-auto" />
-                  <p className="font-bold text-white text-lg">No classes available</p>
-                  <p className="text-sm text-slate-500 max-w-sm mx-auto">
-                    **{activeChild?.name}** is already enrolled in all published classes or has pending registrations/invoices for them.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {courses.map((course) => (
-                    <div
-                      key={course.id}
-                      className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <span className="text-[10px] bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                            {course.category.name}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            course.type === "COMPETITION"
-                              ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          }`}>
-                            {course.type}
-                          </span>
-                        </div>
-
-                        <h3 className="font-bold text-white text-lg leading-tight line-clamp-1">{course.title}</h3>
-
-                        <div className="space-y-1.5 pt-2 text-xs text-slate-400">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                            <span>{course.schedule}</span>
-                          </div>
-                          {course.teachers.length > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                              <span>Taught by: {course.teachers.map((t) => t.teacher.name).join(", ")}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t border-slate-900 space-y-3">
-                        <div className="flex justify-between items-baseline">
-                          <span className="text-xs text-slate-500">From</span>
-                          <span className="text-[#CA8E25] font-black text-lg font-mono">
-                            {formatCurrency(course.price)}
-                          </span>
-                        </div>
-                        {course.registrationFee > 0 && (
-                          <div className="flex justify-between items-baseline text-xs">
-                            <span className="text-slate-500">Reg. Fee</span>
-                            <span className="text-slate-400 font-bold font-mono">
-                              {formatCurrency(course.registrationFee)}
-                            </span>
-                          </div>
-                        )}
-                        <Button
-                          onClick={() => {
-                            setPendingCourse(course);
-                            setShowTermsForRegistration(true);
-                          }}
-                          className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
-                        >
-                          Register Course
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
+          {/* Camp Programs Cards component helper */}
           {activeTab === "camp" && (
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-white">Camp Programs</h2>
@@ -460,26 +437,99 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Deadline: {formatDate(camp.registrationDeadline)}</span>
+                            <span>Open until: {formatDate(camp.registrationDeadline)}</span>
+                          </div>
+                        </div>
+
+                        {/* Frequency Options Display */}
+                        <div className="pt-2 text-xs space-y-1">
+                          {camp.allow1xWeek && (
+                            <div className="flex justify-between text-slate-300">
+                              <span>1x/week (4 Sessions):</span>
+                              <span className="font-bold text-[#CA8E25]">{formatCurrency(camp.price1xWeek || camp.price)}</span>
+                            </div>
+                          )}
+                          {camp.allow2xWeek && (
+                            <div className="flex justify-between text-slate-300">
+                              <span>2x/week (8 Sessions):</span>
+                              <span className="font-bold text-[#CA8E25]">{formatCurrency(camp.price2xWeek || camp.price)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-900 space-y-3">
+                        <Button
+                          onClick={() => {
+                            setPendingCamp(camp);
+                            setShowTermsForRegistration(true);
+                          }}
+                          className="w-full bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl text-xs py-2.5"
+                        >
+                          Select Options &amp; Register
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "class" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-white">Available Classes</h2>
+              {courses.length === 0 ? (
+                <div className="py-20 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-3">
+                  <BookOpen className="w-12 h-12 text-slate-700 mx-auto" />
+                  <p className="font-bold text-white text-lg">No classes available</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {courses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[10px] bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {course.category.name}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            course.type === "COMPETITION"
+                              ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          }`}>
+                            {course.type}
+                          </span>
+                        </div>
+
+                        <h3 className="font-bold text-white text-lg leading-tight line-clamp-1">{course.title}</h3>
+
+                        <div className="space-y-1.5 pt-2 text-xs text-slate-400">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{course.schedule}</span>
                           </div>
                         </div>
                       </div>
 
                       <div className="pt-4 border-t border-slate-900 space-y-3">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-xs text-slate-500">Price</span>
+                          <span className="text-xs text-slate-500">From</span>
                           <span className="text-[#CA8E25] font-black text-lg font-mono">
-                            {formatCurrency(camp.price)}
+                            {formatCurrency(course.price)}
                           </span>
                         </div>
                         <Button
                           onClick={() => {
-                            setPendingCamp(camp);
+                            setPendingCourse(course);
                             setShowTermsForRegistration(true);
                           }}
                           className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
                         >
-                          Register Camp Program
+                          Register Course
                         </Button>
                       </div>
                     </div>
@@ -511,29 +561,10 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
                             <span className="text-[10px] bg-blue-600/10 border border-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                               {course.category.name}
                             </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              course.type === "COMPETITION"
-                                ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                                : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            }`}>
-                              {course.type}
-                            </span>
                           </div>
 
                           <h3 className="font-bold text-white text-lg leading-tight line-clamp-1">{course.title}</h3>
-
-                          <div className="space-y-1.5 pt-2 text-xs text-slate-400">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                              <span>{course.schedule}</span>
-                            </div>
-                            {course.teachers.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                                <span>Taught by: {course.teachers.map((t) => t.teacher.name).join(", ")}</span>
-                              </div>
-                            )}
-                          </div>
+                          <p className="text-xs text-slate-400">{course.schedule}</p>
                         </div>
 
                         <div className="pt-4 border-t border-slate-900 space-y-3">
@@ -543,20 +574,12 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
                               {formatCurrency(course.price)}
                             </span>
                           </div>
-                          {course.registrationFee > 0 && (
-                            <div className="flex justify-between items-baseline text-xs">
-                              <span className="text-slate-500">Reg. Fee</span>
-                              <span className="text-slate-400 font-bold font-mono">
-                                {formatCurrency(course.registrationFee)}
-                              </span>
-                            </div>
-                          )}
                           <Button
                             onClick={() => {
                               setPendingCourse(course);
                               setShowTermsForRegistration(true);
                             }}
-                            className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
+                            className="w-full bg-slate-900 hover:bg-slate-800 text-white border border-slate-850 rounded-xl text-xs py-2"
                           >
                             Register Course
                           </Button>
@@ -583,42 +606,23 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
                         className="bg-slate-950 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition space-y-4"
                       >
                         <div className="space-y-3">
-                          <div className="flex justify-between items-start">
-                            <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-[#CA8E25] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                              {(camp as any).type || "CAMP"}
-                            </span>
-                          </div>
+                          <span className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-[#CA8E25] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {(camp as any).type || "CAMP"}
+                          </span>
 
                           <h3 className="font-bold text-white text-lg leading-tight line-clamp-1 font-mono">{camp.name}</h3>
                           <p className="text-xs text-slate-400 line-clamp-2">{camp.description}</p>
-
-                          <div className="space-y-1.5 pt-2 text-xs text-slate-400">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                              <span>{formatDate(camp.startDate)} - {formatDate(camp.endDate)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-3.5 h-3.5 text-slate-500" />
-                              <span>Deadline: {formatDate(camp.registrationDeadline)}</span>
-                            </div>
-                          </div>
                         </div>
 
                         <div className="pt-4 border-t border-slate-900 space-y-3">
-                          <div className="flex justify-between items-baseline">
-                            <span className="text-xs text-slate-500">Price</span>
-                            <span className="text-[#CA8E25] font-black text-lg font-mono">
-                              {formatCurrency(camp.price)}
-                            </span>
-                          </div>
                           <Button
                             onClick={() => {
                               setPendingCamp(camp);
                               setShowTermsForRegistration(true);
                             }}
-                            className="w-full bg-slate-900 hover:bg-slate-800 text-white hover:text-white border border-slate-850 hover:border-slate-700 rounded-xl text-xs py-2"
+                            className="w-full bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl text-xs py-2.5"
                           >
-                            Register Camp Program
+                            Select Options &amp; Register
                           </Button>
                         </div>
                       </div>
@@ -642,232 +646,198 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
               setLearningMethod("SEMI_PRIVATE");
               setPendingCourse(null);
             } else if (pendingCamp) {
-              setSelectedCamp(pendingCamp);
+              openCampModal(pendingCamp);
               setPendingCamp(null);
             }
           }}
         />
       )}
 
-      {/* Confirmation & Options Modal for Classes */}
-      {selectedCourse && !showTermsForRegistration && !showPTPopup && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-900 flex items-center justify-between">
-              <h3 className="font-bold text-white text-base">Select Learning Method</h3>
-              <button
-                onClick={() => setSelectedCourse(null)}
-                className="text-slate-500 hover:text-white text-xl font-bold"
-              >
-                &times;
-              </button>
-            </div>
-            <div className="p-6 space-y-5">
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Learning Method</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setLearningMethod("SEMI_PRIVATE")}
-                    className={`p-4 rounded-xl border text-left transition flex flex-col justify-between h-28 ${
-                      learningMethod === "SEMI_PRIVATE"
-                        ? "border-[#CA8E25] bg-[#CA8E25]/5"
-                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
-                    }`}
-                  >
-                    <span className="text-sm font-bold text-white">Semi-Private</span>
-                    <span className="text-[10px] text-slate-400 leading-tight">
-                      Follow the schedule assigned by the instructor. Cannot choose schedule/teacher.
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLearningMethod("PRIVATE");
-                      loadSchedules();
-                    }}
-                    className={`p-4 rounded-xl border text-left transition flex flex-col justify-between h-28 ${
-                      learningMethod === "PRIVATE"
-                        ? "border-[#CA8E25] bg-[#CA8E25]/5"
-                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
-                    }`}
-                  >
-                    <span className="text-sm font-bold text-white">Private</span>
-                    <span className="text-[10px] text-slate-400 leading-tight">
-                      Choose your preferred schedule and teacher.
-                    </span>
-                  </button>
-                </div>
+      {/* Confirmation Modal for Camp Programs with Schedule & Frequency Picking */}
+      {selectedCamp && !showTermsForRegistration && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl my-6 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+              <div>
+                <h3 className="font-bold text-white text-base font-mono flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-[#CA8E25]" />
+                  Camp Program Enrollment
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">{selectedCamp.name}</p>
               </div>
-
-              {/* Sessions per Week */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sessions per Week</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {([1, 2] as const).map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setSessionsPerWeek(n)}
-                      className={`p-4 rounded-xl border text-left transition flex flex-col gap-1 ${
-                        sessionsPerWeek === n
-                          ? "border-[#CA8E25] bg-[#CA8E25]/5"
-                          : "border-slate-800 bg-slate-950 hover:border-slate-700"
-                      }`}
-                    >
-                      <span className="text-sm font-bold text-white">{n} Session{n > 1 ? "s" : ""} / Week</span>
-                      <span className="text-[10px] text-slate-400">
-                        {selectedCourse && formatCurrency(getCoursePrice(selectedCourse, learningMethod, n) + selectedCourse.registrationFee)} total
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {learningMethod === "PRIVATE" && (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Schedule &amp; Teacher</label>
-                  {loadingSchedules ? (
-                    <div className="py-4 text-center text-xs text-slate-500 font-mono">Loading schedules...</div>
-                  ) : availableSchedules.length === 0 ? (
-                    <div className="bg-amber-500/15 border border-amber-500/20 text-amber-400 text-xs p-3 rounded-xl">
-                      No available private schedule slots. Please select Semi-Private or contact the administrator.
-                    </div>
-                  ) : (
-                    <select
-                      value={selectedScheduleId}
-                      onChange={(e) => setSelectedScheduleId(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#CA8E25] font-semibold"
-                    >
-                      {availableSchedules.map((sch) => (
-                        <option key={sch.id} value={sch.id}>
-                          {sch.dayOfWeek} at {sch.startTime} - {sch.endTime} ({sch.teacher?.name || "No Teacher"})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              )}
-
-              {learningMethod === "SEMI_PRIVATE" && (
-                <div className="space-y-1.5 bg-slate-900 border border-slate-850 p-4 rounded-xl">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">Class Assigned Schedule</span>
-                  <p className="text-xs text-white font-semibold">{selectedCourse.schedule}</p>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setSelectedCourse(null)}
-                  className="flex-1 text-slate-400 hover:text-white rounded-xl border border-slate-850"
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleRegisterClick}
-                  disabled={submitting || (learningMethod === "PRIVATE" && availableSchedules.length === 0)}
-                  className="flex-1 bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl"
-                >
-                  Register
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Modal for Camps */}
-      {selectedCamp && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-900 flex items-center justify-between">
-              <h3 className="font-bold text-white text-base">Register Camp Program</h3>
               <button
                 onClick={() => setSelectedCamp(null)}
-                className="text-slate-500 hover:text-white text-xl font-bold"
+                className="text-slate-400 hover:text-white text-xl font-bold"
               >
                 &times;
               </button>
             </div>
-            <div className="p-6 space-y-5">
-              <div className="space-y-1.5 bg-slate-900 border border-slate-850 p-4 rounded-xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">Camp Name</span>
-                <p className="text-sm text-white font-semibold font-mono">{selectedCamp.name}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1 bg-slate-900 border border-slate-850 p-3 rounded-xl text-xs">
-                  <span className="text-slate-500 block font-bold uppercase text-[9px]">Start Date</span>
-                  <span className="text-white font-semibold">{formatDate(selectedCamp.startDate)}</span>
+
+            <div className="p-6 space-y-6 overflow-y-auto">
+              {modalError && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center gap-3 text-xs">
+                  <ShieldAlert className="w-5 h-5 shrink-0 text-red-400" />
+                  <span>{modalError}</span>
                 </div>
-                <div className="space-y-1 bg-slate-900 border border-slate-850 p-3 rounded-xl text-xs">
-                  <span className="text-slate-500 block font-bold uppercase text-[9px]">End Date</span>
-                  <span className="text-white font-semibold">{formatDate(selectedCamp.endDate)}</span>
+              )}
+
+              {/* Step 1: Learning Frequency */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-[#CA8E25] uppercase tracking-wider block border-b border-slate-900 pb-1">
+                  1. Select Learning Frequency
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {selectedCamp.allow1xWeek && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCampFrequency("1x_WEEK");
+                        setSelectedScheduleIds([]);
+                      }}
+                      className={`p-4 rounded-2xl border text-left transition flex flex-col justify-between ${
+                        campFrequency === "1x_WEEK"
+                          ? "border-[#CA8E25] bg-[#CA8E25]/10"
+                          : "border-slate-800 bg-slate-900 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-white block">1 Session / Week</span>
+                        <span className="text-[10px] text-slate-400 font-mono">4 Sessions / Month</span>
+                      </div>
+                      <span className="text-sm font-black text-[#CA8E25] font-mono mt-3">
+                        {formatCurrency(selectedCamp.price1xWeek || selectedCamp.price)}
+                      </span>
+                    </button>
+                  )}
+
+                  {selectedCamp.allow2xWeek && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCampFrequency("2x_WEEK");
+                        setSelectedScheduleIds([]);
+                      }}
+                      className={`p-4 rounded-2xl border text-left transition flex flex-col justify-between ${
+                        campFrequency === "2x_WEEK"
+                          ? "border-[#CA8E25] bg-[#CA8E25]/10"
+                          : "border-slate-800 bg-slate-900 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-white block">2 Sessions / Week</span>
+                        <span className="text-[10px] text-slate-400 font-mono">8 Sessions / Month</span>
+                      </div>
+                      <span className="text-sm font-black text-[#CA8E25] font-mono mt-3">
+                        {formatCurrency(selectedCamp.price2xWeek || selectedCamp.price)}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
-              <div className="space-y-1.5 bg-slate-900 border border-slate-850 p-4 rounded-xl">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">Camp Price</span>
-                <p className="text-base text-[#CA8E25] font-black font-mono">{formatCurrency(selectedCamp.price)}</p>
+
+              {/* Step 2: Schedule Selection */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-900 pb-1">
+                  <label className="text-xs font-bold text-[#CA8E25] uppercase tracking-wider">
+                    2. Select Fixed Class Schedule Slots
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Select {campFrequency === "1x_WEEK" ? "1 slot" : "2 slots"} ({selectedScheduleIds.length}/{campFrequency === "1x_WEEK" ? 1 : 2} selected)
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                  {selectedCamp.schedules && selectedCamp.schedules.length > 0 ? (
+                    selectedCamp.schedules.map((sched) => {
+                      const booked = sched._count?.registrationSlots || 0;
+                      const isFull = booked >= (sched.capacity || 4);
+                      const isSelected = selectedScheduleIds.includes(sched.id);
+
+                      return (
+                        <div
+                          key={sched.id}
+                          onClick={() => {
+                            if (!isFull) toggleCampScheduleSelection(sched.id);
+                          }}
+                          className={`p-3.5 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
+                            isFull
+                              ? "bg-slate-950 border-slate-900 opacity-50 cursor-not-allowed"
+                              : isSelected
+                              ? "border-blue-500 bg-blue-600/10 shadow-lg shadow-blue-500/10"
+                              : "bg-slate-900 border-slate-800 hover:border-slate-700"
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-xs">
+                                {sched.className} • {sched.dayOfWeek} ({sched.startTime} - {sched.endTime})
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                              <UserCheck className="w-3.5 h-3.5 text-[#CA8E25]" />
+                              <span>Teacher: <strong className="text-slate-200">{sched.teacher?.name || "Unassigned"}</strong></span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                isFull
+                                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                  : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                              }`}
+                            >
+                              {isFull ? "FULL (4/4)" : `${booked}/4 Booked`}
+                            </span>
+
+                            <div
+                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${
+                                isSelected
+                                  ? "bg-blue-600 border-blue-500 text-white"
+                                  : "border-slate-700 bg-slate-950"
+                              }`}
+                            >
+                              {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">No schedule slots configured for this camp.</p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setSelectedCamp(null)}
-                  className="flex-1 text-slate-400 hover:text-white rounded-xl border border-slate-850"
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCampEnroll}
-                  disabled={submitting}
-                  className="flex-1 bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl"
-                >
-                  {submitting ? "Registering..." : "Confirm & Register"}
-                </Button>
+              {/* Total Summary */}
+              <div className="bg-slate-900 border border-slate-850 p-4 rounded-2xl flex justify-between items-center text-xs">
+                <div>
+                  <span className="text-slate-400 block">Total Tuition Fee:</span>
+                  <span className="text-white font-bold">
+                    {campFrequency === "1x_WEEK" ? "1x/week (4 Sessions/mo)" : "2x/week (8 Sessions/mo)"}
+                  </span>
+                </div>
+                <span className="text-lg font-black text-[#CA8E25] font-mono">
+                  {formatCurrency(campFrequency === "1x_WEEK" ? selectedCamp.price1xWeek || selectedCamp.price : selectedCamp.price2xWeek || selectedCamp.price)}
+                </span>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Placement Test Required Dialog */}
-      {showPTPopup && selectedCourse && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-6 space-y-6">
-            <div className="text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-500">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-              <h3 className="font-extrabold text-white text-lg">Placement Test Required</h3>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-                Before enrolling in a class, you are required to complete a Placement Test. To access the Placement Test, you must first pay the Placement Test fee.
-              </p>
-            </div>
-
-            <div className="bg-slate-900/60 border border-slate-850 rounded-xl p-4 flex justify-between items-center">
-              <span className="text-xs text-slate-400 font-bold uppercase">Placement Test Fee</span>
-              <span className="text-sm font-black text-[#CA8E25] font-mono">{formatCurrency(300000)}</span>
-            </div>
-
-            <div className="flex gap-3">
+            <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3">
               <Button
                 variant="ghost"
-                onClick={() => setShowPTPopup(false)}
-                className="flex-1 text-slate-400 hover:text-white rounded-xl border border-slate-850"
+                onClick={() => setSelectedCamp(null)}
+                className="flex-1 text-slate-400 hover:text-white rounded-xl border border-slate-800"
                 disabled={submitting}
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleEnroll}
-                disabled={submitting}
+                onClick={handleCampEnroll}
+                disabled={submitting || selectedScheduleIds.length !== (campFrequency === "1x_WEEK" ? 1 : 2)}
                 className="flex-1 bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl"
               >
-                {submitting ? "Processing..." : "Continue to Payment"}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirm & Enroll"}
               </Button>
             </div>
           </div>

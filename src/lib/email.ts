@@ -731,3 +731,76 @@ export async function sendUserPasswordResetEmail(email: string, name: string, to
     return { success: false, error: error.message };
   }
 }
+
+export interface StudentPasswordResetEmailParams {
+  parentEmail: string;
+  parentName: string;
+  studentName: string;
+  studentIdStr: string;
+  token: string;
+}
+
+export async function sendStudentPasswordResetEmail(params: StudentPasswordResetEmailParams) {
+  const baseUrl = await getBaseUrl();
+  const resetLink = `${baseUrl}/reset-password?token=${params.token}`;
+
+  const emailHtml = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;background:#0F172A;color:#E2E8F0;border-radius:12px;border:1px solid #1E293B;">
+  <div style="text-align:center;margin-bottom:20px;">
+    <h2 style="color:#CA8E25;margin:0 0 5px 0;font-size:24px;">KAPUTRA</h2>
+    <span style="color:#CA8E25;font-size:12px;letter-spacing:2px;font-weight:bold;">ACADEMY</span>
+  </div>
+  <p style="color:#94A3B8;margin:0 0 20px 0;font-size:13px;text-align:center;">Student Password Reset Request</p>
+  <hr style="border-color:#1E293B;margin-bottom:20px;"/>
+
+  <p>Hello ${params.parentName},</p>
+  <p>A password reset was requested for the student account:</p>
+
+  <div style="background-color:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;margin:20px 0;">
+    <p style="margin:0 0 8px 0;"><strong>Student Name:</strong> <span style="color:#FFF;">${params.studentName}</span></p>
+    <p style="margin:0 0 16px 0;"><strong>Student ID:</strong> <span style="color:#FFF;font-family:monospace;">${params.studentIdStr}</span></p>
+    
+    <p style="color:#CBD5E1;font-size:13px;margin:0 0 14px 0;">
+      Click the button below to reset the student's password:
+    </p>
+    <div style="text-align:center;">
+      <a href="${resetLink}" style="display:inline-block;background-color:#CA8E25;color:#000;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+        RESET STUDENT PASSWORD
+      </a>
+    </div>
+    <p style="margin:14px 0 0 0;color:#ef4444;font-size:11px;font-weight:bold;text-align:center;">
+      This link will expire after 1 hour.
+    </p>
+  </div>
+
+  <p style="margin-top:25px;color:#94A3B8;font-size:13px;">
+    If you did not request this password reset, you can safely ignore this email.
+  </p>
+</div>
+`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+      to: params.parentEmail,
+      subject: "Reset Password - Kaputra Academy",
+      html: emailHtml,
+    });
+
+    await prisma.emailDraft.create({
+      data: {
+        type: "PASSWORD_RESET",
+        recipient: params.parentEmail,
+        subject: "Reset Password - Kaputra Academy",
+        bodyHtml: emailHtml,
+        status: "SENT",
+      },
+    });
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("Failed to send Student Password Reset Email:", error);
+    return { success: false, error: error.message };
+  }
+}
+

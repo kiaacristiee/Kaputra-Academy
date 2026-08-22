@@ -67,14 +67,8 @@ export default function LoginContent() {
         <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
             <div className="max-w-md w-full bg-white border border-gray-100 shadow-xl rounded-2xl p-8 text-slate-900 space-y-6">
                 <div className="text-center">
-                    <Link href="/" className="inline-flex flex-col items-center mb-3">
-                        <Image src="/logo.png" alt="Kaputra Academy Logo" width={48} height={48} className="mb-2 rounded-sm" />
-                        <span className="text-2xl font-black tracking-wide text-[#072147] block">
-                            KAPUTRA
-                        </span>
-                        <span className="text-xs font-semibold tracking-[0.2em] text-[#CA8E25] uppercase">
-                            Academy
-                        </span>
+                    <Link href="/" className="inline-flex flex-col items-center mb-6">
+                        <Image src="/blue.png" alt="Kaputra Academy Logo" width={600} height={160} className="rounded-sm object-contain h-40 w-auto hover:opacity-90 transition" priority />
                     </Link>
 
                     <h2 className="text-3xl font-extrabold text-[#072147] mt-2">
@@ -102,7 +96,7 @@ export default function LoginContent() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-1.5">
                         <Label htmlFor="username" className="text-slate-700 font-medium">
-                            Student ID or Email
+                            Student ID or Staff Email
                         </Label>
 
                         <Input
@@ -111,7 +105,7 @@ export default function LoginContent() {
                             required
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            placeholder="e.g. MDC211006 or teacher@kaputra.academy"
+                            placeholder="e.g. KPA-2026-0001 or staff@email.com"
                             className="bg-white border-gray-200 text-slate-900 rounded-xl placeholder:text-gray-400 focus-visible:ring-[#CA8E25]"
                         />
                     </div>

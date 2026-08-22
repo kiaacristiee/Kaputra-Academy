@@ -52,7 +52,7 @@ export async function generateVirtualAccount(invoiceId: string, bank: MidtransBa
     const orderId = `${invoice.invoiceNumber}-${bank.toUpperCase()}-${timestampSuffix}`;
 
     const customerName = invoice.student.name || "Student";
-    const customerEmail = invoice.student.parent?.email || invoice.student.email || "parent@kaputra.com";
+    const customerEmail = invoice.student.parent?.email || "parent@kaputra.com";
     const customerPhone = invoice.student.parent?.phone || invoice.student.phone || undefined;
 
     // Call Midtrans Core API

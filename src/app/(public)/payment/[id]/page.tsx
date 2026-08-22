@@ -91,8 +91,8 @@ export default async function PaymentPage({ params }: { params: Promise<{ id: st
             Please transfer the total amount to:
           </p>
           <div className="bg-white p-4 rounded-lg border border-yellow-100 font-mono text-center">
-            <p className="font-bold text-lg">BCA 1234-5678-90</p>
-            <p className="text-sm text-gray-500">a.n. Kaputra Academy</p>
+            <p className="font-bold text-lg">BCA 7000686799</p>
+            <p className="text-sm text-gray-500">a.n. ANDI JULIO KAPUTRA</p>
           </div>
         </div>
 

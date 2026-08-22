@@ -29,18 +29,10 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#CA8E25]/20 bg-[#072147]/85 backdrop-blur-xl shadow-lg">
+    <header className="sticky top-0 z-50 w-full border-b border-[#CA8E25]/20 bg-[#072147]/95 backdrop-blur-xl shadow-lg">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
-          <Image src="/logo.png" alt="Kaputra Academy Logo" width={40} height={40} className="rounded-sm" />
-          <div className="flex flex-col leading-none">
-            <span className="text-xl font-bold tracking-wide text-white">
-              KAPUTRA
-            </span>
-            <span className="text-xs font-semibold tracking-[0.3em] text-[#CA8E25] uppercase">
-              Academy
-            </span>
-          </div>
+          <Image src="/cream.png" alt="Kaputra Academy Logo" width={220} height={56} className="h-14 w-auto object-contain hover:opacity-90 scale-[1.75] origin-left ml-2 transition" priority />
         </Link>
 
         {/* Desktop Navigation */}

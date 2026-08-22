@@ -156,7 +156,7 @@ export default function CampProgramPage() {
                                         <div className="flex items-center gap-2">
                                             <Clock className="h-3.5 w-3.5 text-[#CA8E25] shrink-0" />
                                             <span>
-                                                Deadline: <strong className="text-red-500 font-medium">{formatDate(camp.registrationDeadline)}</strong>
+                                                Open until: <strong className="text-red-500 font-medium">{formatDate(camp.registrationDeadline)}</strong>
                                             </span>
                                         </div>
                                         {camp.capacity && (

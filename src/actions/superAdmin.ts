@@ -179,7 +179,7 @@ export async function getSuperAdminDashboardData() {
       activities.push({
         id: `student-${item.id}`,
         type: "STUDENT_REGISTRATION",
-        description: `New student registered: "${item.name}" (${item.email || "No Email"})`,
+        description: `New student registered: "${item.name}" (${item.studentIdStr || "No ID"})`,
         time: item.createdAt
       });
     });

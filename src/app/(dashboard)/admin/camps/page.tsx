@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import CampsClient from "./CampsClient";
-import { getCamps } from "@/actions/camps";
+import { getCamps, getTeachersForAssignment } from "@/actions/camps";
 
 import { isAdminRole } from "@/lib/permissions";
 
@@ -18,12 +18,18 @@ export default async function AdminCampsPage() {
     redirect("/login");
   }
 
-  const campRes = await getCamps();
+  const [campRes, teacherRes] = await Promise.all([
+    getCamps(),
+    getTeachersForAssignment(),
+  ]);
+
   const camps = campRes.success ? campRes.camps || [] : [];
+  const teachers = teacherRes.success ? teacherRes.teachers || [] : [];
 
   return (
     <CampsClient
       initialCamps={JSON.parse(JSON.stringify(camps))}
+      teachers={JSON.parse(JSON.stringify(teachers))}
     />
   );
 }

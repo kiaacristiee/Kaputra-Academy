@@ -36,8 +36,7 @@ export async function Footer() {
         {/* Company Info */}
         <div>
           <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Image src="/logo.png" alt="Kaputra Academy Logo" width={32} height={32} className="rounded-sm" />
-            Kaputra Academy
+            <Image src="/cream.png" alt="Kaputra Academy Logo" width={400} height={96} className="rounded-sm object-contain h-24 w-auto opacity-80 hover:opacity-100 transition" />
           </h3>
           <p className="text-sm text-slate-400">
             Empowering your career with industry-leading courses and expert

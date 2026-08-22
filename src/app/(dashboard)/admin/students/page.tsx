@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { toggleStudentStatus } from "@/actions/students";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function StudentsPage() {
                             </th>
 
                             <th className="text-left p-4 text-slate-400">
-                                Email
+                                Student ID
                             </th>
 
                             <th className="text-left p-4 text-slate-400">
@@ -56,33 +57,51 @@ export default async function StudentsPage() {
                         {students.map((student) => (
                             <tr
                                 key={student.id}
-                                className="border-b border-slate-900"
+                                className={`border-b border-slate-900 ${student.isDisabled ? "opacity-50" : ""}`}
                             >
                                 <td className="p-4 text-white">
                                     {student.name}
+                                    {student.isDisabled && (
+                                        <span className="ml-2 text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full border border-red-500/20">Disabled</span>
+                                    )}
                                 </td>
 
-                                <td className="p-4 text-slate-300">
-                                    {student.email}
+                                <td className="p-4 text-slate-300 font-mono text-sm">
+                                    {student.studentIdStr || "—"}
                                 </td>
 
-                                <td className="p-4 text-slate-300">
+                                <td className="p-4 text-slate-300 text-sm">
                                     {new Date(
                                         student.createdAt
                                     ).toLocaleDateString()}
                                 </td>
 
                                 <td className="p-4 text-right">
-                                    <Link
-                                        href={`/admin/students/${student.id}`}
-                                    >
-                                        <Button
-                                            size="sm"
-                                            className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black"
+                                    <div className="flex items-center justify-end gap-2">
+                                        <form action={toggleStudentStatus}>
+                                            <input type="hidden" name="studentId" value={student.id} />
+                                            <Button
+                                                type="submit"
+                                                size="sm"
+                                                variant="outline"
+                                                className={student.isDisabled 
+                                                    ? "border-emerald-500 text-emerald-400 hover:bg-emerald-500/10" 
+                                                    : "border-red-500 text-red-400 hover:bg-red-500/10"}
+                                            >
+                                                {student.isDisabled ? "Enable" : "Disable"}
+                                            </Button>
+                                        </form>
+                                        <Link
+                                            href={`/admin/students/${student.id}`}
                                         >
-                                            View
-                                        </Button>
-                                    </Link>
+                                            <Button
+                                                size="sm"
+                                                className="bg-[#CA8E25] hover:bg-[#D89A2B] text-black"
+                                            >
+                                                View
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

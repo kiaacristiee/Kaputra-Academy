@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 export async function getCourses() {
   try {
@@ -94,8 +95,7 @@ export async function createCourse(data: {
 }) {
   try {
     const session = await getServerSession(authOptions);
-    const role = session?.user?.role;
-    if (!role || !["ADMIN", "OWNER", "CO_OWNER"].includes(role)) {
+    if (!session || !session.user || !isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized" };
     }
     
@@ -156,8 +156,7 @@ export async function updateCourse(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const role = session?.user?.role;
-    if (!role || !["ADMIN", "OWNER", "CO_OWNER"].includes(role)) {
+    if (!session || !session.user || !isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized" };
     }
 
@@ -209,8 +208,7 @@ export async function updateCourse(
 export async function deleteCourse(id: string) {
   try {
     const session = await getServerSession(authOptions);
-    const role = session?.user?.role;
-    if (!role || !["ADMIN", "OWNER", "CO_OWNER"].includes(role)) {
+    if (!session || !session.user || !isAdminRole(session.user.role)) {
       return { success: false, error: "Unauthorized" };
     }
 

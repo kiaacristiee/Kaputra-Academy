@@ -37,8 +37,8 @@ export default async function StudentDashboardPage() {
     .filter((e) => e.itemType === "COURSE" || e.itemType === "CLASS" || e.itemType === "PROGRAM")
     .map((e) => e.itemId);
 
-  // Fetch course details, camp programs, placement test, and announcements concurrently
-  const [enrolledCourses, camps, placementTest, latestAnnouncements] = await Promise.all([
+  // Fetch course details, camp programs & registrations, placement test, and announcements concurrently
+  const [enrolledCourses, campsData, placementTest, latestAnnouncements] = await Promise.all([
     prisma.course.findMany({
       where: {
         id: { in: courseIds },
@@ -52,7 +52,7 @@ export default async function StudentDashboardPage() {
         },
       },
     }),
-    // Camp programs — resolve from unresolved enrollment IDs
+    // Camp programs and student's camp registrations
     (async () => {
       const resolvedCourseIds_pre = await prisma.course.findMany({
         where: { id: { in: courseIds } },
@@ -65,9 +65,31 @@ export default async function StudentDashboardPage() {
       const campIds = unresolvedEnrollments
         .filter((e) => e.itemType === "PROGRAM" || e.itemType === "CAMP")
         .map((e) => e.itemId);
-      return prisma.campProgram.findMany({
-        where: { id: { in: campIds } },
-      });
+
+      const [camps, campRegs] = await Promise.all([
+        prisma.campProgram.findMany({
+          where: { id: { in: campIds } },
+        }),
+        prisma.campRegistration.findMany({
+          where: {
+            studentId: session.user.id,
+            campProgramId: { in: campIds },
+          },
+          include: {
+            slots: {
+              include: {
+                campSchedule: {
+                  include: {
+                    teacher: { select: { id: true, name: true, email: true } },
+                  },
+                },
+              },
+            },
+          },
+        }),
+      ]);
+
+      return { camps, campRegs };
     })(),
     // Placement test
     student.studentIdStr
@@ -123,22 +145,48 @@ export default async function StudentDashboardPage() {
     (e) => !resolvedCourseIds.includes(e.itemId)
   );
 
+  const { camps, campRegs } = campsData;
   const campMap = new Map(camps.map((c) => [c.id, c]));
+  const campRegMap = new Map(campRegs.map((r) => [r.campProgramId, r]));
 
   const fallbackCourses = unresolvedEnrollments.map((e) => {
     const isProgram = e.itemType === "PROGRAM" || e.itemType === "CAMP";
     const camp = isProgram ? campMap.get(e.itemId) : null;
+    const reg = isProgram ? campRegMap.get(e.itemId) : null;
+
+    let scheduleText = "Schedule to be arranged with your instructor";
+    let teachers: { id: string; name: string; email: string }[] = [];
+
+    if (camp) {
+      if (reg && reg.slots && reg.slots.length > 0) {
+        const freqText = reg.sessionFrequency === "1x_WEEK" ? "1x/week (4 Sessions/mo)" : "2x/week (8 Sessions/mo)";
+        const slotText = reg.slots
+          .map((s) => `${s.campSchedule.className} • ${s.campSchedule.dayOfWeek} (${s.campSchedule.startTime}-${s.campSchedule.endTime})`)
+          .join(" & ");
+        scheduleText = `${freqText} | ${slotText}`;
+
+        reg.slots.forEach((s) => {
+          if (s.campSchedule.teacher && !teachers.some((t) => t.id === s.campSchedule.teacher!.id)) {
+            teachers.push({
+              id: s.campSchedule.teacher.id,
+              name: s.campSchedule.teacher.name,
+              email: s.campSchedule.teacher.email,
+            });
+          }
+        });
+      } else {
+        scheduleText = `Starts: ${new Date(camp.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+      }
+    }
     
     return {
       id: e.id,
       title: camp ? camp.name : e.itemId,
-      schedule: camp
-        ? `Starts: ${new Date(camp.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-        : "Schedule to be arranged with your instructor",
-      price: camp ? camp.price : 0,
+      schedule: scheduleText,
+      price: reg && reg.price != null ? reg.price : (camp ? camp.price : 0),
       type: camp ? (camp as any).type : (isProgram ? "CAMP" : (e.itemType === "CLASS" ? "REGULAR" : "COMPETITION")),
       categoryName: isProgram ? "Camp Program" : e.itemType,
-      teachers: [],
+      teachers,
     };
   });
 

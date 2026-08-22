@@ -13,6 +13,11 @@ export default async function StudentDetailPage({
         where: {
             id,
         },
+        include: {
+            parent: {
+                select: { name: true, email: true, phone: true },
+            },
+        },
     });
 
     if (!student) {
@@ -35,11 +40,11 @@ export default async function StudentDetailPage({
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
                         <p className="text-slate-400 text-sm">
-                            Email
+                            Student ID
                         </p>
 
-                        <p className="text-white">
-                            {student.email}
+                        <p className="text-white font-mono">
+                            {student.studentIdStr || "—"}
                         </p>
                     </div>
 
@@ -50,6 +55,26 @@ export default async function StudentDetailPage({
 
                         <p className="text-white">
                             {student.role}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p className="text-slate-400 text-sm">
+                            Parent Name
+                        </p>
+
+                        <p className="text-white">
+                            {student.parent?.name || "Not linked"}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p className="text-slate-400 text-sm">
+                            Parent Email
+                        </p>
+
+                        <p className="text-white">
+                            {student.parent?.email || "—"}
                         </p>
                     </div>
 

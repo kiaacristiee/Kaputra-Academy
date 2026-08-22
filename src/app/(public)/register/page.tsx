@@ -84,13 +84,7 @@ export default async function RegisterPage({
     <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
         <div className="text-center mb-8 flex flex-col items-center">
-          <Image src="/logo.png" alt="Kaputra Academy Logo" width={48} height={48} className="mb-2 rounded-sm" />
-          <span className="text-2xl font-black tracking-wide text-[#072147] block">
-            KAPUTRA
-          </span>
-          <span className="text-xs font-semibold tracking-[0.2em] text-[#CA8E25] uppercase block mb-3">
-            Academy
-          </span>
+          <Image src="/blue.png" alt="Kaputra Academy Logo" width={600} height={160} className="mb-2 rounded-sm object-contain h-40 w-auto hover:opacity-90 transition" priority />
           <h2 className="text-3xl font-extrabold text-[#072147]">
             Account Registration
           </h2>

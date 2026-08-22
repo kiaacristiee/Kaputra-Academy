@@ -1,15 +1,14 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import prisma from "@/lib/db";
 import EmailsClient from "./EmailsClient";
-
 import { isAdminRole } from "@/lib/permissions";
+import { getEmailDrafts } from "@/actions/emails";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Email Drafts | Admin | Kaputra Academy",
+  title: "Email Workflow | Admin | Kaputra Academy",
 };
 
 export default async function AdminEmailsPage() {
@@ -18,10 +17,8 @@ export default async function AdminEmailsPage() {
     redirect("/login");
   }
 
-  const drafts = await prisma.emailDraft.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const result = await getEmailDrafts();
+  const drafts = result.success && result.drafts ? result.drafts : [];
 
   return <EmailsClient initialDrafts={drafts} />;
 }

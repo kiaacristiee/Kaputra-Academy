@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CreditCard, CheckCircle2, AlertCircle, XCircle, Clock, Download,
   Search, Eye, X, ExternalLink, DollarSign, Users, TrendingUp, Filter, BookOpen, Trophy
@@ -47,6 +48,9 @@ interface Invoice {
 
 interface Props {
   allInvoices: Invoice[];
+  availableArchives: string[];
+  activePeriod: string;
+  currentSystemPeriod: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
@@ -61,7 +65,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 import { useCanManageEnrollment } from "@/hooks/usePermissions";
 
-export default function AdminPaymentsClient({ allInvoices }: Props) {
+export default function AdminPaymentsClient({ allInvoices, availableArchives, activePeriod, currentSystemPeriod }: Props) {
+  const router = useRouter();
   const { canManage } = useCanManageEnrollment();
   const [invoices, setInvoices] = useState<Invoice[]>(allInvoices);
   const [search, setSearch] = useState("");
@@ -211,17 +216,66 @@ export default function AdminPaymentsClient({ allInvoices }: Props) {
           </h1>
           <p className="text-slate-400 mt-2">Manage Regular and Competition class invoices independently.</p>
         </div>
-        <Button
-          onClick={handleExportCSV}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-5 flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Export CSV (Current View)
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => router.push('?')}
+            variant="outline"
+            className="border-slate-700 text-slate-300 hover:bg-slate-800"
+          >
+            Reset to Current Month
+          </Button>
+          <Button
+            onClick={handleExportCSV}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-5 flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV ({activePeriod})
+          </Button>
+        </div>
+      </div>
+
+      {/* Archive Selector */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center gap-3">
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+          <Clock className="h-4 w-4" /> Payment Archives:
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {availableArchives.map((period) => {
+            const isActive = period === activePeriod;
+            const isCurrentMonth = period === currentSystemPeriod;
+            return (
+              <button
+                key={period}
+                type="button"
+                onClick={() => router.push(`?period=${encodeURIComponent(period)}`)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
+                  isActive
+                    ? "bg-[#CA8E25] text-black shadow-md border border-[#CA8E25]"
+                    : isCurrentMonth
+                      ? "bg-slate-800 border border-slate-700 text-white hover:bg-slate-700"
+                      : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+              >
+                {period} {isCurrentMonth && "(Current)"}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Alerts */}
       <AnimatePresence>
+        {activePeriod !== currentSystemPeriod && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="flex items-center gap-2 p-4 rounded-xl border bg-amber-500/10 border-amber-500/20 text-amber-500"
+          >
+            <Clock className="h-5 w-5 shrink-0" />
+            <span className="text-sm font-medium">
+              You are viewing the archived snapshot for <strong>{activePeriod}</strong>. Statistics are historically bound to this month.
+            </span>
+          </motion.div>
+        )}
         {message && (
           <motion.div
             initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -313,10 +367,10 @@ export default function AdminPaymentsClient({ allInvoices }: Props) {
         {/* Stats for current view */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Invoices (View)",   value: stats.total,                                              icon: CreditCard,  color: "text-white"        },
-            { label: "Paid",             value: stats.paid,                                               icon: CheckCircle2, color: "text-emerald-400"  },
-            { label: "Awaiting Review",  value: stats.pending,                                            icon: AlertCircle, color: "text-amber-400"    },
-            { label: "Revenue (View)",   value: `Rp ${stats.totalRevenue.toLocaleString("id-ID")}`,      icon: DollarSign,  color: "text-blue-400"    },
+            { label: "Invoices (Monthly)",value: stats.total,                                              icon: CreditCard,  color: "text-white"        },
+            { label: "Resolved / Paid",  value: stats.paid,                                               icon: CheckCircle2, color: "text-emerald-400"  },
+            { label: "Pending Tickets",  value: stats.pending,                                            icon: AlertCircle, color: "text-amber-400"    },
+            { label: `${activePeriod.split(" ")[0]} Revenue`, value: `Rp ${stats.totalRevenue.toLocaleString("id-ID")}`,      icon: DollarSign,  color: "text-blue-400"    },
           ].map((s) => {
             const Icon = s.icon;
             return (

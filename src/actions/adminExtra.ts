@@ -53,6 +53,83 @@ export async function deleteTeacherAssignment(id: string) {
   }
 }
 
+// =============================================
+// STUDENT ↔ TEACHER ASSIGNMENT (New System)
+// =============================================
+
+export async function getStudentTeacherAssignments() {
+  try {
+    await checkAdmin();
+    const assignments = await (prisma as any).studentTeacherAssignment.findMany({
+      include: {
+        teacher: { select: { id: true, name: true, role: true } },
+        student: {
+          select: {
+            id: true,
+            name: true,
+            studentIdStr: true,
+            enrollments: {
+              where: { status: "ACTIVE" },
+              select: { itemId: true, itemType: true },
+            },
+          },
+        },
+      },
+      orderBy: { assignedAt: "desc" },
+    });
+    return { success: true, assignments: JSON.parse(JSON.stringify(assignments)) };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function createStudentTeacherAssignment(data: { teacherId: string; studentId: string }) {
+  try {
+    await checkAdmin();
+    if (!data.teacherId || !data.studentId) {
+      return { success: false, error: "Teacher and Student are required." };
+    }
+
+    // Validate teacher role
+    const teacher = await prisma.user.findUnique({ where: { id: data.teacherId } });
+    if (!teacher || !["TEACHER", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(teacher.role)) {
+      return { success: false, error: "Selected user is not a teacher." };
+    }
+
+    // Validate student role
+    const student = await prisma.user.findUnique({ where: { id: data.studentId } });
+    if (!student || student.role !== "STUDENT") {
+      return { success: false, error: "Selected user is not a student." };
+    }
+
+    const assignment = await (prisma as any).studentTeacherAssignment.create({
+      data: {
+        teacherId: data.teacherId,
+        studentId: data.studentId,
+        isPrimary: true,
+      },
+    });
+    revalidatePath("/admin/teacher-assignments");
+    return { success: true, assignment };
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      return { success: false, error: "This teacher is already assigned to this student." };
+    }
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteStudentTeacherAssignment(id: string) {
+  try {
+    await checkAdmin();
+    await (prisma as any).studentTeacherAssignment.delete({ where: { id } });
+    revalidatePath("/admin/teacher-assignments");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getParents() {
   try {
     await checkAdmin();

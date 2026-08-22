@@ -238,8 +238,17 @@ export async function enrollInClass(
       });
     }
 
+    // Automatically generate invoice PDF and place into Admin Email Workflow -> Invoice (Draft)
+    try {
+      const { createOrUpdateInvoiceEmailDraft } = await import("@/lib/invoiceDraft");
+      await createOrUpdateInvoiceEmailDraft(invoice.id);
+    } catch (draftErr) {
+      console.error("Failed to auto-generate invoice draft:", draftErr);
+    }
+
     revalidatePath("/student/invoices");
     revalidatePath("/parent/invoices");
+    revalidatePath("/admin/emails");
 
     return { success: true, invoiceId: invoice.id };
   } catch (error: any) {

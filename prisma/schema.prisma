@@ -55,6 +55,11 @@ model User {
   campRegistrations   CampRegistration[]
   liveChatSessions    LiveChatSession[]   @relation("ChatUser")
   assignedChats       LiveChatSession[]   @relation("ChatAdmin")
+
+  // Teacher↔Student Assignment Relations
+  assignedTeachers    StudentTeacherAssignment[] @relation("StudentTeacherStudent")
+  campTeacherSchedules CampSchedule[]           @relation("CampScheduleTeacher")
+  assignedStudents    StudentTeacherAssignment[] @relation("StudentTeacherTeacher")
 }
 
 model Category {
@@ -115,6 +120,19 @@ model TeacherAssignment {
   course  Course @relation(fields: [courseId], references: [id])
 
   @@unique([teacherId, courseId])
+}
+
+model StudentTeacherAssignment {
+  id         String   @id @default(cuid())
+  teacherId  String
+  studentId  String
+  isPrimary  Boolean  @default(true)
+  assignedAt DateTime @default(now())
+
+  teacher User @relation("StudentTeacherTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  student User @relation("StudentTeacherStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, studentId])
 }
 
 model Registration {
@@ -530,6 +548,10 @@ model CampProgram {
   endDate              DateTime
   registrationDeadline DateTime
   price                Float
+  allow1xWeek          Boolean            @default(true)
+  price1xWeek          Float              @default(0)
+  allow2xWeek          Boolean            @default(true)
+  price2xWeek          Float              @default(0)
   capacity             Int?
   status               String             @default("OPEN") // "OPEN" or "CLOSED"
   visibility           String             @default("DRAFT") // "PUBLISHED" or "DRAFT"
@@ -541,10 +563,30 @@ model CampProgram {
   videos               Video[]
   materials            Material[]
   mockTests            MockTest[]
+  schedules            CampSchedule[]
+}
+
+model CampSchedule {
+  id            String   @id @default(cuid())
+  campProgramId String
+  dayOfWeek     String   // "FRIDAY" or "SATURDAY"
+  startTime     String   // e.g. "15:00"
+  endTime       String   // e.g. "16:30"
+  className     String   // e.g. "Class A" or "Class B"
+  capacity      Int      @default(4)
+  teacherId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  campProgram       CampProgram            @relation(fields: [campProgramId], references: [id], onDelete: Cascade)
+  teacher           User?                  @relation("CampScheduleTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  registrationSlots CampRegistrationSlot[]
+
+  @@unique([campProgramId, dayOfWeek, startTime, className])
 }
 
 model CampRegistration {
-  id                String             @id @default(cuid())
+  id                String                 @id @default(cuid())
   studentId         String
   studentName       String
   studentAge        Int
@@ -552,12 +594,28 @@ model CampRegistration {
   parentPhone       String
   parentEmail       String
   campProgramId     String
-  status            String             @default("PENDING_PAYMENT") // PENDING_PAYMENT, VERIFYING_PAYMENT, APPROVED
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  sessionFrequency  String?                // "1x_WEEK" or "2x_WEEK"
+  sessionsPerMonth  Int?                   // 4 or 8
+  price             Float?
+  status            String                 @default("PENDING_PAYMENT") // PENDING_PAYMENT, VERIFYING_PAYMENT, APPROVED
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
 
-  campProgram       CampProgram        @relation(fields: [campProgramId], references: [id], onDelete: Cascade)
-  student           User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  campProgram       CampProgram            @relation(fields: [campProgramId], references: [id], onDelete: Cascade)
+  student           User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  slots             CampRegistrationSlot[]
+}
+
+model CampRegistrationSlot {
+  id                 String           @id @default(cuid())
+  campRegistrationId String
+  campScheduleId     String
+  createdAt          DateTime         @default(now())
+
+  campRegistration   CampRegistration @relation(fields: [campRegistrationId], references: [id], onDelete: Cascade)
+  campSchedule       CampSchedule     @relation(fields: [campScheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([campRegistrationId, campScheduleId])
 }
 
 model EmailDraft {

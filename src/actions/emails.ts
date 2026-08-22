@@ -110,9 +110,56 @@ export async function deleteEmailDraft(id: string) {
     }
 
     await prisma.emailDraft.delete({ where: { id } });
+
+    console.log(
+      `[AUDIT] Admin ${user.email || user.name || "Unknown"} (${user.role}) DELETE_EMAIL: Deleted draft ID ${id} (${existing.type} to ${existing.recipient}) at ${new Date().toISOString()}`
+    );
+
     revalidatePath("/admin/emails");
     return { success: true };
   } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function bulkDeleteEmailDrafts(ids: string[]) {
+  try {
+    const user = await checkAdminAuth();
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return { success: false, error: "No email IDs provided" };
+    }
+
+    const existingDrafts = await prisma.emailDraft.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, metadata: true, recipient: true, subject: true, type: true }
+    });
+
+    const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(user.role);
+
+    const deletableIds = existingDrafts
+      .filter(d => isSuperAdmin || extractLearningMethodFromDraft(d.metadata) !== "PRIVATE")
+      .map(d => d.id);
+
+    if (deletableIds.length === 0) {
+      return { success: false, error: "No eligible email drafts to delete" };
+    }
+
+    const deleteResult = await prisma.emailDraft.deleteMany({
+      where: { id: { in: deletableIds } }
+    });
+
+    console.log(
+      `[AUDIT] Admin ${user.email || user.name || "Unknown"} (${user.role}) BULK_DELETE_EMAILS: Deleted ${deleteResult.count} draft(s) at ${new Date().toISOString()}. IDs: ${deletableIds.join(", ")}`
+    );
+
+    revalidatePath("/admin/emails");
+    return {
+      success: true,
+      count: deleteResult.count,
+      message: `${deleteResult.count} email draft(s) deleted successfully.`,
+    };
+  } catch (error: any) {
+    console.error("[BULK DELETE EMAIL DRAFTS ERROR]", error);
     return { success: false, error: error.message };
   }
 }
@@ -130,17 +177,30 @@ export async function sendEmailDraft(id: string) {
 
     // Send the email via Gmail SMTP using Nodemailer
     const { transporter } = await import("@/lib/transporter");
+    const currentMeta = draft.metadata ? JSON.parse(draft.metadata) : {};
+
+    const mailOptions: any = {
+      from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+      to: draft.recipient,
+      subject: draft.subject,
+      html: draft.bodyHtml,
+    };
+
+    // Attach PDF if available in metadata (e.g. for INVOICE emails)
+    if (currentMeta.pdfBase64 && currentMeta.pdfFilename) {
+      mailOptions.attachments = [
+        {
+          filename: currentMeta.pdfFilename,
+          content: Buffer.from(currentMeta.pdfBase64, "base64"),
+          contentType: "application/pdf",
+        },
+      ];
+    }
     
     try {
-      await transporter.sendMail({
-        from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
-        to: draft.recipient,
-        subject: draft.subject,
-        html: draft.bodyHtml,
-      });
+      await transporter.sendMail(mailOptions);
 
       // Update status to SENT and log activity
-      const currentMeta = draft.metadata ? JSON.parse(draft.metadata) : {};
       currentMeta.sentBy = user.email || user.name || "Admin";
       currentMeta.sentAt = new Date().toISOString();
       currentMeta.lastError = undefined; // clear previous errors
@@ -159,7 +219,6 @@ export async function sendEmailDraft(id: string) {
     } catch (sendError: any) {
       console.error("[EMAIL SEND ERROR]", sendError);
       
-      const currentMeta = draft.metadata ? JSON.parse(draft.metadata) : {};
       currentMeta.lastError = sendError.message || sendError.toString();
       currentMeta.failedBy = user.email || user.name || "Admin";
       currentMeta.failedAt = new Date().toISOString();
@@ -180,4 +239,58 @@ export async function sendEmailDraft(id: string) {
     return { success: false, error: error.message };
   }
 }
+
+export async function updateInvoiceDraftData(
+  id: string,
+  payload: {
+    recipient?: string;
+    subject?: string;
+    bodyHtml?: string;
+    invoiceData?: any;
+  }
+) {
+  try {
+    const user = await checkAdminAuth();
+    const existing = await prisma.emailDraft.findUnique({ where: { id } });
+    if (!existing) throw new Error("Draft not found");
+
+    const currentMeta = existing.metadata ? JSON.parse(existing.metadata) : {};
+
+    let newPdfBase64 = currentMeta.pdfBase64;
+    let updatedInvoiceData = currentMeta.invoiceData;
+
+    // If admin edited invoice data (items, prices, bank details, dates, etc.), regenerate PDF
+    if (payload.invoiceData) {
+      const { generateInvoicePDF } = await import("@/lib/invoicePdf");
+      updatedInvoiceData = payload.invoiceData;
+      const { base64 } = generateInvoicePDF(updatedInvoiceData);
+      newPdfBase64 = base64;
+    }
+
+    const newMeta = {
+      ...currentMeta,
+      invoiceData: updatedInvoiceData,
+      pdfBase64: newPdfBase64,
+      lastEditedBy: user.email || user.name || "Admin",
+      lastEditedAt: new Date().toISOString(),
+    };
+
+    const draft = await prisma.emailDraft.update({
+      where: { id },
+      data: {
+        recipient: payload.recipient || existing.recipient,
+        subject: payload.subject || existing.subject,
+        bodyHtml: payload.bodyHtml || existing.bodyHtml,
+        metadata: JSON.stringify(newMeta),
+      },
+    });
+
+    revalidatePath("/admin/emails");
+    return { success: true, draft };
+  } catch (error: any) {
+    console.error("[UPDATE INVOICE DRAFT ERROR]", error);
+    return { success: false, error: error.message };
+  }
+}
+
 

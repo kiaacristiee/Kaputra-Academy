@@ -65,12 +65,14 @@ function ResetPasswordForm() {
         <p className="text-rose-700 text-sm">
           This password reset link is invalid or missing a security token.
         </p>
-        <Button
-          asChild
-          className="w-full mt-4 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all"
-        >
-          <Link href="/forgot-password">Request New Link</Link>
-        </Button>
+        <Link href="/forgot-password" className="block w-full">
+          <Button
+            type="button"
+            className="w-full mt-4 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all"
+          >
+            Request New Link
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -83,12 +85,14 @@ function ResetPasswordForm() {
         <p className="text-emerald-700 text-sm">
           Your password has been successfully updated. You can now use your new password to sign in.
         </p>
-        <Button
-          asChild
-          className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all"
-        >
-          <Link href="/login">Return to Sign In</Link>
-        </Button>
+        <Link href="/login" className="block w-full">
+          <Button
+            type="button"
+            className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all"
+          >
+            Return to Sign In
+          </Button>
+        </Link>
       </div>
     );
   }
@@ -149,20 +153,15 @@ export default function ResetPasswordPage() {
     <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full bg-white border border-gray-100 shadow-xl rounded-2xl p-8 text-slate-900 space-y-6">
         <div className="text-center">
-          <Link href="/" className="inline-flex flex-col items-center mb-3">
+          <Link href="/" className="inline-flex flex-col items-center mb-6">
             <Image
-              src="/logo.png"
+              src="/blue.png"
               alt="Kaputra Academy Logo"
-              width={48}
-              height={48}
-              className="mb-2 rounded-sm"
+              width={600}
+              height={160}
+              className="mb-2 rounded-sm object-contain h-40 w-auto hover:opacity-90 transition"
+              priority
             />
-            <span className="text-2xl font-black tracking-wide text-[#072147] block">
-              KAPUTRA
-            </span>
-            <span className="text-xs font-semibold tracking-[0.2em] text-[#CA8E25] uppercase">
-              Academy
-            </span>
           </Link>
 
           <h2 className="text-3xl font-extrabold text-[#072147] mt-2">

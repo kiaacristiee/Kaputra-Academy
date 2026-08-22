@@ -67,6 +67,13 @@ export async function createInvoice(data: {
     },
   });
 
+  try {
+    const { createOrUpdateInvoiceEmailDraft } = await import("@/lib/invoiceDraft");
+    await createOrUpdateInvoiceEmailDraft(invoice.id);
+  } catch (draftErr) {
+    console.error("Failed to auto-generate invoice draft:", draftErr);
+  }
+
   return { success: true, invoiceId: invoice.id };
 }
 

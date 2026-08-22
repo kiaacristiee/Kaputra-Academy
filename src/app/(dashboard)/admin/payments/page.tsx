@@ -12,7 +12,12 @@ export const metadata = {
   title: "Payment Management | Admin Dashboard",
 };
 
-export default async function AdminPaymentsPage() {
+export default async function AdminPaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const { period } = await searchParams;
   const session = await getServerSession(authOptions);
   if (!session || !session.user || !isAdminRole(session.user.role)) {
     redirect("/login");
@@ -20,15 +25,58 @@ export default async function AdminPaymentsPage() {
 
   const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
 
-  // Fetch ALL invoices with relations
+  const baseWhere = {
+    ...(!isSuperAdmin && {
+      OR: [
+        { learningMethod: null },
+        { learningMethod: { not: "PRIVATE" } }
+      ]
+    })
+  };
+
+  // 1. Fetch lightweight dates to construct Monthly Archives list automatically
+  const allInvoicesLight = await prisma.invoice.findMany({
+    where: baseWhere,
+    select: { createdAt: true },
+    orderBy: { createdAt: "desc" }
+  });
+
+  const uniquePeriods = new Set<string>();
+  allInvoicesLight.forEach((inv) => {
+    uniquePeriods.add(inv.createdAt.toLocaleDateString("en-US", { month: "long", year: "numeric" }));
+  });
+  const availableArchives = Array.from(uniquePeriods);
+
+  // 2. Define active period boundary
+  const now = new Date();
+  const currentSystemPeriod = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  
+  let activePeriodStr = period ? decodeURIComponent(period) : currentSystemPeriod;
+  if (!availableArchives.includes(activePeriodStr) && activePeriodStr !== currentSystemPeriod) {
+    activePeriodStr = currentSystemPeriod;
+  }
+
+  // Ensure current month is always available to jump to even if empty
+  if (!uniquePeriods.has(currentSystemPeriod)) {
+    availableArchives.unshift(currentSystemPeriod);
+  }
+
+  const [monthName, yearStr] = activePeriodStr.split(" ");
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const targetMonthNum = monthNames.indexOf(monthName);
+  const targetYearNum = parseInt(yearStr, 10);
+
+  const startOfMonth = new Date(targetYearNum, targetMonthNum, 1, 0, 0, 0, 0);
+  const endOfMonth = new Date(targetYearNum, targetMonthNum + 1, 0, 23, 59, 59, 999);
+
+  // 3. Fetch full invoices tightly bound to the desired monthly archive bracket
   const allInvoices = await prisma.invoice.findMany({
     where: {
-      ...(!isSuperAdmin && {
-        OR: [
-          { learningMethod: null },
-          { learningMethod: { not: "PRIVATE" } }
-        ]
-      })
+      ...baseWhere,
+      createdAt: {
+        gte: startOfMonth,
+        lte: endOfMonth
+      }
     },
     include: {
       student: {
@@ -41,7 +89,6 @@ export default async function AdminPaymentsPage() {
       },
     },
     orderBy: { updatedAt: "desc" },
-    take: 100, // Limit invoices to recent 100 to prevent slow load times
   });
 
   const courses = await prisma.course.findMany({
@@ -115,5 +162,5 @@ export default async function AdminPaymentsPage() {
     };
   });
 
-  return <AdminPaymentsClient allInvoices={formatted} />;
+  return <AdminPaymentsClient allInvoices={formatted} availableArchives={availableArchives} activePeriod={activePeriodStr} currentSystemPeriod={currentSystemPeriod} />;
 }
