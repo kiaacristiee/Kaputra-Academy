@@ -403,63 +403,6 @@ export default function VirtualAccountPayment({ invoice, studentName, onRefresh 
                   <span className="font-mono font-bold text-white text-base">Rp {invoice.amount.toLocaleString("id-ID")}</span>
                 </div>
               </div>
-
-              {/* Step-by-Step Payment Instructions Accordion */}
-              <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950">
-                <button
-                  type="button"
-                  onClick={() => setShowInstructions(!showInstructions)}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-slate-900/50 transition"
-                >
-                  <div className="flex items-center gap-2 font-bold text-white text-sm">
-                    <ShieldCheck className="h-4 w-4 text-[#CA8E25]" />
-                    Payment Instructions ({currentBankObj.logoText})
-                  </div>
-                  {showInstructions ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-                </button>
-
-                <AnimatePresence>
-                  {showInstructions && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-slate-800 p-5 space-y-4"
-                    >
-                      {/* Instruction Tabs */}
-                      <div className="flex border-b border-slate-800 gap-4 text-xs font-bold">
-                        {(["mobile", "atm", "internet"] as const).map((tab) => (
-                          <button
-                            key={tab}
-                            type="button"
-                            onClick={() => setActiveInstructionTab(tab)}
-                            className={`pb-2 capitalize transition border-b-2 ${
-                              activeInstructionTab === tab
-                                ? "border-[#CA8E25] text-white"
-                                : "border-transparent text-slate-400 hover:text-slate-200"
-                            }`}
-                          >
-                            {tab === "mobile" ? "m-Banking / App" : tab === "atm" ? "ATM Transfer" : "Internet Banking"}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Instruction Steps */}
-                      <ol className="space-y-2.5 text-xs text-slate-300 list-decimal list-inside pl-1">
-                        {instructions[activeInstructionTab].map((step, idx) => (
-                          <li key={idx} className="leading-relaxed">
-                            <span className="text-slate-200">{step}</span>
-                          </li>
-                        ))}
-                      </ol>
-
-                      <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-[11px] text-slate-400">
-                        ⚡ <strong>Automated Verification:</strong> Once transferred, Midtrans automatically confirms your payment in real-time. No manual receipt upload required.
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
           )}
         </>
