@@ -275,7 +275,7 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
         if (!existingInvoice) {
           const count = await prisma.invoice.count();
           const invoiceNumber = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${(count + 1).toString().padStart(4, '0')}`;
-          const virtualAccountNumber = `8800${Math.floor(10000000 + Math.random() * 90000000)}`;
+          const virtualAccountNumber = "7000686799";
           const dueDate = new Date();
           dueDate.setHours(dueDate.getHours() + 24);
 

@@ -13,8 +13,7 @@ export async function approveDraftInvoice(invoiceId: string) {
     throw new Error("Unauthorized");
   }
 
-  // Generate mock VA
-  const virtualAccountNumber = `8800${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const virtualAccountNumber = "7000686799";
   
   // Set due date 24h from now
   const dueDate = new Date();
@@ -48,8 +47,7 @@ export async function createInvoice(data: {
   const count = await prisma.invoice.count();
   const invoiceNumber = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${(count + 1).toString().padStart(4, '0')}`;
 
-  // Generate mock VA
-  const virtualAccountNumber = `8800${Math.floor(10000000 + Math.random() * 90000000)}`;
+  const virtualAccountNumber = "7000686799";
 
   // Due date: 24 hours from now
   const dueDate = new Date();

@@ -37,16 +37,7 @@ export async function createVaCharge(params: CreateVaChargeParams): Promise<VaCh
   if (!serverKey) {
     console.warn("[MIDTRANS] MIDTRANS_SERVER_KEY is not configured. Falling back to simulated VA generation for development.");
     
-    // Bank prefixes for realistic mock VAs
-    const bankPrefixes: Record<MidtransBank, string> = {
-      bca: "88001",
-      bni: "88002",
-      bri: "88003",
-      permata: "88004",
-      mandiri: "88005",
-    };
-    const randomDigits = Math.floor(100000000 + Math.random() * 900000000).toString();
-    const mockVa = `${bankPrefixes[params.bank]}${randomDigits}`;
+    const mockVa = "7000686799";
 
     return {
       success: true,
