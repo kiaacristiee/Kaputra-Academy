@@ -561,127 +561,128 @@ export async function enrollInCamp(
       return { success: false, error: "Invalid session frequency selected." };
     }
 
-    // Run concurrency-safe registration in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Fetch camp program
-      const camp = await tx.campProgram.findUnique({
-        where: { id: campProgramId },
-        include: { schedules: true },
-      });
-      if (!camp) {
-        throw new Error("Camp Program not found.");
-      }
+    // 1. Fetch camp program & student details outside transaction
+    const camp = await prisma.campProgram.findUnique({
+      where: { id: campProgramId },
+      include: { schedules: true },
+    });
+    if (!camp) {
+      return { success: false, error: "Camp Program not found." };
+    }
 
-      if (camp.status !== "OPEN" || camp.visibility !== "PUBLISHED") {
-        throw new Error("This Camp Program is currently not open for registration.");
-      }
+    if (camp.status !== "OPEN" || camp.visibility !== "PUBLISHED") {
+      return { success: false, error: "This Camp Program is currently not open for registration." };
+    }
 
-      // Check frequency allowed
-      if (sessionFrequency === "1x_WEEK" && !camp.allow1xWeek) {
-        throw new Error("1 Session / Week option is not enabled for this camp.");
-      }
-      if (sessionFrequency === "2x_WEEK" && !camp.allow2xWeek) {
-        throw new Error("2 Sessions / Week option is not enabled for this camp.");
-      }
+    if (sessionFrequency === "1x_WEEK" && !camp.allow1xWeek) {
+      return { success: false, error: "1 Session / Week option is not enabled for this camp." };
+    }
+    if (sessionFrequency === "2x_WEEK" && !camp.allow2xWeek) {
+      return { success: false, error: "2 Sessions / Week option is not enabled for this camp." };
+    }
 
-      const calculatedPrice = sessionFrequency === "1x_WEEK" ? camp.price1xWeek : camp.price2xWeek;
-      const sessionsPerMonth = sessionFrequency === "1x_WEEK" ? 4 : 8;
+    const calculatedPrice = sessionFrequency === "1x_WEEK" ? camp.price1xWeek : camp.price2xWeek;
+    const sessionsPerMonth = sessionFrequency === "1x_WEEK" ? 4 : 8;
 
-      // 2. Check if already enrolled or registered
-      const existingReg = await tx.campRegistration.findFirst({
-        where: {
-          studentId,
-          campProgramId,
-          status: { in: ["PENDING_PAYMENT", "VERIFYING_PAYMENT", "APPROVED"] },
-        },
-      });
-      if (existingReg) {
-        throw new Error("You have already registered for this camp program.");
-      }
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      include: { parent: true },
+    });
+    if (!student) {
+      return { success: false, error: "Student record not found." };
+    }
 
-      // 3. Strict Capacity Check per Schedule Slot
-      const selectedSchedules = [];
-      for (const schedId of scheduleIds) {
-        const sched = camp.schedules.find((s) => s.id === schedId);
-        if (!sched) {
-          throw new Error("Selected schedule slot does not exist in this camp.");
+    let studentAge = 12;
+    if (student.dateOfBirth) {
+      const birthYear = new Date(student.dateOfBirth).getFullYear();
+      const currentYear = new Date().getFullYear();
+      studentAge = currentYear - birthYear;
+    }
+
+    // Run concurrency-safe registration in a transaction with extended timeout limits
+    const result = await prisma.$transaction(
+      async (tx) => {
+        // 2. Check if already enrolled or registered
+        const existingReg = await tx.campRegistration.findFirst({
+          where: {
+            studentId,
+            campProgramId,
+            status: { in: ["PENDING_PAYMENT", "VERIFYING_PAYMENT", "APPROVED"] },
+          },
+        });
+        if (existingReg) {
+          throw new Error("You have already registered for this camp program.");
         }
 
-        const currentBookedCount = await tx.campRegistrationSlot.count({
-          where: { campScheduleId: schedId },
+        // 3. Strict Capacity Check per Schedule Slot
+        for (const schedId of scheduleIds) {
+          const sched = camp.schedules.find((s) => s.id === schedId);
+          if (!sched) {
+            throw new Error("Selected schedule slot does not exist in this camp.");
+          }
+
+          const currentBookedCount = await tx.campRegistrationSlot.count({
+            where: { campScheduleId: schedId },
+          });
+
+          if (currentBookedCount >= sched.capacity) {
+            throw new Error(
+              `Schedule slot (${sched.className} - ${sched.dayOfWeek} ${sched.startTime}) is fully booked (Max ${sched.capacity} students). Please choose another schedule.`
+            );
+          }
+        }
+
+        // 4. Create CampRegistration record
+        const registration = await tx.campRegistration.create({
+          data: {
+            studentId,
+            studentName: student.name,
+            studentAge,
+            parentName: student.parent?.name || "Parent",
+            parentPhone: student.parent?.phone || "",
+            parentEmail: student.parent?.email || "",
+            campProgramId,
+            sessionFrequency,
+            sessionsPerMonth,
+            price: calculatedPrice,
+            status: "PENDING_PAYMENT",
+            slots: {
+              create: scheduleIds.map((schedId) => ({
+                campScheduleId: schedId,
+              })),
+            },
+          },
         });
 
-        if (currentBookedCount >= sched.capacity) {
-          throw new Error(
-            `Schedule slot (${sched.className} - ${sched.dayOfWeek} ${sched.startTime}) is fully booked (Max ${sched.capacity} students). Please choose another schedule.`
-          );
-        }
+        // 5. Generate Invoice
+        const count = await tx.invoice.count();
+        const invoiceNumber = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}-${(count + 1).toString().padStart(4, "0")}`;
+        const virtualAccountNumber = `8800${Math.floor(10000000 + Math.random() * 90000000)}`;
 
-        selectedSchedules.push(sched);
-      }
+        const dueDate = new Date();
+        dueDate.setHours(dueDate.getHours() + 24);
 
-      // 4. Fetch Student & Parent details
-      const student = await tx.user.findUnique({
-        where: { id: studentId },
-        include: { parent: true },
-      });
-      if (!student) {
-        throw new Error("Student record not found.");
-      }
-
-      let studentAge = 12;
-      if (student.dateOfBirth) {
-        const birthYear = new Date(student.dateOfBirth).getFullYear();
-        const currentYear = new Date().getFullYear();
-        studentAge = currentYear - birthYear;
-      }
-
-      // 5. Create CampRegistration record
-      const registration = await tx.campRegistration.create({
-        data: {
-          studentId,
-          studentName: student.name,
-          studentAge,
-          parentName: student.parent?.name || "Parent",
-          parentPhone: student.parent?.phone || "",
-          parentEmail: student.parent?.email || "",
-          campProgramId,
-          sessionFrequency,
-          sessionsPerMonth,
-          price: calculatedPrice,
-          status: "PENDING_PAYMENT",
-          slots: {
-            create: scheduleIds.map((schedId) => ({
-              campScheduleId: schedId,
-            })),
+        const invoice = await tx.invoice.create({
+          data: {
+            invoiceNumber,
+            studentId,
+            itemId: campProgramId,
+            itemType: "CAMP",
+            amount: calculatedPrice,
+            virtualAccountNumber,
+            dueDate,
           },
-        },
-      });
+        });
 
-      // 6. Generate Invoice
-      const count = await tx.invoice.count();
-      const invoiceNumber = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}-${(count + 1).toString().padStart(4, "0")}`;
-      const virtualAccountNumber = `8800${Math.floor(10000000 + Math.random() * 90000000)}`;
-
-      const dueDate = new Date();
-      dueDate.setHours(dueDate.getHours() + 24);
-
-      const invoice = await tx.invoice.create({
-        data: {
-          invoiceNumber,
-          studentId,
-          itemId: campProgramId,
-          itemType: "CAMP",
-          amount: calculatedPrice,
-          virtualAccountNumber,
-          dueDate,
-        },
-      });
-
-      return { registration, invoice };
-    });
+        return { registration, invoice };
+      },
+      {
+        maxWait: 15000,
+        timeout: 30000,
+      }
+    );
 
     // Auto-generate invoice draft for admin review
     try {
