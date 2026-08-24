@@ -73,8 +73,6 @@ export async function submitRegistration(formData: FormData) {
       parentId: parentUser.id,
       isActive: false,
       dateOfBirth: dateOfBirth,
-      activationToken: token,
-      activationExpires: expires,
     },
   });
 
@@ -160,24 +158,15 @@ export async function resendActivationEmail(identifier: string) {
     const newToken = randomBytes(32).toString("hex");
     const newExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    // Invalidate old token & update with new token
+    // Invalidate old token & update target user (parent/student) with new token
+    const targetUser = parent || student;
     await prisma.user.update({
-      where: { id: student.id },
+      where: { id: targetUser.id },
       data: {
         activationToken: newToken,
         activationExpires: newExpires,
       },
     });
-
-    if (parent) {
-      await prisma.user.update({
-        where: { id: parent.id },
-        data: {
-          activationToken: newToken,
-          activationExpires: newExpires,
-        },
-      });
-    }
 
     const emailRes = await sendParentActivationEmail({
       parentEmail,
