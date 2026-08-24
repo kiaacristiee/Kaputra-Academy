@@ -30,17 +30,23 @@ export async function getAvailablePrograms() {
         orderBy: { title: "asc" },
       }),
       prisma.campProgram.findMany({
-        where: { isPublished: true },
+        where: { visibility: "PUBLISHED" },
         select: {
           id: true,
-          title: true,
+          name: true,
           price: true,
         },
-        orderBy: { title: "asc" },
+        orderBy: { name: "asc" },
       }),
     ]);
 
-    return { success: true, courses, camps };
+    const formattedCamps = camps.map((c) => ({
+      id: c.id,
+      title: c.name,
+      price: c.price,
+    }));
+
+    return { success: true, courses, camps: formattedCamps };
   } catch (error: any) {
     console.error("Failed to fetch available programs:", error);
     return { success: false, error: error.message, courses: [], camps: [] };
@@ -163,6 +169,13 @@ export async function adminEnrollStudent(params: AdminEnrollParams) {
         throw new Error("Camp program not found");
       }
 
+      let studentAge = 10;
+      if (student.dateOfBirth) {
+        const birthYear = new Date(student.dateOfBirth).getFullYear();
+        const currentYear = new Date().getFullYear();
+        studentAge = currentYear - birthYear;
+      }
+
       // Create Camp Registration record
       await prisma.campRegistration.create({
         data: {
@@ -172,6 +185,7 @@ export async function adminEnrollStudent(params: AdminEnrollParams) {
           parentPhone: student.parent?.phone || "-",
           parentEmail: student.parent?.email || student.email,
           studentName: student.name,
+          studentAge,
           status: paymentStatus === "PAID" ? "CONFIRMED" : "ENROLLED",
         },
       });

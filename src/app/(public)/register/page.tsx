@@ -8,6 +8,7 @@ import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { ResendActivationButton } from "@/components/auth/ResendActivationButton";
 
 export const metadata = {
   title: "Register | Kaputra Academy",
@@ -16,6 +17,8 @@ export const metadata = {
 interface SearchParams {
   success?: string;
   studentId?: string;
+  emailSent?: string;
+  emailError?: string;
 }
 
 export default async function RegisterPage({
@@ -32,15 +35,17 @@ export default async function RegisterPage({
     if (role === "STUDENT") redirect("/student");
   }
 
-  const { success, studentId } = await searchParams;
+  const { success, studentId, emailSent, emailError } = await searchParams;
 
   if (success === "true") {
+    const isEmailFailed = emailSent === "false";
+
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full bg-white shadow-2xl rounded-3xl p-8 border border-gray-100 text-center space-y-6">
           <div className="flex justify-center">
-            <div className="p-4 bg-emerald-50 rounded-full">
-              <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+            <div className={`p-4 rounded-full ${isEmailFailed ? "bg-amber-50" : "bg-emerald-50"}`}>
+              <CheckCircle2 className={`w-16 h-16 ${isEmailFailed ? "text-amber-500" : "text-emerald-500"}`} />
             </div>
           </div>
           <div className="space-y-2">
@@ -57,24 +62,33 @@ export default async function RegisterPage({
               <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Student ID</span>
               <span className="font-mono font-bold text-[#CA8E25] text-lg">{studentId}</span>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              An activation email containing your **Student ID** and an **Activation Link** has been sent to your parent's email address.
-            </p>
-            <p className="text-xs text-gray-400 italic">
-              Please check the terminal/console to view the simulated email and activate your account.
-            </p>
+            
+            {!isEmailFailed ? (
+              <p className="text-sm text-gray-600 leading-relaxed">
+                An activation email containing your <strong>Activation Link</strong> has been sent to your parent's email address.
+              </p>
+            ) : (
+              <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-xs text-rose-800 space-y-1">
+                <p className="font-semibold">Activation email could not be delivered automatically.</p>
+                <p>{emailError || "Please click below to try resending the email."}</p>
+              </div>
+            )}
           </div>
 
-          <div className="pt-4 space-y-3">
-            <Link href={`/activate?studentId=${studentId}`}>
-              <Button className="w-full bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2">
-                Go to Activation Link <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/login" className="block text-sm text-slate-500 hover:text-slate-800 transition">
-              Back to Login
-            </Link>
-          </div>
+          {studentId && (
+            <div className="pt-2 space-y-3">
+              <ResendActivationButton studentId={studentId} />
+
+              <Link href={`/activate?studentId=${studentId}`} className="block">
+                <Button className="w-full bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2">
+                  Go to Activation Link <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/login" className="block text-sm text-slate-500 hover:text-slate-800 transition">
+                Back to Login
+              </Link>
+            </div>
+          )}
         </div>
       </main>
     );

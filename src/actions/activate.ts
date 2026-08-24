@@ -6,43 +6,82 @@ import { redirect } from "next/navigation";
 
 export async function activateAccounts(formData: FormData) {
   const studentId = formData.get("studentId") as string;
+  const token = (formData.get("token") as string || "").trim();
   const studentPassword = formData.get("studentPassword") as string;
   const parentPassword = formData.get("parentPassword") as string;
 
-  if (!studentId || !studentPassword) {
+  if ((!studentId && !token) || !studentPassword) {
     throw new Error("Missing required fields");
   }
 
-  // 1. Find the inactive student account
-  const student = await prisma.user.findUnique({
-    where: { studentIdStr: studentId },
-    include: { parent: true },
-  });
+  let student: any = null;
+
+  if (token) {
+    // Lookup by activation token
+    const tokenUser = await prisma.user.findFirst({
+      where: { activationToken: token },
+      include: { parent: true, children: true },
+    });
+
+    if (!tokenUser) {
+      throw new Error("Invalid or expired activation link.");
+    }
+
+    if (tokenUser.activationExpires && new Date() > tokenUser.activationExpires) {
+      throw new Error("Activation link has expired. Please request a new activation link.");
+    }
+
+    if (tokenUser.role === "STUDENT") {
+      student = tokenUser;
+    } else if (tokenUser.role === "PARENT") {
+      student = tokenUser.children[0] || null;
+      if (student) {
+        student.parent = tokenUser;
+      }
+    }
+  }
+
+  if (!student && studentId) {
+    // Fallback lookup by studentId
+    student = await prisma.user.findUnique({
+      where: { studentIdStr: studentId },
+      include: { parent: true },
+    });
+  }
 
   if (!student) {
-    throw new Error("Student ID not found");
+    throw new Error("Student account not found");
   }
 
   if (student.isActive) {
     throw new Error("Account is already activated.");
   }
 
-  // 2. Hash student password
+  // Hash student password
   const studentPasswordHash = await bcrypt.hash(studentPassword, 10);
 
-  // 3. Update Student User to active
+  // Update Student User to active & clear single-use token
   await prisma.user.update({
     where: { id: student.id },
     data: {
       passwordHash: studentPasswordHash,
       isActive: true,
+      activationToken: null,
+      activationExpires: null,
     },
   });
 
-  // 4. Update Parent User to active/verified and set their password
+  // Update Parent User to active/verified, clear token, set password
   if (student.parent) {
-    const parentUpdateData: { isActive: boolean; passwordHash?: string } = {
+    const parentUpdateData: {
+      isActive: boolean;
+      activationToken: null;
+      activationExpires: null;
+      passwordHash?: string;
+    } = {
       isActive: true,
+      activationToken: null,
+      activationExpires: null,
     };
 
     if (parentPassword) {

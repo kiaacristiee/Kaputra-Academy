@@ -9,7 +9,7 @@ export default async function StudentDetailPage({
 }) {
   const { id } = await params;
 
-  const [student, courses, camps] = await Promise.all([
+  const [student, courses, campsData] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
       include: {
@@ -34,15 +34,21 @@ export default async function StudentDetailPage({
       orderBy: { title: "asc" },
     }),
     prisma.campProgram.findMany({
-      where: { isPublished: true },
+      where: { visibility: "PUBLISHED" },
       select: {
         id: true,
-        title: true,
+        name: true,
         price: true,
       },
-      orderBy: { title: "asc" },
+      orderBy: { name: "asc" },
     }),
   ]);
+
+  const camps = campsData.map((c) => ({
+    id: c.id,
+    title: c.name,
+    price: c.price,
+  }));
 
   if (!student) {
     notFound();

@@ -129,6 +129,104 @@ export async function sendActivationEmail(params: ActivationEmailParams) {
   return { success: true };
 }
 
+export interface ParentActivationEmailParams {
+  parentEmail: string;
+  parentName: string;
+  studentName: string;
+  studentId: string;
+  token: string;
+}
+
+export async function sendParentActivationEmail(params: ParentActivationEmailParams) {
+  const baseUrl = await getBaseUrl();
+  const activationLink = `${baseUrl}/activate?token=${params.token}`;
+
+  console.log("[PARENT_ACTIVATION_EMAIL] Sending email to:", params.parentEmail);
+  console.log("[PARENT_ACTIVATION_EMAIL] Activation URL:", activationLink);
+
+  const emailHtml = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;background:#0F172A;color:#E2E8F0;border-radius:12px;border:1px solid #1E293B;">
+  <div style="text-align:center;margin-bottom:20px;">
+    <h2 style="color:#CA8E25;margin:0 0 5px 0;font-size:24px;">KAPUTRA</h2>
+    <span style="color:#CA8E25;font-size:12px;letter-spacing:2px;font-weight:bold;">ACADEMY</span>
+  </div>
+  <p style="color:#94A3B8;margin:0 0 20px 0;font-size:13px;text-align:center;">Parent & Student Account Activation</p>
+  <hr style="border-color:#1E293B;margin-bottom:20px;"/>
+
+  <p>Hello ${params.parentName},</p>
+  <p>Welcome to <strong>Kaputra Academy</strong>!</p>
+  <p>Your parent account has been successfully created along with the student profile for <strong>${params.studentName}</strong> (Student ID: <span style="font-family:monospace;color:#CA8E25;font-weight:bold;">${params.studentId}</span>).</p>
+
+  <div style="background-color:#1E293B;border:1px solid #334155;border-radius:12px;padding:24px;margin:24px 0;text-align:center;">
+    <h3 style="margin:0 0 14px 0;color:#CA8E25;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">
+      🔑 Account Activation
+    </h3>
+    <p style="color:#CBD5E1;font-size:13px;margin:0 0 18px 0;">
+      Please activate your account and set up your login passwords by clicking the button below:
+    </p>
+    <a href="${activationLink}" style="display:inline-block;background-color:#CA8E25;color:#000;font-weight:800;font-size:14px;padding:14px 32px;border-radius:10px;text-decoration:none;box-shadow:0 4px 12px rgba(202,142,37,0.3);">
+      ACTIVATE MY ACCOUNT
+    </a>
+    <p style="margin:16px 0 0 0;color:#94A3B8;font-size:12px;">
+      This link will take you directly to the Kaputra Academy account activation page.
+    </p>
+  </div>
+
+  <p style="color:#94A3B8;font-size:13px;">
+    If you did not create this account, please ignore this email.
+  </p>
+
+  <br/>
+  <p style="margin:0;color:#94A3B8;font-size:13px;">Regards,<br/><strong style="color:#FFF;">Kaputra Academy Team</strong></p>
+</div>
+`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+      to: params.parentEmail,
+      subject: "Activate Your Kaputra Academy Account",
+      html: emailHtml,
+    });
+
+    console.log("[PARENT_ACTIVATION_EMAIL] Delivered. MessageId:", info.messageId);
+
+    try {
+      await prisma.emailDraft.create({
+        data: {
+          type: "ACCOUNT_ACTIVATION",
+          recipient: params.parentEmail,
+          subject: "Activate Your Kaputra Academy Account",
+          bodyHtml: emailHtml,
+          status: "SENT",
+        },
+      });
+    } catch (dbErr) {
+      console.warn("[PARENT_ACTIVATION_EMAIL] Audit log failed (non-critical):", dbErr);
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("[PARENT_ACTIVATION_EMAIL] Failed to send email:", error);
+
+    try {
+      await prisma.emailDraft.create({
+        data: {
+          type: "ACCOUNT_ACTIVATION",
+          recipient: params.parentEmail,
+          subject: "Activate Your Kaputra Academy Account",
+          bodyHtml: emailHtml,
+          status: "FAILED",
+        },
+      });
+    } catch (dbErr) {
+      // ignore
+    }
+
+    return { success: false, error: error.message };
+  }
+}
+
 export interface TestResultEmailParams {
   parentEmail: string;
   parentName?: string;

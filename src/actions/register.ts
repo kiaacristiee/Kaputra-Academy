@@ -3,6 +3,8 @@
 import prisma from "@/lib/db";
 import { generateStudentId } from "@/lib/idGenerator";
 import { redirect } from "next/navigation";
+import { randomBytes } from "crypto";
+import { sendParentActivationEmail } from "@/lib/email";
 
 export async function submitRegistration(formData: FormData) {
   const studentName = formData.get("studentName") as string;
@@ -16,15 +18,16 @@ export async function submitRegistration(formData: FormData) {
   }
 
   const dateOfBirth = new Date(dateOfBirthStr);
-  const currentYear = new Date().getFullYear();
-  const dobYear = dateOfBirth.getFullYear();
-  const studentAge = currentYear - dobYear;
 
   // Generate unique Student ID (e.g. initials + DOB like MDC211006)
   const studentId = await generateStudentId(studentName, dateOfBirth);
 
   // Generate unique student virtual email placeholder
   const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
+
+  // Generate single-use secure activation token & expiration (7 days)
+  const token = randomBytes(32).toString("hex");
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   // Find or create Parent User
   let parentUser = await prisma.user.findUnique({
@@ -37,11 +40,26 @@ export async function submitRegistration(formData: FormData) {
         name: parentName,
         email: parentEmail,
         phone: parentPhone,
-        passwordHash: "", // Blank password until set (or parent doesn't log in directly)
+        passwordHash: "", // Blank password until set
         role: "PARENT",
-        isActive: false, // Will become verified upon student activation
+        isActive: false,
+        activationToken: token,
+        activationExpires: expires,
       },
     });
+  } else {
+    // Update existing parent's activation token if not active yet
+    if (!parentUser.isActive) {
+      parentUser = await prisma.user.update({
+        where: { id: parentUser.id },
+        data: {
+          name: parentName,
+          phone: parentPhone,
+          activationToken: token,
+          activationExpires: expires,
+        },
+      });
+    }
   }
 
   // Create inactive Student User
@@ -55,11 +73,127 @@ export async function submitRegistration(formData: FormData) {
       parentId: parentUser.id,
       isActive: false,
       dateOfBirth: dateOfBirth,
+      activationToken: token,
+      activationExpires: expires,
     },
   });
 
+  // Automatically send activation email to parent
+  let emailSent = false;
+  let emailError = "";
+  try {
+    const emailRes = await sendParentActivationEmail({
+      parentEmail,
+      parentName,
+      studentName,
+      studentId,
+      token,
+    });
+    emailSent = emailRes.success;
+    if (!emailRes.success) {
+      emailError = emailRes.error || "Email delivery failed";
+    }
+  } catch (err: any) {
+    console.error("Failed to send activation email during registration:", err);
+    emailError = err.message || "Email delivery failed";
+  }
 
+  const queryParams = new URLSearchParams({
+    success: "true",
+    studentId,
+    emailSent: emailSent ? "true" : "false",
+  });
+  if (emailError) {
+    queryParams.set("emailError", emailError);
+  }
 
   // Redirect to registration page with success query param
-  redirect(`/register?success=true&studentId=${studentId}`);
+  redirect(`/register?${queryParams.toString()}`);
+}
+
+export async function resendActivationEmail(identifier: string) {
+  try {
+    if (!identifier) {
+      return { success: false, error: "Student ID or Email is required." };
+    }
+
+    const trimmed = identifier.trim();
+
+    // Find student or parent by ID or Email
+    let student = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { studentIdStr: trimmed },
+          { email: trimmed },
+        ],
+      },
+      include: { parent: true, children: true },
+    });
+
+    if (!student) {
+      // Check parent email
+      const parent = await prisma.user.findUnique({
+        where: { email: trimmed },
+        include: { children: true },
+      });
+
+      if (parent && parent.children.length > 0) {
+        student = parent.children[0] as any;
+      }
+    }
+
+    if (!student) {
+      return { success: false, error: "No student or parent record found matching that identifier." };
+    }
+
+    const parent = student.parent || (student.role === "PARENT" ? student : null);
+    const parentEmail = parent?.email || student.email;
+    const parentName = parent?.name || "Parent";
+    const studentName = student.name;
+    const studentId = student.studentIdStr || student.id;
+
+    if (student.isActive && parent?.isActive) {
+      return { success: false, error: "This account is already active. Please log in." };
+    }
+
+    // Generate new secure activation token
+    const newToken = randomBytes(32).toString("hex");
+    const newExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    // Invalidate old token & update with new token
+    await prisma.user.update({
+      where: { id: student.id },
+      data: {
+        activationToken: newToken,
+        activationExpires: newExpires,
+      },
+    });
+
+    if (parent) {
+      await prisma.user.update({
+        where: { id: parent.id },
+        data: {
+          activationToken: newToken,
+          activationExpires: newExpires,
+        },
+      });
+    }
+
+    const emailRes = await sendParentActivationEmail({
+      parentEmail,
+      parentName,
+      studentName,
+      studentId,
+      token: newToken,
+    });
+
+    if (emailRes.success) {
+      return { success: true, message: `Activation email resent to ${parentEmail}.` };
+    } else {
+      return { success: false, error: emailRes.error || "Failed to resend activation email." };
+    }
+  } catch (error: any) {
+    console.error("Error resending activation email:", error);
+    return { success: false, error: error.message || "Failed to resend activation email." };
+  }
 }

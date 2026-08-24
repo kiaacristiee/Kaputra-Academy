@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 export default async function StudentsPage() {
-  const [students, courses, camps] = await Promise.all([
+  const [students, courses, campsData] = await Promise.all([
     prisma.user.findMany({
       where: {
         role: "STUDENT",
@@ -40,15 +40,21 @@ export default async function StudentsPage() {
       orderBy: { title: "asc" },
     }),
     prisma.campProgram.findMany({
-      where: { isPublished: true },
+      where: { visibility: "PUBLISHED" },
       select: {
         id: true,
-        title: true,
+        name: true,
         price: true,
       },
-      orderBy: { title: "asc" },
+      orderBy: { name: "asc" },
     }),
   ]);
+
+  const camps = campsData.map((c) => ({
+    id: c.id,
+    title: c.name,
+    price: c.price,
+  }));
 
   return (
     <div className="space-y-6">
