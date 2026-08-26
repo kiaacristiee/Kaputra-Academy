@@ -28,8 +28,9 @@ export default async function AdminPlacementTestsPage() {
           parentName: true,
           parentEmail: true,
           parentPhone: true,
+          grade: true,
           course: { select: { title: true } },
-        },
+        } as any,
       },
     },
     orderBy: { createdAt: "desc" },
@@ -94,7 +95,7 @@ export default async function AdminPlacementTestsPage() {
     }
   }
 
-  const formattedResults = results.map((r) => ({
+  const formattedResults = (results as any[]).map((r) => ({
     id: r.id,
     studentIdStr: r.studentIdStr,
     testCode: r.testCode,
@@ -108,6 +109,7 @@ export default async function AdminPlacementTestsPage() {
       parentName: r.registration.parentName,
       parentEmail: r.registration.parentEmail,
       parentPhone: r.registration.parentPhone,
+      grade: r.registration.grade || null,
       course: { title: r.registration.course.title },
     },
   }));

@@ -4,26 +4,55 @@ import prisma from "@/lib/db";
 import { generateStudentId } from "@/lib/idGenerator";
 import { redirect } from "next/navigation";
 import { randomBytes } from "crypto";
-import { sendParentActivationEmail } from "@/lib/email";
+import { sendParentActivationEmail, sendNewChildNotificationEmail } from "@/lib/email";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function submitRegistration(formData: FormData) {
-  const studentName = formData.get("studentName") as string;
-  const dateOfBirthStr = formData.get("dateOfBirth") as string;
-  const parentName = formData.get("parentName") as string;
-  const parentPhone = formData.get("parentPhone") as string;
-  const parentEmail = formData.get("parentEmail") as string;
+  const parentName = (formData.get("parentName") as string || "").trim();
+  const parentPhone = (formData.get("parentPhone") as string || "").trim();
+  const parentEmail = (formData.get("parentEmail") as string || "").trim();
 
-  if (!studentName || !dateOfBirthStr || !parentName || !parentPhone || !parentEmail) {
-    throw new Error("Missing required fields");
+  if (!parentName || !parentPhone || !parentEmail) {
+    throw new Error("Missing required parent information");
   }
 
-  const dateOfBirth = new Date(dateOfBirthStr);
+  // Parse children list (from JSON payload or form arrays)
+  let children: { studentName: string; dateOfBirth: string }[] = [];
 
-  // Generate unique Student ID (e.g. initials + DOB like MDC211006)
-  const studentId = await generateStudentId(studentName, dateOfBirth);
+  const childrenJson = formData.get("childrenJson") as string;
+  if (childrenJson) {
+    try {
+      children = JSON.parse(childrenJson);
+    } catch (e) {
+      // ignore
+    }
+  }
 
-  // Generate unique student virtual email placeholder
-  const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
+  if (!children || children.length === 0) {
+    const names = formData.getAll("studentName") as string[];
+    const dobs = formData.getAll("dateOfBirth") as string[];
+    for (let i = 0; i < names.length; i++) {
+      if (names[i] && dobs[i]) {
+        children.push({
+          studentName: names[i].trim(),
+          dateOfBirth: dobs[i].trim(),
+        });
+      }
+    }
+  }
+
+  if (!children || children.length === 0) {
+    throw new Error("At least one child (Full Name & Date of Birth) is required for registration.");
+  }
+
+  // Validate each child
+  for (const child of children) {
+    if (!child.studentName || !child.dateOfBirth) {
+      throw new Error("Each child must have a Full Name and Date of Birth.");
+    }
+  }
 
   // Generate single-use secure activation token & expiration (7 days)
   const token = randomBytes(32).toString("hex");
@@ -62,29 +91,50 @@ export async function submitRegistration(formData: FormData) {
     }
   }
 
-  // Create inactive Student User
-  await prisma.user.create({
-    data: {
-      name: studentName,
-      email: virtualEmail,
-      passwordHash: "", // Password created during activation
-      role: "STUDENT",
-      studentIdStr: studentId,
-      parentId: parentUser.id,
-      isActive: false,
-      dateOfBirth: dateOfBirth,
-    },
-  });
+  // Create inactive Student User for each child
+  const createdStudentIds: string[] = [];
+  let primaryStudentName = "";
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    const dateOfBirth = new Date(child.dateOfBirth);
+
+    // Generate unique Student ID (e.g. initials + DOB like MDC211006)
+    const studentId = await generateStudentId(child.studentName, dateOfBirth);
+    const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
+
+    await prisma.user.create({
+      data: {
+        name: child.studentName,
+        email: virtualEmail,
+        passwordHash: "", // Password created during activation
+        role: "STUDENT",
+        studentIdStr: studentId,
+        parentId: parentUser.id,
+        isActive: parentUser.isActive,
+        dateOfBirth: dateOfBirth,
+      },
+    });
+
+    createdStudentIds.push(studentId);
+    if (i === 0) {
+      primaryStudentName = child.studentName;
+    }
+  }
 
   // Automatically send activation email to parent
   let emailSent = false;
   let emailError = "";
   try {
+    const displayStudentName = children.length > 1
+      ? `${primaryStudentName} (+${children.length - 1} more)`
+      : primaryStudentName;
+
     const emailRes = await sendParentActivationEmail({
       parentEmail,
       parentName,
-      studentName,
-      studentId,
+      studentName: displayStudentName,
+      studentId: createdStudentIds.join(", "),
       token,
     });
     emailSent = emailRes.success;
@@ -98,7 +148,8 @@ export async function submitRegistration(formData: FormData) {
 
   const queryParams = new URLSearchParams({
     success: "true",
-    studentId,
+    studentId: createdStudentIds.join(","),
+    count: String(children.length),
     emailSent: emailSent ? "true" : "false",
   });
   if (emailError) {
@@ -107,6 +158,85 @@ export async function submitRegistration(formData: FormData) {
 
   // Redirect to registration page with success query param
   redirect(`/register?${queryParams.toString()}`);
+}
+
+export async function addChildFromParentDashboard(data: { studentName: string; dateOfBirth: string }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || session.user.role !== "PARENT") {
+      return { success: false, error: "Unauthorized access. Parent session required." };
+    }
+
+    const studentName = (data.studentName || "").trim();
+    const dateOfBirthStr = (data.dateOfBirth || "").trim();
+
+    if (!studentName || !dateOfBirthStr) {
+      return { success: false, error: "Full Name and Date of Birth are required." };
+    }
+
+    const authenticatedParentId = session.user.id;
+    const parentUser = await prisma.user.findUnique({
+      where: { id: authenticatedParentId },
+    });
+
+    if (!parentUser) {
+      return { success: false, error: "Parent account not found." };
+    }
+
+    const dateOfBirth = new Date(dateOfBirthStr);
+
+    // Auto-generate unique Student ID
+    const studentId = await generateStudentId(studentName, dateOfBirth);
+    const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
+
+    // Create student linked directly to authenticated parent
+    const newStudent = await prisma.user.create({
+      data: {
+        name: studentName,
+        email: virtualEmail,
+        passwordHash: "",
+        role: "STUDENT",
+        studentIdStr: studentId,
+        parentId: parentUser.id, // Strictly server-side binding
+        isActive: parentUser.isActive, // Inherit active state if parent is active
+        dateOfBirth: dateOfBirth,
+      },
+    });
+
+    // Automatically send notification/activation email to parent
+    try {
+      if (!parentUser.isActive && parentUser.activationToken) {
+        await sendParentActivationEmail({
+          parentEmail: parentUser.email,
+          parentName: parentUser.name,
+          studentName,
+          studentId,
+          token: parentUser.activationToken,
+        });
+      } else {
+        await sendNewChildNotificationEmail({
+          parentEmail: parentUser.email,
+          parentName: parentUser.name,
+          studentName,
+          studentId,
+        });
+      }
+    } catch (emailErr) {
+      console.error("Non-critical error sending email to parent for new child:", emailErr);
+    }
+
+    revalidatePath("/parent");
+    revalidatePath("/parent/children");
+
+    return {
+      success: true,
+      message: `Child ${newStudent.name} (${studentId}) added successfully!`,
+      studentId,
+    };
+  } catch (error: any) {
+    console.error("Error adding child from parent dashboard:", error);
+    return { success: false, error: error.message || "Failed to add child." };
+  }
 }
 
 export async function resendActivationEmail(identifier: string) {

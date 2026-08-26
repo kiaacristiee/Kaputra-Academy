@@ -227,6 +227,80 @@ export async function sendParentActivationEmail(params: ParentActivationEmailPar
   }
 }
 
+export interface NewChildNotificationParams {
+  parentEmail: string;
+  parentName: string;
+  studentName: string;
+  studentId: string;
+}
+
+export async function sendNewChildNotificationEmail(params: NewChildNotificationParams) {
+  const baseUrl = await getBaseUrl();
+
+  const emailHtml = `
+<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;padding:30px;background:#0F172A;color:#E2E8F0;border-radius:12px;border:1px solid #1E293B;">
+  <div style="text-align:center;margin-bottom:20px;">
+    <h2 style="color:#CA8E25;margin:0 0 5px 0;font-size:24px;">KAPUTRA</h2>
+    <span style="color:#CA8E25;font-size:12px;letter-spacing:2px;font-weight:bold;">ACADEMY</span>
+  </div>
+  <p style="color:#94A3B8;margin:0 0 20px 0;font-size:13px;text-align:center;">New Student Profile Linked</p>
+  <hr style="border-color:#1E293B;margin-bottom:20px;"/>
+
+  <p>Hello ${params.parentName},</p>
+  <p>A new student profile has been successfully added and linked to your Kaputra Academy parent account.</p>
+
+  <div style="background-color:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;margin:20px 0;">
+    <p style="margin:0 0 8px 0;color:#94A3B8;font-size:12px;text-transform:uppercase;font-weight:bold;">Student Details:</p>
+    <p style="margin:0 0 6px 0;color:#FFF;font-size:15px;font-weight:bold;">Student Name: ${params.studentName}</p>
+    <p style="margin:0;color:#CA8E25;font-family:monospace;font-size:15px;font-weight:bold;">Student ID: ${params.studentId}</p>
+  </div>
+
+  <p style="color:#CBD5E1;font-size:13px;">
+    You can now monitor this child's enrollments, attendance, and academic progress directly from your Parent Dashboard.
+  </p>
+
+  <div style="text-align:center;margin-top:24px;">
+    <a href="${baseUrl}/parent" style="display:inline-block;background-color:#CA8E25;color:#000;font-weight:800;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">
+      GO TO PARENT DASHBOARD
+    </a>
+  </div>
+
+  <br/>
+  <p style="margin:0;color:#94A3B8;font-size:13px;">Regards,<br/><strong style="color:#FFF;">Kaputra Academy Team</strong></p>
+</div>
+`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Kaputra Academy" <${process.env.EMAIL_USER}>`,
+      to: params.parentEmail,
+      subject: `New Student Linked: ${params.studentName} (${params.studentId})`,
+      html: emailHtml,
+    });
+
+    console.log("[NEW_CHILD_EMAIL] Delivered. MessageId:", info.messageId);
+
+    try {
+      await prisma.emailDraft.create({
+        data: {
+          type: "GENERAL_ANNOUNCEMENT",
+          recipient: params.parentEmail,
+          subject: `New Student Linked: ${params.studentName} (${params.studentId})`,
+          bodyHtml: emailHtml,
+          status: "SENT",
+        },
+      });
+    } catch (dbErr) {
+      // ignore
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error("[NEW_CHILD_EMAIL] Failed to send email:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export interface TestResultEmailParams {
   parentEmail: string;
   parentName?: string;

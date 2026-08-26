@@ -21,7 +21,11 @@ import {
   RotateCcw,
   Folder,
   FolderOpen,
-  FolderPlus
+  FolderPlus,
+  ArrowUp,
+  ArrowDown,
+  AlertCircle,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +43,7 @@ import {
   updateBankQuestion
 } from "@/actions/dashboard";
 import Link from "next/link";
+import { STUDENT_GRADES, getGradeLabel } from "@/lib/grades";
 
 interface MockQuestion {
   id: string;
@@ -66,6 +71,7 @@ interface MockTest {
   passingScore: number;
   isPublished: boolean;
   isTrial: boolean;
+  targetedGrade?: string | null;
   questions: MockQuestion[];
   submissions: MockSubmission[];
 }
@@ -94,18 +100,22 @@ export default function MockTestClient({
 }: MockTestClientProps) {
   const [activeTab, setActiveTab] = useState<"mockTests" | "bankSoal">("mockTests");
   const [bankQuestions, setBankQuestions] = useState<MockQuestion[]>(initialBankQuestions);
-  const [bankSearchQuery, setBankSearchQuery] = useState("");
-  const [folders, setFolders] = useState<any[]>(initialFolders || []);
+  const [folders, setFolders] = useState<any[]>(initialFolders);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState("");
+  const [bankSearchQuery, setBankSearchQuery] = useState("");
   const [selectedAdminBankQuestionIds, setSelectedAdminBankQuestionIds] = useState<string[]>([]);
-  const [editingBankQuestionId, setEditingBankQuestionId] = useState<string | null>(null);
+  
+  // Quiz Grade Filter
+  const [selectedQuizGradeFilter, setSelectedQuizGradeFilter] = useState<string>("ALL");
 
-  // Bank Soal Form State
+  // Bank Question form states
   const [isBankFormOpen, setIsBankFormOpen] = useState(false);
+  const [editingBankQuestionId, setEditingBankQuestionId] = useState<string | null>(null);
+  const [isBankSaving, setIsBankSaving] = useState(false);
   const [bankFormData, setBankFormData] = useState({
     questionText: "",
     options: ["", ""],
@@ -114,13 +124,11 @@ export default function MockTestClient({
     topic: "",
     difficulty: "EASY",
     questionType: "MULTIPLE_CHOICE",
-    imageFile: null as File | null
+    imageFile: null as File | null,
   });
-  const [isBankSaving, setIsBankSaving] = useState(false);
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
-  const [selectedCourseIdx, setSelectedCourseIdx] = useState(0);
 
-  // Active exam taking state
+  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [selectedCourseIdx, setSelectedCourseIdx] = useState<number>(0);
   const [activeTest, setActiveTest] = useState<MockTest | null>(null);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [testAnswers, setTestAnswers] = useState<Record<string, string>>({});
@@ -135,12 +143,17 @@ export default function MockTestClient({
   const [isSelectingForTest, setIsSelectingForTest] = useState(false);
   const [selectedBankQuestionIds, setSelectedBankQuestionIds] = useState<string[]>([]);
   const [editingTest, setEditingTest] = useState<MockTest | null>(null);
+  const [selectedFolderForImport, setSelectedFolderForImport] = useState<string>("");
+  const [showManualBankPicker, setShowManualBankPicker] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
-    timeLimit: 15,
-    passingScore: 70,
+    description: "",
+    timeLimit: 20,
+    passingScore: 75,
     isPublished: true,
     isTrial: false,
+    targetedGrade: "ALL",
+    courseId: "",
     selectedQuestionIds: [] as string[],
   });
 
@@ -173,6 +186,25 @@ export default function MockTestClient({
     return test.submissions && test.submissions.length > 0;
   };
 
+  const getOrderedQuestions = (test: MockTest): MockQuestion[] => {
+    if (!test || !test.questions) return [];
+    const questionOrder = (test as any).questionOrder;
+    if (!questionOrder) return test.questions;
+    try {
+      const orderArr: string[] = JSON.parse(questionOrder);
+      if (!Array.isArray(orderArr) || orderArr.length === 0) return test.questions;
+      const orderMap = new Map<string, number>();
+      orderArr.forEach((id, index) => orderMap.set(id, index));
+      return [...test.questions].sort((a, b) => {
+        const idxA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+        const idxB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+        return idxA - idxB;
+      });
+    } catch (e) {
+      return test.questions;
+    }
+  };
+
   const handleReviewTest = (test: MockTest) => {
     const submission = test.submissions[0];
     if (!submission) return;
@@ -182,15 +214,17 @@ export default function MockTestClient({
     try { parsedAnswers = JSON.parse(submission.answers || "{}"); } catch (e) {}
     try { (submission as any).timeSpent && (parsedTimeSpent = JSON.parse((submission as any).timeSpent || "{}")); } catch (e) {}
 
+    const orderedQuestions = getOrderedQuestions(test);
+
     let correctCount = 0;
-    test.questions.forEach((q) => {
+    orderedQuestions.forEach((q) => {
       const studentAns = (parsedAnswers as Record<string, string>)[q.id];
       if (studentAns?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim()) {
         correctCount++;
       }
     });
 
-    setActiveTest(test);
+    setActiveTest({ ...test, questions: orderedQuestions });
     setCurrentQuestionIdx(0);
     setTestAnswers(parsedAnswers as Record<string, string>);
     setTimeSpentPerQuestion(parsedTimeSpent as Record<string, number>);
@@ -230,7 +264,8 @@ export default function MockTestClient({
   }, [activeTest, timeLeft, testResult, reviewMode, currentQuestionIdx]);
 
   const handleStartTest = (test: MockTest) => {
-    setActiveTest(test);
+    const orderedQuestions = getOrderedQuestions(test);
+    setActiveTest({ ...test, questions: orderedQuestions });
     setCurrentQuestionIdx(0);
     setTestAnswers({});
     setTimeSpentPerQuestion({});
@@ -289,28 +324,45 @@ export default function MockTestClient({
 
   // CMS functions
   const handleOpenCms = (test?: MockTest) => {
-    if (!activeCourse) return;
+    if (!activeCourse && courses.length === 0) return;
     if (test) {
       setEditingTest(test);
+      let initialOrder: string[] = test.questions.map((q) => q.id);
+      if ((test as any).questionOrder) {
+        try {
+          const orderArr = JSON.parse((test as any).questionOrder);
+          if (Array.isArray(orderArr) && orderArr.length > 0) {
+            initialOrder = orderArr;
+          }
+        } catch (e) {}
+      }
       setFormData({
         title: test.title,
+        description: (test as any).description || "",
         timeLimit: test.timeLimit,
         passingScore: test.passingScore,
         isPublished: test.isPublished,
         isTrial: test.isTrial,
-        selectedQuestionIds: test.questions.map((q) => q.id),
+        targetedGrade: test.targetedGrade || "ALL",
+        courseId: (test as any).courseId || (activeCourse ? activeCourse.id : courses[0]?.id || ""),
+        selectedQuestionIds: initialOrder,
       });
     } else {
       setEditingTest(null);
       setFormData({
         title: "",
+        description: "",
         timeLimit: 20,
         passingScore: 75,
         isPublished: true,
         isTrial: false,
+        targetedGrade: "ALL",
+        courseId: activeCourse ? activeCourse.id : courses[0]?.id || "",
         selectedQuestionIds: [],
       });
     }
+    setSelectedFolderForImport("");
+    setShowManualBankPicker(false);
     setIsCmsOpen(true);
   };
 
@@ -368,7 +420,22 @@ export default function MockTestClient({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeCourse) return;
+    if (!formData.title.trim()) {
+      alert("Please enter a title for the Mock Paper.");
+      return;
+    }
+    if (formData.selectedQuestionIds.length === 0) {
+      alert("This folder does not contain any questions / No questions selected. Please import questions into the Mock Paper before saving.");
+      return;
+    }
+
+    const targetCourseId = formData.courseId || activeCourse?.id;
+    if (!targetCourseId && courses.length > 0) {
+      alert("Please select a target course for this Mock Paper.");
+      return;
+    }
+
+    const targetedGrade = formData.targetedGrade === "ALL" ? null : formData.targetedGrade;
 
     if (editingTest) {
       const res = await updateMockTest(editingTest.id, {
@@ -377,26 +444,34 @@ export default function MockTestClient({
         passingScore: Number(formData.passingScore),
         isPublished: formData.isPublished,
         isTrial: formData.isTrial,
+        targetedGrade,
+        courseId: targetCourseId,
         questionIds: formData.selectedQuestionIds,
+        questionOrder: formData.selectedQuestionIds,
       });
       if (res.success && res.test) {
-        // Refetch/update locally
-        alert("Mock Test updated successfully!");
-        window.location.reload(); // Simplest way to refresh deep relations
+        alert("Mock Paper updated successfully!");
+        window.location.reload();
+      } else {
+        alert("Failed to update Mock Paper: " + res.error);
       }
     } else {
       const res = await createMockTest({
-        courseId: activeCourse.id,
+        courseId: targetCourseId,
         title: formData.title,
         timeLimit: Number(formData.timeLimit),
         passingScore: Number(formData.passingScore),
         isPublished: formData.isPublished,
         isTrial: formData.isTrial,
+        targetedGrade,
         questionIds: formData.selectedQuestionIds,
+        questionOrder: formData.selectedQuestionIds,
       });
       if (res.success && res.test) {
-        alert("Quiz created successfully!");
+        alert("Mock Paper created successfully!");
         window.location.reload();
+      } else {
+        alert("Failed to create Mock Paper: " + res.error);
       }
     }
   };
@@ -1027,19 +1102,37 @@ export default function MockTestClient({
           ) : (
             <div className="space-y-6">
               <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="w-full md:max-w-xs space-y-1">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#CA8E25] block">Filter Course</span>
-                  <select
-                    value={selectedCourseIdx}
-                    onChange={(e) => setSelectedCourseIdx(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
-                  >
-                    {courses.map((course, idx) => (
-                      <option key={course.id} value={idx}>
-                        {course.title} ({course.type})
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                  <div className="w-full sm:w-64 space-y-1">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#CA8E25] block">Filter Course</span>
+                    <select
+                      value={selectedCourseIdx}
+                      onChange={(e) => setSelectedCourseIdx(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
+                    >
+                      {courses.map((course, idx) => (
+                        <option key={course.id} value={idx}>
+                          {course.title} ({course.type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="w-full sm:w-48 space-y-1">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#CA8E25] block">Filter Grade</span>
+                    <select
+                      value={selectedQuizGradeFilter}
+                      onChange={(e) => setSelectedQuizGradeFilter(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
+                    >
+                      <option value="ALL">All Grades</option>
+                      {STUDENT_GRADES.map((g) => (
+                        <option key={g.value} value={g.value}>
+                          {g.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {isStaff && (
@@ -1054,30 +1147,37 @@ export default function MockTestClient({
 
               {/* Test Cards */}
               <div className="grid grid-cols-1 gap-6">
-                {activeCourse?.mockTests.length > 0 ? (
-                  activeCourse.mockTests.map((test) => {
-                    const latestSubmission = test.submissions[0];
-                    return (
-                      <div
-                        key={test.id}
-                        className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-slate-750 transition"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-white text-lg flex items-center gap-2">
-                              {test.title}
-                              {test.isTrial && (
-                                <span className="bg-amber-500/10 border border-amber-500/20 text-[#CA8E25] text-[8px] font-bold px-2 py-0.5 rounded-full">
-                                  Trial
-                                </span>
-                              )}
-                              {!test.isPublished && (
-                                <span className="bg-red-500/10 border border-red-500/20 text-red-450 text-[8px] font-bold px-2 py-0.5 rounded-full">
-                                  Draft
-                                </span>
-                              )}
-                            </h4>
-                          </div>
+                {activeCourse?.mockTests.filter((t) => selectedQuizGradeFilter === "ALL" || t.targetedGrade === selectedQuizGradeFilter).length > 0 ? (
+                  activeCourse.mockTests
+                    .filter((t) => selectedQuizGradeFilter === "ALL" || t.targetedGrade === selectedQuizGradeFilter)
+                    .map((test) => {
+                      const latestSubmission = test.submissions[0];
+                      return (
+                        <div
+                          key={test.id}
+                          className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-slate-750 transition"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-white text-lg flex items-center gap-2">
+                                {test.title}
+                                {test.targetedGrade && (
+                                  <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[8px] font-bold px-2 py-0.5 rounded-full">
+                                    {getGradeLabel(test.targetedGrade)}
+                                  </span>
+                                )}
+                                {test.isTrial && (
+                                  <span className="bg-amber-500/10 border border-amber-500/20 text-[#CA8E25] text-[8px] font-bold px-2 py-0.5 rounded-full">
+                                    Trial
+                                  </span>
+                                )}
+                                {!test.isPublished && (
+                                  <span className="bg-red-500/10 border border-red-500/20 text-red-450 text-[8px] font-bold px-2 py-0.5 rounded-full">
+                                    Draft
+                                  </span>
+                                )}
+                              </h4>
+                            </div>
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
                             <span className="flex items-center gap-1 font-mono">
                               <Clock className="w-3.5 h-3.5 text-[#CA8E25]" /> {test.timeLimit} Minutes
@@ -1564,24 +1664,59 @@ export default function MockTestClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-2xl bg-slate-900 border border-slate-850 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-lg">
-                {editingTest ? "Edit Quiz" : "Create Quiz"}
+              <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-500" />
+                {editingTest ? "Edit Mock Paper" : "Create Mock Paper"}
               </h3>
               <button onClick={() => setIsCmsOpen(false)} className="text-slate-450 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-6">
+            <form onSubmit={handleSave} className="space-y-5">
+              {/* Target Course & Targeted Grade Selectors */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400 font-bold block mb-1">Paper Title</label>
+                  <label className="text-xs text-slate-400 font-bold block mb-1">Target Course</label>
+                  <select
+                    value={formData.courseId}
+                    onChange={(e) => setFormData({ ...formData, courseId: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                  >
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title} ({c.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 font-bold block mb-1">Target Grade</label>
+                  <select
+                    value={formData.targetedGrade}
+                    onChange={(e) => setFormData({ ...formData, targetedGrade: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                  >
+                    <option value="ALL">All Grades (General)</option>
+                    {STUDENT_GRADES.map((g) => (
+                      <option key={g.value} value={g.value}>
+                        {g.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Title & Timing */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-400 font-bold block mb-1">Mock Paper Title</label>
                   <input
                     type="text"
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g. Olympiad Math Quiz A"
+                    placeholder="e.g. Algebra Mid-Term Quiz A"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
                   />
                 </div>
@@ -1591,16 +1726,19 @@ export default function MockTestClient({
                     <input
                       type="number"
                       required
+                      min={1}
                       value={formData.timeLimit}
                       onChange={(e) => setFormData({ ...formData, timeLimit: Number(e.target.value) })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 font-bold block mb-1">Passing %</label>
+                    <label className="text-xs text-slate-400 font-bold block mb-1">Passing Grade (%)</label>
                     <input
                       type="number"
                       required
+                      min={1}
+                      max={100}
                       value={formData.passingScore}
                       onChange={(e) => setFormData({ ...formData, passingScore: Number(e.target.value) })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
@@ -1609,115 +1747,280 @@ export default function MockTestClient({
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.isPublished}
-                    onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                    className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-blue-600"
-                  />
-                  <span className="text-xs text-slate-350 select-none">Publish Paper</span>
-                </label>
-              </div>
+              {/* Folder Selector for Importing Questions */}
+              <div className="space-y-3 pt-3 border-t border-slate-800">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-bold text-white text-sm flex items-center gap-1.5">
+                    <FolderOpen className="w-4 h-4 text-emerald-400" />
+                    Select Question Bank Folder
+                  </h4>
+                </div>
 
-              <div>
-                <label className="text-xs text-slate-400 font-bold block mb-1">Content Visibility</label>
-                <select
-                  value={formData.isTrial ? "TRIAL" : activeCourse?.type === "COMPETITION" ? "COMPETITION" : "REGULAR"}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({
-                      ...formData,
-                      isTrial: val === "TRIAL",
-                    });
-                  }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
-                >
-                  <option value="REGULAR">Regular Class</option>
-                  <option value="COMPETITION">Competition Class</option>
-                  <option value="TRIAL">Trial Content</option>
-                </select>
-              </div>
-
-
-              {/* Folder Selection from Bank */}
-              <div className="space-y-4 pt-3 border-t border-slate-800">
                 <div>
-                  <h4 className="font-bold text-white text-sm mb-2">Quick Import from Folders</h4>
-                  <div className="flex flex-wrap gap-2">
+                  <select
+                    value={selectedFolderForImport}
+                    onChange={(e) => setSelectedFolderForImport(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+                  >
+                    <option value="" disabled>-- Select Question Bank Folder --</option>
+                    <option value="unfiled">
+                      📁 All Unfiled Questions ({bankQuestions.filter(q => !(q as any).folderId).length} questions available)
+                    </option>
                     {folders.map(f => {
-                      const folderQuestionIds = bankQuestions.filter(q => (q as any).folderId === f.id).map(q => q.id);
-                      if (folderQuestionIds.length === 0) return null;
-                      const isFullySelected = folderQuestionIds.every(id => formData.selectedQuestionIds.includes(id));
+                      const count = bankQuestions.filter(q => (q as any).folderId === f.id).length;
                       return (
-                        <div key={f.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] cursor-pointer font-medium transition ${isFullySelected ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" : "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800"}`} onClick={() => {
-                          if (isFullySelected) {
-                            setFormData(prev => ({ ...prev, selectedQuestionIds: prev.selectedQuestionIds.filter(id => !folderQuestionIds.includes(id)) }));
-                          } else {
-                            const newIds = new Set([...formData.selectedQuestionIds, ...folderQuestionIds]);
-                            setFormData(prev => ({ ...prev, selectedQuestionIds: Array.from(newIds) }));
-                          }
-                        }}>
-                          <FolderOpen className="w-3.5 h-3.5" />
-                          <span>{f.name} ({folderQuestionIds.length} Qs)</span>
+                        <option key={f.id} value={f.id}>
+                          📁 {f.name} ({count} questions available)
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Folder Info & Import Action Box */}
+                {selectedFolderForImport && (() => {
+                  const folderQuestions = bankQuestions.filter(q => {
+                    if (selectedFolderForImport === "unfiled") return !(q as any).folderId;
+                    return (q as any).folderId === selectedFolderForImport;
+                  });
+                  const folderName = selectedFolderForImport === "unfiled"
+                    ? "All Unfiled Questions"
+                    : folders.find(f => f.id === selectedFolderForImport)?.name || "Folder";
+                  const count = folderQuestions.length;
+
+                  if (count === 0) {
+                    return (
+                      <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-xs flex items-center gap-2 font-medium">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>This folder does not contain any questions.</span>
+                      </div>
+                    );
+                  }
+
+                  const folderQuestionIds = folderQuestions.map(q => q.id);
+                  const importedCountFromThisFolder = folderQuestionIds.filter(id => formData.selectedQuestionIds.includes(id)).length;
+                  const isFullyImported = importedCountFromThisFolder === count;
+
+                  return (
+                    <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-300 font-medium">
+                          📁 <strong>{folderName}</strong> contains <strong>{count} questions</strong>.
+                        </span>
+                        {importedCountFromThisFolder > 0 && (
+                          <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            ✓ {importedCountFromThisFolder} / {count} Added
+                          </span>
+                        )}
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const combined = Array.from(new Set([...formData.selectedQuestionIds, ...folderQuestionIds]));
+                          setFormData(prev => ({ ...prev, selectedQuestionIds: combined }));
+                        }}
+                        disabled={isFullyImported}
+                        className={`w-full font-bold rounded-xl text-xs py-2.5 flex items-center justify-center gap-2 transition ${
+                          isFullyImported
+                            ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                            : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                        }`}
+                      >
+                        <Plus className="w-4 h-4" />
+                        {isFullyImported
+                          ? `✓ All ${count} Questions Already Imported`
+                          : `Import Questions From Folder (${count} Questions)`}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Options & Visibility */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isPublished}
+                      onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                      className="w-4 h-4 rounded bg-slate-950 border-slate-800 text-blue-600 focus:ring-blue-600"
+                    />
+                    <span className="text-xs text-slate-300 font-medium select-none">Publish Paper</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 font-bold block mb-1">Content Visibility</label>
+                  <select
+                    value={formData.isTrial ? "TRIAL" : activeCourse?.type === "COMPETITION" ? "COMPETITION" : "REGULAR"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({
+                        ...formData,
+                        isTrial: val === "TRIAL",
+                      });
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                  >
+                    <option value="REGULAR">Regular Class</option>
+                    <option value="COMPETITION">Competition Class</option>
+                    <option value="TRIAL">Trial Content</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Questions in Mock Paper (Review, Reorder & Remove) */}
+              <div className="space-y-3 pt-3 border-t border-slate-800">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-bold text-white text-sm">Questions in Mock Paper</h4>
+                    <p className="text-xs text-slate-400 font-medium">Total: {formData.selectedQuestionIds.length} Questions</p>
+                  </div>
+                  {formData.selectedQuestionIds.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setFormData({ ...formData, selectedQuestionIds: [] })}
+                      className="text-red-400 hover:text-red-300 text-xs h-7 px-2"
+                    >
+                      Clear All Questions
+                    </Button>
+                  )}
+                </div>
+
+                {formData.selectedQuestionIds.length === 0 ? (
+                  <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl text-center text-slate-500 text-xs">
+                    No questions added yet. Select a folder above and click &quot;Import Questions From Folder&quot;.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                    {formData.selectedQuestionIds.map((qid, idx) => {
+                      const q = bankQuestions.find(bq => bq.id === qid);
+                      if (!q) return null;
+                      return (
+                        <div key={qid} className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between gap-3 hover:border-slate-700 transition">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <span className="w-6 h-6 rounded bg-slate-900 border border-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs text-white truncate font-medium">{q.questionText}</p>
+                              <div className="flex items-center gap-2 mt-1 text-[10px]">
+                                {(q as any).topic && <span className="text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">{(q as any).topic}</span>}
+                                <span className="text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Ans: {q.correctAnswer}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Move Up */}
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => {
+                                const newArr = [...formData.selectedQuestionIds];
+                                const temp = newArr[idx - 1];
+                                newArr[idx - 1] = newArr[idx];
+                                newArr[idx] = temp;
+                                setFormData({ ...formData, selectedQuestionIds: newArr });
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-20 disabled:hover:text-slate-400 rounded hover:bg-slate-800"
+                              title="Move Up"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Move Down */}
+                            <button
+                              type="button"
+                              disabled={idx === formData.selectedQuestionIds.length - 1}
+                              onClick={() => {
+                                const newArr = [...formData.selectedQuestionIds];
+                                const temp = newArr[idx + 1];
+                                newArr[idx + 1] = newArr[idx];
+                                newArr[idx] = temp;
+                                setFormData({ ...formData, selectedQuestionIds: newArr });
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-white disabled:opacity-20 disabled:hover:text-slate-400 rounded hover:bg-slate-800"
+                              title="Move Down"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Remove */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  selectedQuestionIds: formData.selectedQuestionIds.filter(id => id !== qid)
+                                });
+                              }}
+                              className="p-1.5 text-red-500/60 hover:text-red-400 rounded hover:bg-red-500/10 ml-1"
+                              title="Remove from Mock Paper"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                )}
               </div>
 
-              {/* Individual Questions Selection */}
-              <div className="space-y-4 pt-4 border-t border-slate-800">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-bold text-white text-sm">Review & Select Questions ({formData.selectedQuestionIds.length} selected)</h4>
-                </div>
+              {/* Optional Manual Individual Question Selection */}
+              <div className="pt-2 border-t border-slate-800">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowManualBankPicker(!showManualBankPicker)}
+                  className="text-xs text-slate-400 hover:text-white p-0 h-auto font-normal flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {showManualBankPicker ? "Hide Individual Question Selector" : "Manually Select Individual Questions from Bank"}
+                </Button>
 
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                  {bankQuestions.map((q) => {
-                    const isSelected = formData.selectedQuestionIds.includes(q.id);
-                    return (
-                      <div
-                        key={q.id}
-                        className={`border p-3 rounded-xl flex items-start gap-3 cursor-pointer transition-colors ${isSelected ? "bg-blue-900/20 border-blue-600" : "bg-slate-950 border-slate-800 hover:border-slate-700"
+                {showManualBankPicker && (
+                  <div className="mt-3 space-y-2 max-h-[200px] overflow-y-auto pr-1 bg-slate-950 border border-slate-800 p-3 rounded-xl">
+                    {bankQuestions.map((q) => {
+                      const isSelected = formData.selectedQuestionIds.includes(q.id);
+                      return (
+                        <div
+                          key={q.id}
+                          className={`p-2.5 rounded-lg border flex items-start gap-2.5 cursor-pointer transition ${
+                            isSelected ? "bg-blue-900/20 border-blue-600" : "bg-slate-900/40 border-slate-800 hover:border-slate-700"
                           }`}
-                        onClick={() => {
-                          if (isSelected) {
-                            setFormData({
-                              ...formData,
-                              selectedQuestionIds: formData.selectedQuestionIds.filter(id => id !== q.id)
-                            });
-                          } else {
-                            setFormData({
-                              ...formData,
-                              selectedQuestionIds: [...formData.selectedQuestionIds, q.id]
-                            });
-                          }
-                        }}
-                      >
-                        <div className="mt-1">
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormData({
+                                ...formData,
+                                selectedQuestionIds: formData.selectedQuestionIds.filter(id => id !== q.id)
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                selectedQuestionIds: [...formData.selectedQuestionIds, q.id]
+                              });
+                            }
+                          }}
+                        >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             readOnly
-                            className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-blue-600"
+                            className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-blue-600 mt-0.5 shrink-0"
                           />
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <p className="text-xs text-white line-clamp-2">{q.questionText}</p>
-                          <div className="flex gap-2">
-                            {(q as any).topic && <span className="px-2 py-0.5 bg-slate-800 text-[10px] text-slate-300 rounded-full">{(q as any).topic}</span>}
-                            {(q as any).difficulty && <span className="px-2 py-0.5 bg-slate-800 text-[10px] text-slate-300 rounded-full">{(q as any).difficulty}</span>}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-white truncate">{q.questionText}</p>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                  {bankQuestions.length === 0 && (
-                    <p className="text-xs text-slate-500 text-center py-4">No questions available in the Bank Soal.</p>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
@@ -1725,15 +2028,16 @@ export default function MockTestClient({
                   type="button"
                   variant="ghost"
                   onClick={() => setIsCmsOpen(false)}
-                  className="text-slate-400 hover:text-white rounded-xl"
+                  className="text-slate-400 hover:text-white rounded-xl text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-blue-650 hover:bg-blue-600 text-white rounded-xl px-5 flex items-center gap-1.5"
+                  disabled={formData.selectedQuestionIds.length === 0}
+                  className="bg-blue-650 hover:bg-blue-600 disabled:opacity-50 text-white rounded-xl px-5 text-xs flex items-center gap-1.5 font-bold"
                 >
-                  <Save className="w-4 h-4" /> Save Quiz
+                  <Save className="w-4 h-4" /> {editingTest ? "Save Changes" : "Create Mock Paper"}
                 </Button>
               </div>
             </form>

@@ -97,17 +97,25 @@ export async function getAvailablePrivateSchedules() {
   }
 }
 
+import { isValidGrade } from "@/lib/grades";
+
 export async function enrollInClass(
   studentId: string,
   courseId: string,
   learningMethod: string,
   scheduleId?: string,
-  sessionsPerWeek?: number
+  sessionsPerWeek?: number,
+  grade?: string
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return { success: false, error: "Unauthorized" };
+    }
+
+    // Grade validation: required for new registrations
+    if (!isValidGrade(grade)) {
+      return { success: false, error: "Please select a valid Grade (Grade 1 - Grade 9)." };
     }
 
     // Verify user accepted terms
@@ -185,8 +193,9 @@ export async function enrollInClass(
         courseId,
         learningMethod,
         scheduleId: scheduleId || null,
+        grade: grade || null,
         status: isRegular ? "PENDING_ENROLLMENT_PAYMENT" : "PENDING_PT_PAYMENT",
-      },
+      } as any,
     });
 
     const count = await prisma.invoice.count();

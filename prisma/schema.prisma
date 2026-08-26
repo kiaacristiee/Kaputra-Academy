@@ -147,6 +147,7 @@ model Registration {
   learningMethod    String?            // "SEMI_PRIVATE" or "PRIVATE"
   sessionsPerWeek   Int?               // 1 or 2
   scheduleId        String?            // Selected private schedule slot id
+  grade             String?            // e.g. "GRADE_3" — student grade at registration
   status            String             @default("PENDING_PAYMENT")
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -329,6 +330,8 @@ model MockTest {
   passingScore  Float
   isPublished   Boolean  @default(false)
   isTrial       Boolean  @default(false)
+  questionOrder String?  // JSON array string of question IDs e.g. '["id1","id2"]'
+  targetedGrade String?  // e.g. "GRADE_5" — targeted student grade level
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

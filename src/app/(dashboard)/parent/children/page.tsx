@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import { Users, GraduationCap, BookOpen, TrendingUp } from "lucide-react";
+import { AddChildModal } from "@/components/parent/AddChildModal";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -30,12 +31,17 @@ export default async function ParentChildrenPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-          <Users className="h-8 w-8 text-[#CA8E25]" />
-          Children
-        </h1>
-        <p className="text-slate-400 mt-2">View and monitor your linked student accounts.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+            <Users className="h-8 w-8 text-[#CA8E25]" />
+            Children
+          </h1>
+          <p className="text-slate-400 mt-2">View and monitor your linked student accounts.</p>
+        </div>
+        <div>
+          <AddChildModal />
+        </div>
       </div>
 
       {children.length > 0 ? (

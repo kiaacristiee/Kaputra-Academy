@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AddChildModal } from "@/components/parent/AddChildModal";
 import ParentDashboardClient from "./ParentDashboardClient";
 import ViewAsStudentButton from "./ViewAsStudentButton";
 
@@ -116,11 +117,15 @@ export default async function ParentDashboardPage() {
           <h1 className="text-3xl font-black tracking-tight text-white">Welcome back, {parent.name}!</h1>
           <p className="text-slate-400">Parent Dashboard • Monitor your child's academic progress</p>
         </div>
+        <div>
+          <AddChildModal />
+        </div>
       </div>
 
       {children.length === 0 ? (
-        <div className="bg-slate-950 p-12 rounded-2xl border border-slate-800 text-center text-slate-500">
-          No registered student accounts are linked to this parent account.
+        <div className="bg-slate-950 p-12 rounded-2xl border border-slate-800 text-center space-y-4">
+          <p className="text-slate-400">No registered student accounts are linked to this parent account.</p>
+          <AddChildModal />
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -129,7 +134,10 @@ export default async function ParentDashboardPage() {
 
             {/* Student Monitor Cards */}
             <div className="space-y-6">
-              <h2 className="text-xl font-bold text-white">Linked Students</h2>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white">Linked Students</h2>
+                <AddChildModal />
+              </div>
 
               {children.map((child: any) => {
                 // Compute attendance rate dynamically

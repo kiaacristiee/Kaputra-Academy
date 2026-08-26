@@ -1,14 +1,12 @@
-import { submitRegistration } from "@/actions/register";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CheckCircle2, Mail, ShieldCheck, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ResendActivationButton } from "@/components/auth/ResendActivationButton";
+import { MultiChildRegisterForm } from "./MultiChildRegisterForm";
 
 export const metadata = {
   title: "Register | Kaputra Academy",
@@ -17,6 +15,7 @@ export const metadata = {
 interface SearchParams {
   success?: string;
   studentId?: string;
+  count?: string;
   emailSent?: string;
   emailError?: string;
 }
@@ -35,10 +34,12 @@ export default async function RegisterPage({
     if (role === "STUDENT") redirect("/student");
   }
 
-  const { success, studentId, emailSent, emailError } = await searchParams;
+  const { success, studentId, count, emailSent, emailError } = await searchParams;
 
   if (success === "true") {
     const isEmailFailed = emailSent === "false";
+    const studentIdList = (studentId || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const firstStudentId = studentIdList[0] || "";
 
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -53,18 +54,28 @@ export default async function RegisterPage({
               Registration Complete!
             </h2>
             <p className="text-sm text-gray-500">
-              Your student account has been created successfully.
+              {studentIdList.length > 1
+                ? `${studentIdList.length} student accounts have been created successfully.`
+                : "Your student account has been created successfully."}
             </p>
           </div>
 
           <div className="bg-slate-50 p-6 rounded-2xl border border-gray-100 text-left space-y-3">
-            <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Student ID</span>
-              <span className="font-mono font-bold text-[#CA8E25] text-lg">{studentId}</span>
+            <div className="flex flex-col gap-2 pb-2 border-b border-gray-200">
+              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                {studentIdList.length > 1 ? "Generated Student IDs" : "Student ID"}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {studentIdList.map((id) => (
+                  <span key={id} className="font-mono font-bold text-[#CA8E25] bg-[#CA8E25]/10 px-3 py-1 rounded-xl border border-[#CA8E25]/20 text-sm">
+                    {id}
+                  </span>
+                ))}
+              </div>
             </div>
             
             {!isEmailFailed ? (
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <p className="text-sm text-gray-600 leading-relaxed pt-1">
                 An activation email containing your <strong>Activation Link</strong> has been sent to your parent's email address.
               </p>
             ) : (
@@ -75,11 +86,11 @@ export default async function RegisterPage({
             )}
           </div>
 
-          {studentId && (
+          {firstStudentId && (
             <div className="pt-2 space-y-3">
-              <ResendActivationButton studentId={studentId} />
+              <ResendActivationButton studentId={firstStudentId} />
 
-              <Link href={`/activate?studentId=${studentId}`} className="block">
+              <Link href={`/activate?studentId=${firstStudentId}`} className="block">
                 <Button className="w-full bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2">
                   Go to Activation Link <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -102,94 +113,14 @@ export default async function RegisterPage({
           <h2 className="text-3xl font-extrabold text-[#072147]">
             Account Registration
           </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Register parent account and child profile(s)
+          </p>
         </div>
 
-        <form action={submitRegistration} className="space-y-6">
-
-          {/* Student Info */}
-          <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-            <h3 className="text-lg font-semibold text-[#072147] mb-4">
-              Student Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="studentName">Student's Full Name</Label>
-                <Input
-                  id="studentName"
-                  name="studentName"
-                  required
-                  placeholder="Full Name"
-                  className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25] placeholder: italic"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                <Input
-                  id="dateOfBirth"
-                  name="dateOfBirth"
-                  type="date"
-                  required
-                  className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Parent Info */}
-          <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-            <h3 className="text-lg font-semibold text-[#072147] mb-4">
-              Parent Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="parentName">Parent Name</Label>
-                <Input
-                  id="parentName"
-                  name="parentName"
-                  required
-                  placeholder="Full Name"
-                  className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25] placeholder: italic"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="parentPhone">Parent Phone Number</Label>
-                <Input
-                  id="parentPhone"
-                  name="parentPhone"
-                  required
-                  placeholder="Enter Phone Number"
-                  className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25] placeholder: italic"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="parentEmail">Parent Email Address</Label>
-                <Input
-                  id="parentEmail"
-                  name="parentEmail"
-                  type="email"
-                  required
-                  placeholder="Enter Email"
-                  className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25] placeholder: italic"
-                />
-              </div>
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold py-3 rounded-xl shadow-lg transition-all text-lg"
-          >
-            Register Account
-          </Button>
-
-          <div className="text-center text-sm text-gray-500">
-            Already have an account?{" "}
-            <Link href="/login" className="text-[#CA8E25] font-semibold hover:underline">
-              Log In
-            </Link>
-          </div>
-        </form>
+        <MultiChildRegisterForm />
       </div>
     </main>
   );
 }
+

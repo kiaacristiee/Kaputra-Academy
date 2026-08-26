@@ -38,7 +38,24 @@ export default async function TeacherMockTestsPage() {
     },
   });
 
-  const courses = teacherAssignments.map((ta) => ta.course);
+  let courses = teacherAssignments.map((ta) => ta.course);
+  if (courses.length === 0) {
+    courses = await prisma.course.findMany({
+      include: {
+        mockTests: {
+          include: {
+            questions: true,
+            submissions: {
+              include: {
+                student: true,
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+  }
 
   // Fetch all bank questions with folder info
   const bankQuestions = await prisma.mockQuestion.findMany({

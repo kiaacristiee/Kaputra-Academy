@@ -7,6 +7,7 @@ import { getAvailableCourses, enrollInClass, getAvailablePrivateSchedules } from
 import { getAvailableCamps, enrollInCamp } from "@/actions/camps";
 import TermsModal from "@/components/TermsModal";
 import Link from "next/link";
+import { STUDENT_GRADES } from "@/lib/grades";
 
 interface Child {
   id: string;
@@ -116,6 +117,7 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
   const [showTermsForRegistration, setShowTermsForRegistration] = useState(false);
 
   const [learningMethod, setLearningMethod] = useState<"SEMI_PRIVATE" | "PRIVATE">("SEMI_PRIVATE");
+  const [selectedGrade, setSelectedGrade] = useState<string>("GRADE_1");
   const [sessionsPerWeek, setSessionsPerWeek] = useState<1 | 2>(1);
   const [availableSchedules, setAvailableSchedules] = useState<any[]>([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("");
@@ -176,6 +178,10 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
 
   const handleEnroll = async () => {
     if (!selectedCourse || !selectedChildId) return;
+    if (!selectedGrade) {
+      setError("Please select a Grade.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -187,7 +193,8 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
       selectedCourse.id, 
       learningMethod, 
       learningMethod === "PRIVATE" ? selectedScheduleId : undefined,
-      sessionsPerWeek
+      sessionsPerWeek,
+      selectedGrade
     );
     if (res.success && res.invoiceId) {
       setSuccessType(wasRegular ? "CLASS" : "PLACEMENT_TEST");
@@ -651,6 +658,191 @@ export default function ParentEnrollClient({ childrenList }: ParentEnrollClientP
             }
           }}
         />
+      )}
+
+      {/* Confirmation & Options Modal for Classes */}
+      {selectedCourse && !showTermsForRegistration && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+            <div className="px-6 py-4 border-b border-slate-900 flex items-center justify-between">
+              <h3 className="font-bold text-white text-base">Select Grade, Method &amp; Frequency</h3>
+              <button
+                onClick={() => setSelectedCourse(null)}
+                className="text-slate-500 hover:text-white text-xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              {/* Student Grade Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Student Grade <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={selectedGrade}
+                  onChange={(e) => setSelectedGrade(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#CA8E25] font-semibold"
+                >
+                  {STUDENT_GRADES.map((g) => (
+                    <option key={g.value} value={g.value}>
+                      {g.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Learning Method */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">1. Learning Method</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setLearningMethod("SEMI_PRIVATE")}
+                    className={`p-4 rounded-xl border text-left transition flex flex-col justify-between h-28 ${
+                      learningMethod === "SEMI_PRIVATE"
+                        ? "border-[#CA8E25] bg-[#CA8E25]/10"
+                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-sm font-bold text-white">Semi-Private</span>
+                    <span className="text-[10px] text-slate-400 leading-tight">
+                      Follow the schedule assigned by the instructor.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLearningMethod("PRIVATE");
+                      loadSchedules();
+                    }}
+                    className={`p-4 rounded-xl border text-left transition flex flex-col justify-between h-28 ${
+                      learningMethod === "PRIVATE"
+                        ? "border-[#CA8E25] bg-[#CA8E25]/10"
+                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-sm font-bold text-white">Private</span>
+                    <span className="text-[10px] text-slate-400 leading-tight">
+                      Choose your preferred day &amp; teacher.
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Session Frequency */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">2. Session Frequency</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSessionsPerWeek(1)}
+                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                      sessionsPerWeek === 1
+                        ? "border-[#CA8E25] bg-[#CA8E25]/10"
+                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-xs font-bold text-white">1 Session / Week</span>
+                    <span className="text-[10px] text-slate-400 font-mono">4 Sessions/mo</span>
+                    <span className="text-xs font-bold text-[#CA8E25] font-mono mt-1">
+                      {formatCurrency(getCoursePrice(selectedCourse, learningMethod, 1))}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSessionsPerWeek(2)}
+                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                      sessionsPerWeek === 2
+                        ? "border-[#CA8E25] bg-[#CA8E25]/10"
+                        : "border-slate-800 bg-slate-950 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-xs font-bold text-white">2 Sessions / Week</span>
+                    <span className="text-[10px] text-slate-400 font-mono">8 Sessions/mo</span>
+                    <span className="text-xs font-bold text-[#CA8E25] font-mono mt-1">
+                      {formatCurrency(getCoursePrice(selectedCourse, learningMethod, 2))}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Schedule Info / Select */}
+              {learningMethod === "PRIVATE" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Day &amp; Teacher</label>
+                  {loadingSchedules ? (
+                    <div className="py-4 text-center text-xs text-slate-500 font-mono">Loading schedules...</div>
+                  ) : availableSchedules.length === 0 ? (
+                    <div className="bg-amber-500/15 border border-amber-500/20 text-amber-400 text-xs p-3 rounded-xl">
+                      No available private schedule slots. Please select Semi-Private or contact the administrator.
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedScheduleId}
+                      onChange={(e) => setSelectedScheduleId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#CA8E25] font-semibold"
+                    >
+                      {availableSchedules.map((sch) => (
+                        <option key={sch.id} value={sch.id}>
+                          {sch.dayOfWeek} ({sch.teacher?.name || "Teacher"})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {learningMethod === "SEMI_PRIVATE" && (
+                <div className="space-y-1.5 bg-slate-900 border border-slate-850 p-4 rounded-xl">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">Class Assigned Schedule</span>
+                  <p className="text-xs text-white font-semibold">{selectedCourse.schedule}</p>
+                </div>
+              )}
+
+              {/* Price Breakdown */}
+              <div className="bg-slate-900 border border-slate-850 p-4 rounded-xl space-y-2">
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Course Fee:</span>
+                  <span className="font-mono text-white font-semibold">
+                    {formatCurrency(getCoursePrice(selectedCourse, learningMethod, sessionsPerWeek))}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Registration Fee:</span>
+                  <span className="font-mono text-white font-semibold">{formatCurrency(selectedCourse.registrationFee)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-white pt-2 border-t border-slate-800">
+                  <span>Total Due:</span>
+                  <span className="font-mono text-[#CA8E25]">
+                    {formatCurrency(getCoursePrice(selectedCourse, learningMethod, sessionsPerWeek) + selectedCourse.registrationFee)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={() => setSelectedCourse(null)}
+                  variant="ghost"
+                  className="flex-1 text-slate-400 hover:text-white rounded-xl border border-slate-850"
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleEnroll}
+                  disabled={submitting || (learningMethod === "PRIVATE" && availableSchedules.length === 0)}
+                  className="flex-1 bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-bold rounded-xl"
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirm Registration"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Confirmation Modal for Camp Programs with Schedule & Frequency Picking */}

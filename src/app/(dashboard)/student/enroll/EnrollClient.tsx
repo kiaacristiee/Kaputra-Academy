@@ -8,6 +8,8 @@ import { enrollInCamp } from "@/actions/camps";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { STUDENT_GRADES } from "@/lib/grades";
+
 interface Course {
   id: string;
   title: string;
@@ -107,6 +109,7 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
   const [successAmount, setSuccessAmount] = useState(300000);
 
   const [learningMethod, setLearningMethod] = useState<"SEMI_PRIVATE" | "PRIVATE">("SEMI_PRIVATE");
+  const [selectedGrade, setSelectedGrade] = useState<string>("GRADE_1");
   const [sessionFrequency, setSessionFrequency] = useState<1 | 2>(1);
   const [availableSchedules, setAvailableSchedules] = useState<any[]>([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>("");
@@ -136,6 +139,10 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
 
   const handleEnroll = async () => {
     if (!selectedCourse) return;
+    if (!selectedGrade) {
+      setError("Please select a Grade.");
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -147,7 +154,8 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
       selectedCourse.id, 
       learningMethod, 
       learningMethod === "PRIVATE" ? selectedScheduleId : undefined,
-      sessionFrequency
+      sessionFrequency,
+      selectedGrade
     );
     if (res.success && res.invoiceId) {
       setSuccessType(wasRegular ? "CLASS" : "PLACEMENT_TEST");
@@ -751,6 +759,24 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
               </button>
             </div>
             <div className="p-6 space-y-5">
+              {/* Student Grade Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Student Grade <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={selectedGrade}
+                  onChange={(e) => setSelectedGrade(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#CA8E25] font-semibold"
+                >
+                  {STUDENT_GRADES.map((g) => (
+                    <option key={g.value} value={g.value}>
+                      {g.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Learning Method */}
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">1. Learning Method</label>
@@ -784,7 +810,7 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
                   >
                     <span className="text-sm font-bold text-white">Private</span>
                     <span className="text-[10px] text-slate-400 leading-tight">
-                      Choose your preferred schedule &amp; teacher.
+                      Choose your preferred day &amp; teacher.
                     </span>
                   </button>
                 </div>
@@ -831,7 +857,7 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
               {/* Schedule Info / Select */}
               {learningMethod === "PRIVATE" && (
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Schedule &amp; Teacher</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Day &amp; Teacher</label>
                   {loadingSchedules ? (
                     <div className="py-4 text-center text-xs text-slate-500 font-mono">Loading schedules...</div>
                   ) : availableSchedules.length === 0 ? (
@@ -846,7 +872,7 @@ export default function EnrollClient({ initialCourses, initialCamps, studentId }
                     >
                       {availableSchedules.map((sch) => (
                         <option key={sch.id} value={sch.id}>
-                          {sch.dayOfWeek} at {sch.startTime} - {sch.endTime} ({sch.teacher?.name || "No Teacher"})
+                          {sch.dayOfWeek} ({sch.teacher?.name || "Teacher"})
                         </option>
                       ))}
                     </select>

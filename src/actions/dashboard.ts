@@ -316,24 +316,33 @@ export async function createMockTest(data: {
   passingScore: number;
   isPublished: boolean;
   isTrial: boolean;
+  targetedGrade?: string | null;
   questionIds: string[];
+  questionOrder?: string[];
 }) {
   try {
     await checkAuth(["ADMIN", "TEACHER"]);
-    const { questionIds, courseId, campProgramId, ...testData } = data;
+    const { questionIds, questionOrder, courseId, campProgramId, targetedGrade, ...testData } = data;
 
     const test = await prisma.mockTest.create({
       data: {
         ...testData,
         courseId: courseId || null,
         campProgramId: campProgramId || null,
+        targetedGrade: targetedGrade || null,
+        questionOrder: questionOrder ? JSON.stringify(questionOrder) : JSON.stringify(questionIds),
         questions: {
           connect: questionIds.map((id) => ({ id })),
         },
+      } as any,
+      include: {
+        questions: true,
       },
     });
 
     revalidatePath("/student/trial");
+    revalidatePath("/teacher/mock-tests");
+    revalidatePath("/student/mock-test");
     return { success: true, test };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -348,26 +357,41 @@ export async function updateMockTest(
     passingScore: number;
     isPublished: boolean;
     isTrial: boolean;
+    targetedGrade?: string | null;
     questionIds?: string[];
+    questionOrder?: string[];
+    courseId?: string;
   }
 ) {
   try {
     await checkAuth(["ADMIN", "TEACHER"]);
-    const { questionIds, ...testData } = data;
+    const { questionIds, questionOrder, courseId, targetedGrade, ...testData } = data;
 
     const test = await prisma.mockTest.update({
       where: { id },
       data: {
         ...testData,
+        ...(courseId !== undefined ? { courseId: courseId || null } : {}),
+        ...(targetedGrade !== undefined ? { targetedGrade: targetedGrade || null } : {}),
+        questionOrder: questionOrder
+          ? JSON.stringify(questionOrder)
+          : questionIds
+          ? JSON.stringify(questionIds)
+          : undefined,
         questions: questionIds
           ? {
-            set: questionIds.map((qid) => ({ id: qid })),
-          }
+              set: questionIds.map((qid) => ({ id: qid })),
+            }
           : undefined,
+      } as any,
+      include: {
+        questions: true,
       },
     });
 
     revalidatePath("/student/trial");
+    revalidatePath("/teacher/mock-tests");
+    revalidatePath("/student/mock-test");
     return { success: true, test };
   } catch (error: any) {
     return { success: false, error: error.message };
