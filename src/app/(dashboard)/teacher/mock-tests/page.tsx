@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import MockTestClient from "../../student/mock-test/MockTestClient";
 import BulkUpload from "./BulkUpload";
+import { getVisibleStudentIds } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export default async function TeacherMockTestsPage() {
     redirect("/login");
   }
 
+  const visibleStudentIds = await getVisibleStudentIds(session.user);
+
   const teacherAssignments = await prisma.teacherAssignment.findMany({
     where: { teacherId: session.user.id },
     include: {
@@ -26,6 +29,7 @@ export default async function TeacherMockTestsPage() {
             include: {
               questions: true,
               submissions: {
+                where: visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {},
                 include: {
                   student: true,
                 },
@@ -46,6 +50,7 @@ export default async function TeacherMockTestsPage() {
           include: {
             questions: true,
             submissions: {
+              where: visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {},
               include: {
                 student: true,
               },
@@ -56,6 +61,7 @@ export default async function TeacherMockTestsPage() {
       },
     });
   }
+
 
   // Fetch all bank questions with folder info
   const bankQuestions = await prisma.mockQuestion.findMany({

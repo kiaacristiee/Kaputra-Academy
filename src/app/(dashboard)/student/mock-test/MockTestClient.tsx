@@ -51,6 +51,10 @@ interface MockQuestion {
   options: string; // JSON Array string
   correctAnswer: string;
   explanation: string | null;
+  explanationImageUrl?: string | null;
+  imageUrl?: string | null;
+  topic?: string | null;
+  difficulty?: string | null;
 }
 
 interface MockSubmission {
@@ -125,6 +129,7 @@ export default function MockTestClient({
     difficulty: "EASY",
     questionType: "MULTIPLE_CHOICE",
     imageFile: null as File | null,
+    explanationImageFile: null as File | null,
   });
 
   const [courses, setCourses] = useState<Course[]>(initialCourses);
@@ -506,7 +511,22 @@ export default function MockTestClient({
         const data = await uploadRes.json();
         imageUrl = data.url;
       } else {
-        alert("Failed to upload image.");
+        alert("Failed to upload question image.");
+        setIsBankSaving(false);
+        return;
+      }
+    }
+
+    let explanationImageUrl = undefined;
+    if (bankFormData.explanationImageFile) {
+      const formData = new FormData();
+      formData.append("file", bankFormData.explanationImageFile);
+      const uploadRes = await fetch("/api/teacher/mock-tests/upload-image", { method: "POST", body: formData });
+      if (uploadRes.ok) {
+        const data = await uploadRes.json();
+        explanationImageUrl = data.url;
+      } else {
+        alert("Failed to upload explanation image.");
         setIsBankSaving(false);
         return;
       }
@@ -519,6 +539,7 @@ export default function MockTestClient({
         options: finalOptions,
         correctAnswer: finalAnswer,
         explanation: bankFormData.explanation,
+        explanationImageUrl: explanationImageUrl,
         topic: bankFormData.topic,
         difficulty: bankFormData.difficulty,
         imageUrl: imageUrl,
@@ -533,10 +554,11 @@ export default function MockTestClient({
         options: finalOptions,
         correctAnswer: finalAnswer,
         explanation: bankFormData.explanation,
+        explanationImageUrl: explanationImageUrl,
         topic: bankFormData.topic,
         difficulty: bankFormData.difficulty,
         imageUrl: imageUrl,
-        folderId: activeFolderId, // Set folder automatically based on what we're viewing
+        folderId: activeFolderId,
       });
       if (res.success && res.question) {
         setBankQuestions([res.question as MockQuestion, ...bankQuestions]);
@@ -548,7 +570,7 @@ export default function MockTestClient({
       setIsBankFormOpen(false);
       setEditingBankQuestionId(null);
       setBankFormData({
-        questionText: "", options: ["", ""], correctAnswer: "", explanation: "", topic: "", difficulty: "EASY", questionType: "MULTIPLE_CHOICE", imageFile: null
+        questionText: "", options: ["", ""], correctAnswer: "", explanation: "", topic: "", difficulty: "EASY", questionType: "MULTIPLE_CHOICE", imageFile: null, explanationImageFile: null
       });
     } else {
       alert("Failed to add/update question: " + res.error);
@@ -946,6 +968,16 @@ export default function MockTestClient({
                       />
                     </div>
 
+                    <div>
+                      <label className="text-xs text-slate-400 font-bold block mb-1">Explanation Image (Optional)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setBankFormData({ ...bankFormData, explanationImageFile: e.target.files?.[0] || null })}
+                        className="w-full text-xs text-slate-400 bg-slate-900 border border-slate-800 p-2 rounded-xl"
+                      />
+                    </div>
+
                     <div className="flex gap-2 justify-end pt-2">
                       <Button
                         type="button"
@@ -1004,7 +1036,7 @@ export default function MockTestClient({
                     </div>
                   )}
                   
-                  <Button onClick={() => { setIsBankFormOpen(!isBankFormOpen); setEditingBankQuestionId(null); setBankFormData({ questionText: "", options: ["", ""], correctAnswer: "", explanation: "", topic: "", difficulty: "EASY", questionType: "MULTIPLE_CHOICE", imageFile: null }); }} className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl px-4 py-2.5 transition text-xs shadow-lg shadow-emerald-500/20">
+                  <Button onClick={() => { setIsBankFormOpen(!isBankFormOpen); setEditingBankQuestionId(null); setBankFormData({ questionText: "", options: ["", ""], correctAnswer: "", explanation: "", topic: "", difficulty: "EASY", questionType: "MULTIPLE_CHOICE", imageFile: null, explanationImageFile: null }); }} className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl px-4 py-2.5 transition text-xs shadow-lg shadow-emerald-500/20">
                     {isBankFormOpen && !editingBankQuestionId ? <X className="w-3.5 h-3.5 mr-1" /> : <Plus className="w-3.5 h-3.5 mr-1" />} {isBankFormOpen && !editingBankQuestionId ? "Cancel" : "Add Question"}
                   </Button>
                 </div>
@@ -1072,7 +1104,8 @@ export default function MockTestClient({
                                  topic: (q as any).topic || "",
                                  difficulty: (q as any).difficulty || "EASY",
                                  questionType: (q as any).options && JSON.parse(q.options).length > 0 ? "MULTIPLE_CHOICE" : "SHORT_ANSWER",
-                                 imageFile: null
+                                 imageFile: null,
+                                 explanationImageFile: null
                                });
                                setIsBankFormOpen(true);
                                window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1616,14 +1649,23 @@ export default function MockTestClient({
                 </div>
 
                 {/* Explanation */}
-                {activeTest.questions[currentQuestionIdx]?.explanation && (
-                  <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl">
+                {(activeTest.questions[currentQuestionIdx]?.explanation || activeTest.questions[currentQuestionIdx]?.explanationImageUrl) && (
+                  <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl space-y-2">
                     <h5 className="text-[10px] font-bold text-blue-400 flex items-center gap-1 mb-1">
                       <HelpCircle className="w-3 h-3" /> Explanation
                     </h5>
-                    <p className="text-[12px] text-slate-400 leading-relaxed">
-                      {activeTest.questions[currentQuestionIdx].explanation}
-                    </p>
+                    {activeTest.questions[currentQuestionIdx].explanation && (
+                      <p className="text-[12px] text-slate-400 leading-relaxed">
+                        {activeTest.questions[currentQuestionIdx].explanation}
+                      </p>
+                    )}
+                    {activeTest.questions[currentQuestionIdx].explanationImageUrl && (
+                      <img
+                        src={activeTest.questions[currentQuestionIdx].explanationImageUrl}
+                        alt={activeTest.questions[currentQuestionIdx].explanation || "Explanation image"}
+                        className="max-w-full rounded-lg border border-blue-900/30 object-contain max-h-80"
+                      />
+                    )}
                   </div>
                 )}
 

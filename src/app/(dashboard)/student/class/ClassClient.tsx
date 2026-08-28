@@ -41,6 +41,7 @@ interface MockQuestion {
   options: string;
   correctAnswer: string;
   explanation: string | null;
+  explanationImageUrl?: string | null;
   imageUrl?: string | null;
 }
 
@@ -979,14 +980,23 @@ export default function ClassClient({
                   </div>
 
                   {/* Explanation */}
-                  {activeTest.questions[currentQuestionIdx]?.explanation && (
-                    <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl">
+                  {(activeTest.questions[currentQuestionIdx]?.explanation || activeTest.questions[currentQuestionIdx]?.explanationImageUrl) && (
+                    <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl space-y-2">
                       <h5 className="text-[10px] font-bold text-blue-400 flex items-center gap-1 mb-1">
                         <BookOpen className="w-3 h-3" /> Explanation
                       </h5>
-                      <p className="text-[12px] text-slate-400 leading-relaxed">
-                        {activeTest.questions[currentQuestionIdx].explanation}
-                      </p>
+                      {activeTest.questions[currentQuestionIdx].explanation && (
+                        <p className="text-[12px] text-slate-400 leading-relaxed">
+                          {activeTest.questions[currentQuestionIdx].explanation}
+                        </p>
+                      )}
+                      {activeTest.questions[currentQuestionIdx].explanationImageUrl && (
+                        <img
+                          src={activeTest.questions[currentQuestionIdx].explanationImageUrl}
+                          alt={activeTest.questions[currentQuestionIdx].explanation || "Explanation image"}
+                          className="max-w-full rounded-lg border border-blue-900/30 object-contain max-h-80"
+                        />
+                      )}
                     </div>
                   )}
 

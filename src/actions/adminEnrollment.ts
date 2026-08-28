@@ -57,6 +57,7 @@ export interface AdminEnrollParams {
   studentId: string;
   itemType: "CLASS" | "CAMP";
   itemId: string;
+  grade?: string;
   learningMethod?: "SEMI_PRIVATE" | "PRIVATE";
   sessionsPerWeek?: number;
   paymentStatus: "PAID" | "PENDING";
@@ -69,7 +70,7 @@ export async function adminEnrollStudent(params: AdminEnrollParams) {
       throw new Error("Unauthorized access");
     }
 
-    const { studentId, itemType, itemId, learningMethod = "SEMI_PRIVATE", sessionsPerWeek = 1, paymentStatus } = params;
+    const { studentId, itemType, itemId, grade, learningMethod = "SEMI_PRIVATE", sessionsPerWeek = 1, paymentStatus } = params;
 
     const student = await prisma.user.findUnique({
       where: { id: studentId },
@@ -110,6 +111,7 @@ export async function adminEnrollStudent(params: AdminEnrollParams) {
           courseId: course.id,
           learningMethod,
           sessionsPerWeek,
+          grade: grade || "GRADE_1",
           status: "APPROVED",
         },
       });

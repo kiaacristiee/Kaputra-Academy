@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import AttendanceClient from "./AttendanceClient";
+import { getVisibleStudentIds } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,8 @@ export default async function TeacherAttendancePage() {
   if (!session || !session.user || session.user.role !== "TEACHER") {
     redirect("/login");
   }
+
+  const visibleStudentIds = await getVisibleStudentIds(session.user);
 
   // Fetch attendance records and assignments concurrently
   const [records, assignments] = await Promise.all([
@@ -56,12 +59,14 @@ export default async function TeacherAttendancePage() {
         itemId: { in: courses.map(c => c.id) },
         itemType: "CLASS",
         status: "ACTIVE",
+        ...(visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {}),
       },
       include: { student: true },
     }),
     prisma.attendance.findMany({
       where: {
         courseId: { in: courses.map(c => c.id) },
+        ...(visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {}),
       },
       include: {
         student: { select: { name: true } },
@@ -70,6 +75,7 @@ export default async function TeacherAttendancePage() {
       orderBy: { date: "desc" },
     }),
   ]);
+
 
   const students = enrollments.map(e => ({
     id: e.student.id,

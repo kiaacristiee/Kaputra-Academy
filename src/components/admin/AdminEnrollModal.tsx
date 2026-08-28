@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, GraduationCap, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { adminEnrollStudent } from "@/actions/adminEnrollment";
+import { STUDENT_GRADES } from "@/lib/grades";
 
 interface CourseItem {
   id: string;
@@ -35,6 +36,7 @@ interface Props {
 export default function AdminEnrollModal({ isOpen, onClose, student, courses, camps, onSuccess }: Props) {
   const [itemType, setItemType] = useState<"CLASS" | "CAMP">("CLASS");
   const [selectedItemId, setSelectedItemId] = useState<string>("");
+  const [grade, setGrade] = useState<string>(STUDENT_GRADES[0].value);
   const [learningMethod, setLearningMethod] = useState<"SEMI_PRIVATE" | "PRIVATE">("SEMI_PRIVATE");
   const [sessionsPerWeek, setSessionsPerWeek] = useState<number>(1);
   const [paymentStatus, setPaymentStatus] = useState<"PAID" | "PENDING">("PAID");
@@ -48,6 +50,7 @@ export default function AdminEnrollModal({ isOpen, onClose, student, courses, ca
       setError(null);
       setSuccess(false);
       setItemType("CLASS");
+      setGrade(STUDENT_GRADES[0].value);
       if (courses.length > 0) setSelectedItemId(courses[0].id);
       else if (camps.length > 0) setSelectedItemId(camps[0].id);
     }
@@ -77,6 +80,7 @@ export default function AdminEnrollModal({ isOpen, onClose, student, courses, ca
       studentId: student.id,
       itemType,
       itemId: selectedItemId,
+      grade,
       learningMethod,
       sessionsPerWeek,
       paymentStatus,
@@ -193,6 +197,22 @@ export default function AdminEnrollModal({ isOpen, onClose, student, courses, ca
               ) : (
                 <option value="">No camps available</option>
               )}
+            </select>
+          </div>
+
+          {/* Student Grade Selection */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Student Grade</label>
+            <select
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#CA8E25]"
+            >
+              {STUDENT_GRADES.map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label}
+                </option>
+              ))}
             </select>
           </div>
 

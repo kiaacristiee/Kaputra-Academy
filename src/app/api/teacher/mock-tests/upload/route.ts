@@ -127,6 +127,8 @@ export async function POST(req: Request) {
       const idxTopik = getColIndex(["Topik", "questionType", "Materi"]);
       const idxKesulitan = getColIndex(["Tingkat Kesulitan", "difficulty"]);
       const idxGambar = getColIndex(["Nama File Gambar", "image", "gambar", "image url", "imageurl"]);
+      const idxExplanation = getColIndex(["Explanation", "explanation", "Penjelasan"]);
+      const idxExplanationImage = getColIndex(["Explanation Image", "explanation image", "Gambar Penjelasan", "Gambar Explanation", "explanation_image"]);
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -150,17 +152,46 @@ export async function POST(req: Request) {
         else if (upperAns === "C" && options.length > 2) correctAns = options[2];
         else if (upperAns === "D" && options.length > 3) correctAns = options[3];
 
-        let finalImageUrl = null;
-        if (idxGambar !== -1 && row[idxGambar]) {
+        // Question picture
+        let finalImageUrl: string | null = null;
+        if (idxGambar !== -1 && row[idxGambar] != null) {
           const cleanName = String(row[idxGambar]).trim();
-          const lowerName = cleanName.toLowerCase();
-          if (cleanName.startsWith("http://") || cleanName.startsWith("https://") || cleanName.startsWith("/uploads/")) {
+          if (cleanName.length > 0) {
+            const lowerName = cleanName.toLowerCase();
+            if (cleanName.startsWith("http://") || cleanName.startsWith("https://") || cleanName.startsWith("/uploads/")) {
               finalImageUrl = cleanName;
-          } else if (imageMap[lowerName]) {
+            } else if (imageMap[lowerName]) {
               finalImageUrl = imageMap[lowerName];
-          } else {
-              // Fallback: If image wasn't in ZIP, assume it's manually placed in /uploads/questions/
+            } else {
+              console.warn(`Row ${i + 2}: Question image file "${cleanName}" not found in ZIP archive`);
               finalImageUrl = `/uploads/questions/${cleanName}`;
+            }
+          }
+        }
+
+        // Read explanation text — treat empty/whitespace-only cells as null
+        let explanationVal: string | null = null;
+        if (idxExplanation !== -1 && row[idxExplanation] != null) {
+          const trimmed = String(row[idxExplanation]).trim();
+          if (trimmed.length > 0) {
+            explanationVal = trimmed;
+          }
+        }
+
+        // Read explanation image — treat empty/whitespace-only cells as null
+        let finalExplanationImageUrl: string | null = null;
+        if (idxExplanationImage !== -1 && row[idxExplanationImage] != null) {
+          const cleanName = String(row[idxExplanationImage]).trim();
+          if (cleanName.length > 0) {
+            const lowerName = cleanName.toLowerCase();
+            if (cleanName.startsWith("http://") || cleanName.startsWith("https://") || cleanName.startsWith("/uploads/")) {
+              finalExplanationImageUrl = cleanName;
+            } else if (imageMap[lowerName]) {
+              finalExplanationImageUrl = imageMap[lowerName];
+            } else {
+              console.warn(`Row ${i + 2}: Explanation image file "${cleanName}" not found in ZIP archive`);
+              finalExplanationImageUrl = null;
+            }
           }
         }
 
@@ -170,6 +201,8 @@ export async function POST(req: Request) {
           questionText: String(teksSoal).trim(),
           options: JSON.stringify(options),
           correctAnswer: correctAns,
+          explanation: explanationVal,
+          explanationImageUrl: finalExplanationImageUrl,
           topic: idxTopik !== -1 && row[idxTopik] ? String(row[idxTopik]).trim() : null,
           difficulty: idxKesulitan !== -1 && row[idxKesulitan] ? String(row[idxKesulitan]).trim() : null,
           imageUrl: finalImageUrl

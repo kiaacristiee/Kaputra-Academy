@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import QuizResultsClient from "./QuizResultsClient";
+import { getVisibleStudentIds } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function TeacherQuizResultsPage() {
     redirect("/login");
   }
 
+  const visibleStudentIds = await getVisibleStudentIds(session.user);
+
   const teacherAssignments = await prisma.teacherAssignment.findMany({
     where: { teacherId: session.user.id },
     include: {
@@ -25,6 +28,7 @@ export default async function TeacherQuizResultsPage() {
             include: {
               questions: true,
               submissions: {
+                where: visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {},
                 include: {
                   student: true,
                 },
@@ -39,6 +43,7 @@ export default async function TeacherQuizResultsPage() {
   });
 
   const courses = teacherAssignments.map((ta) => ta.course);
+
 
   return (
     <>

@@ -4,10 +4,11 @@ import prisma from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { canAccessStudent } from "@/lib/permissions";
 
 async function checkTeacher() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "TEACHER") {
+  if (!session?.user?.id || !["TEACHER", "ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
   return session.user;
@@ -23,6 +24,9 @@ export async function createPrivateSession(data: {
 }) {
   try {
     const teacher = await checkTeacher();
+    if (!(await canAccessStudent(teacher, data.studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
 
     const existing = await prisma.privateSession.findMany({
       where: {
@@ -71,7 +75,13 @@ export async function createPrivateSession(data: {
 
 export async function updatePrivateSessionStatus(sessionId: string, status: string, attendance?: string) {
   try {
-    await checkTeacher();
+    const teacher = await checkTeacher();
+    const existing = await prisma.privateSession.findUnique({ where: { id: sessionId } });
+    if (!existing) throw new Error("Session not found");
+    if (!(await canAccessStudent(teacher, existing.studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
+
     const session = await prisma.privateSession.update({
       where: { id: sessionId },
       data: {
@@ -88,7 +98,13 @@ export async function updatePrivateSessionStatus(sessionId: string, status: stri
 
 export async function deletePrivateSession(sessionId: string) {
   try {
-    await checkTeacher();
+    const teacher = await checkTeacher();
+    const existing = await prisma.privateSession.findUnique({ where: { id: sessionId } });
+    if (!existing) throw new Error("Session not found");
+    if (!(await canAccessStudent(teacher, existing.studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
+
     await prisma.privateSession.delete({
       where: { id: sessionId }
     });
@@ -98,3 +114,4 @@ export async function deletePrivateSession(sessionId: string) {
     return { success: false, error: error.message };
   }
 }
+

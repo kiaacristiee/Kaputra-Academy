@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import AnnouncementsClient from "./AnnouncementsClient";
+import { getVisibleStudentIds } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -61,11 +62,14 @@ export default async function TeacherAnnouncementsPage() {
 
   const assignedCourses = teacher.teachingAssignments.map((ta) => ta.course);
 
-  // Fetch all active students in the system with their active enrollments
+  const visibleStudentIds = await getVisibleStudentIds(session.user);
+
+  // Fetch active students assigned to this teacher with their active enrollments
   const students = await prisma.user.findMany({
     where: {
       role: "STUDENT",
       isActive: true,
+      ...(visibleStudentIds ? { id: { in: visibleStudentIds } } : {}),
     },
     select: {
       id: true,
@@ -80,6 +84,7 @@ export default async function TeacherAnnouncementsPage() {
     },
     orderBy: { name: "asc" },
   });
+
 
   return (
     <AnnouncementsClient

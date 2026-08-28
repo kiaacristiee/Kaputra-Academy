@@ -4,10 +4,11 @@ import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { canAccessStudent } from "@/lib/permissions";
 
 async function checkTeacherOrAdmin() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
+  if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN" && session.user.role !== "OWNER" && session.user.role !== "CO_OWNER")) {
     throw new Error("Unauthorized: Only teachers and admins can manage announcements.");
   }
   return session.user;
@@ -43,6 +44,15 @@ export async function createAnnouncement(data: {
 }) {
   try {
     const user = await checkTeacherOrAdmin();
+
+    if (data.targetStudentIds && data.targetStudentIds.length > 0) {
+      for (const sid of data.targetStudentIds) {
+        if (!(await canAccessStudent(user, sid))) {
+          throw new Error(`Unauthorized: You are not assigned to target student ID ${sid}`);
+        }
+      }
+    }
+
     const item = await prisma.announcement.create({
       data: {
         title: data.title,
@@ -83,7 +93,16 @@ export async function updateAnnouncement(
   }
 ) {
   try {
-    await checkTeacherOrAdmin();
+    const user = await checkTeacherOrAdmin();
+
+    if (data.targetStudentIds && data.targetStudentIds.length > 0) {
+      for (const sid of data.targetStudentIds) {
+        if (!(await canAccessStudent(user, sid))) {
+          throw new Error(`Unauthorized: You are not assigned to target student ID ${sid}`);
+        }
+      }
+    }
+
     const item = await prisma.announcement.update({
       where: { id },
       data: {
@@ -111,6 +130,7 @@ export async function updateAnnouncement(
     return { success: false, error: error.message };
   }
 }
+
 
 export async function deleteAnnouncement(id: string) {
   try {

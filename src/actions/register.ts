@@ -12,7 +12,7 @@ import { revalidatePath } from "next/cache";
 export async function submitRegistration(formData: FormData) {
   const parentName = (formData.get("parentName") as string || "").trim();
   const parentPhone = (formData.get("parentPhone") as string || "").trim();
-  const parentEmail = (formData.get("parentEmail") as string || "").trim();
+  const parentEmail = (formData.get("parentEmail") as string || "").trim().toLowerCase();
 
   if (!parentName || !parentPhone || !parentEmail) {
     throw new Error("Missing required parent information");
@@ -58,103 +58,114 @@ export async function submitRegistration(formData: FormData) {
   const token = randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-  // Find or create Parent User
-  let parentUser = await prisma.user.findUnique({
-    where: { email: parentEmail },
-  });
-
-  if (!parentUser) {
-    parentUser = await prisma.user.create({
-      data: {
-        name: parentName,
-        email: parentEmail,
-        phone: parentPhone,
-        passwordHash: "", // Blank password until set
-        role: "PARENT",
-        isActive: false,
-        activationToken: token,
-        activationExpires: expires,
-      },
+  // Wrap all parent & child database operations in a single atomic transaction
+  const { createdStudentIds, primaryStudentName, activeToken } = await prisma.$transaction(async (tx) => {
+    // Find or create Parent User
+    let parentUser = await tx.user.findUnique({
+      where: { email: parentEmail },
     });
-  } else {
-    // Update existing parent's activation token if not active yet
-    if (!parentUser.isActive) {
-      parentUser = await prisma.user.update({
-        where: { id: parentUser.id },
+
+    if (!parentUser) {
+      parentUser = await tx.user.create({
         data: {
           name: parentName,
+          email: parentEmail,
           phone: parentPhone,
+          passwordHash: "", // Blank password until set
+          role: "PARENT",
+          isActive: false,
           activationToken: token,
           activationExpires: expires,
         },
       });
+    } else {
+      // Update existing parent's activation token if not active yet
+      if (!parentUser.isActive) {
+        parentUser = await tx.user.update({
+          where: { id: parentUser.id },
+          data: {
+            name: parentName,
+            phone: parentPhone,
+            activationToken: token,
+            activationExpires: expires,
+          },
+        });
+      }
     }
-  }
 
-  // Create inactive Student User for each child
-  const createdStudentIds: string[] = [];
-  let primaryStudentName = "";
+    const studentIds: string[] = [];
+    let firstChildName = "";
 
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
-    const dateOfBirth = new Date(child.dateOfBirth);
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      const dateOfBirth = new Date(child.dateOfBirth);
 
-    // Generate unique Student ID (e.g. initials + DOB like MDC211006)
-    const studentId = await generateStudentId(child.studentName, dateOfBirth);
-    const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
+      // Check if student with same parentId, name (case-insensitive), and DOB already exists (e.g. from double-click)
+      const existingStudent = await tx.user.findFirst({
+        where: {
+          parentId: parentUser.id,
+          name: { equals: child.studentName.trim(), mode: "insensitive" },
+          dateOfBirth: dateOfBirth,
+          role: "STUDENT",
+        },
+      });
 
-    await prisma.user.create({
-      data: {
-        name: child.studentName,
-        email: virtualEmail,
-        passwordHash: "", // Password created during activation
-        role: "STUDENT",
-        studentIdStr: studentId,
-        parentId: parentUser.id,
-        isActive: parentUser.isActive,
-        dateOfBirth: dateOfBirth,
-      },
-    });
+      if (existingStudent && existingStudent.studentIdStr) {
+        studentIds.push(existingStudent.studentIdStr);
+      } else {
+        // Generate unique Student ID (e.g. initials + DOB like MDC211006)
+        const studentId = await generateStudentId(child.studentName, dateOfBirth, tx);
+        const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
 
-    createdStudentIds.push(studentId);
-    if (i === 0) {
-      primaryStudentName = child.studentName;
+        await tx.user.create({
+          data: {
+            name: child.studentName.trim(),
+            email: virtualEmail,
+            passwordHash: "", // Password created during activation
+            role: "STUDENT",
+            studentIdStr: studentId,
+            parentId: parentUser.id,
+            isActive: parentUser.isActive,
+            dateOfBirth: dateOfBirth,
+          },
+        });
+
+        studentIds.push(studentId);
+      }
+
+      if (i === 0) {
+        firstChildName = child.studentName.trim();
+      }
     }
-  }
 
-  // Automatically send activation email to parent
-  let emailSent = false;
-  let emailError = "";
-  try {
-    const displayStudentName = children.length > 1
-      ? `${primaryStudentName} (+${children.length - 1} more)`
-      : primaryStudentName;
+    return {
+      createdStudentIds: studentIds,
+      primaryStudentName: firstChildName,
+      activeToken: parentUser.activationToken || token,
+    };
+  });
 
-    const emailRes = await sendParentActivationEmail({
-      parentEmail,
-      parentName,
-      studentName: displayStudentName,
-      studentId: createdStudentIds.join(", "),
-      token,
-    });
-    emailSent = emailRes.success;
-    if (!emailRes.success) {
-      emailError = emailRes.error || "Email delivery failed";
-    }
-  } catch (err: any) {
-    console.error("Failed to send activation email during registration:", err);
-    emailError = err.message || "Email delivery failed";
-  }
+  // Trigger activation email asynchronously in the background so HTTP response returns instantly
+  const displayStudentName = children.length > 1
+    ? `${primaryStudentName} (+${children.length - 1} more)`
+    : primaryStudentName;
+
+  void sendParentActivationEmail({
+    parentEmail,
+    parentName,
+    studentName: displayStudentName,
+    studentId: createdStudentIds.join(", "),
+    token: activeToken,
+  }).catch((err) => {
+    console.error("[REGISTRATION_EMAIL] Async delivery failed:", err);
+  });
 
   const queryParams = new URLSearchParams({
     success: "true",
     studentId: createdStudentIds.join(","),
     count: String(children.length),
-    emailSent: emailSent ? "true" : "false",
+    emailSent: "true",
   });
-  if (emailError) {
-    queryParams.set("emailError", emailError);
-  }
 
   // Redirect to registration page with success query param
   redirect(`/register?${queryParams.toString()}`);
@@ -185,59 +196,77 @@ export async function addChildFromParentDashboard(data: { studentName: string; d
 
     const dateOfBirth = new Date(dateOfBirthStr);
 
-    // Auto-generate unique Student ID
-    const studentId = await generateStudentId(studentName, dateOfBirth);
-    const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
+    const newStudent = await prisma.$transaction(async (tx) => {
+      // Deduplicate check
+      const existingStudent = await tx.user.findFirst({
+        where: {
+          parentId: parentUser.id,
+          name: { equals: studentName, mode: "insensitive" },
+          dateOfBirth: dateOfBirth,
+          role: "STUDENT",
+        },
+      });
 
-    // Create student linked directly to authenticated parent
-    const newStudent = await prisma.user.create({
-      data: {
-        name: studentName,
-        email: virtualEmail,
-        passwordHash: "",
-        role: "STUDENT",
-        studentIdStr: studentId,
-        parentId: parentUser.id, // Strictly server-side binding
-        isActive: parentUser.isActive, // Inherit active state if parent is active
-        dateOfBirth: dateOfBirth,
-      },
+      if (existingStudent) {
+        return existingStudent;
+      }
+
+      // Auto-generate unique Student ID
+      const studentId = await generateStudentId(studentName, dateOfBirth, tx);
+      const virtualEmail = `${studentId.toLowerCase()}@kaputra.local`;
+
+      return await tx.user.create({
+        data: {
+          name: studentName,
+          email: virtualEmail,
+          passwordHash: "",
+          role: "STUDENT",
+          studentIdStr: studentId,
+          parentId: parentUser.id,
+          isActive: parentUser.isActive,
+          dateOfBirth: dateOfBirth,
+        },
+      });
     });
 
-    // Automatically send notification/activation email to parent
-    try {
-      if (!parentUser.isActive && parentUser.activationToken) {
-        await sendParentActivationEmail({
-          parentEmail: parentUser.email,
-          parentName: parentUser.name,
-          studentName,
-          studentId,
-          token: parentUser.activationToken,
-        });
-      } else {
-        await sendNewChildNotificationEmail({
-          parentEmail: parentUser.email,
-          parentName: parentUser.name,
-          studentName,
-          studentId,
-        });
+    // Send notification email asynchronously
+    void (async () => {
+      try {
+        if (!parentUser.isActive && parentUser.activationToken) {
+          await sendParentActivationEmail({
+            parentEmail: parentUser.email,
+            parentName: parentUser.name,
+            studentName,
+            studentId: newStudent.studentIdStr || newStudent.id,
+            token: parentUser.activationToken,
+          });
+        } else {
+          await sendNewChildNotificationEmail({
+            parentEmail: parentUser.email,
+            parentName: parentUser.name,
+            studentName,
+            studentId: newStudent.studentIdStr || newStudent.id,
+          });
+        }
+      } catch (emailErr) {
+        console.error("Non-critical error sending email to parent for new child:", emailErr);
       }
-    } catch (emailErr) {
-      console.error("Non-critical error sending email to parent for new child:", emailErr);
-    }
+    })();
 
     revalidatePath("/parent");
     revalidatePath("/parent/children");
 
     return {
       success: true,
-      message: `Child ${newStudent.name} (${studentId}) added successfully!`,
-      studentId,
+      message: `Child ${newStudent.name} (${newStudent.studentIdStr}) added successfully!`,
+      studentId: newStudent.studentIdStr,
     };
   } catch (error: any) {
     console.error("Error adding child from parent dashboard:", error);
     return { success: false, error: error.message || "Failed to add child." };
   }
 }
+
 
 export async function resendActivationEmail(identifier: string) {
   try {
@@ -265,7 +294,10 @@ export async function resendActivationEmail(identifier: string) {
         include: { children: true },
       });
 
-      if (parent && parent.children.length > 0) {
+      if (parent && parent.role === "PARENT") {
+        // Use parent directly — don't fall through to children[0]
+        student = Object.assign({}, parent, { parent }) as any;
+      } else if (parent && parent.children.length > 0) {
         student = parent.children[0] as any;
       }
     }

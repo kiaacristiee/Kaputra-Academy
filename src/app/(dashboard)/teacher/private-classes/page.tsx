@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import PrivateClassesClient from "./PrivateClassesClient";
+import { getVisibleStudentIds } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,14 @@ export default async function PrivateClassesPage() {
   }
 
   const teacherId = session.user.id;
+  const visibleStudentIds = await getVisibleStudentIds(session.user);
 
   const [sessions, students, courses] = await Promise.all([
     prisma.privateSession.findMany({
-      where: { teacherId },
+      where: {
+        teacherId,
+        ...(visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {}),
+      },
       include: {
         student: { select: { name: true, studentIdStr: true } },
         course: { select: { title: true } },
@@ -29,7 +34,11 @@ export default async function PrivateClassesPage() {
       orderBy: { date: "asc" },
     }),
     prisma.user.findMany({
-      where: { role: "STUDENT", isActive: true },
+      where: {
+        role: "STUDENT",
+        isActive: true,
+        ...(visibleStudentIds ? { id: { in: visibleStudentIds } } : {}),
+      },
       select: { id: true, name: true, studentIdStr: true },
       orderBy: { name: "asc" },
     }),
@@ -41,3 +50,4 @@ export default async function PrivateClassesPage() {
 
   return <PrivateClassesClient sessions={sessions} students={students} courses={courses} />;
 }
+

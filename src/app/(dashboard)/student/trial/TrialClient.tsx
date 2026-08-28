@@ -36,6 +36,7 @@ interface MockQuestion {
   options: string; // JSON Array string
   correctAnswer: string;
   explanation: string | null;
+  explanationImageUrl?: string | null;
   imageUrl?: string | null;
 }
 
@@ -620,45 +621,64 @@ export default function TrialClient({
                          if (reviewMode) {
                            const studentAns = testAnswers[q.id];
                            const correctAns = q.correctAnswer;
-                           if (opts.length === 0) {
-                             const isCorrect = studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim();
-                             return (
-                               <div className="space-y-4 pt-2">
-                                  <div className={`w-full p-5 rounded-[20px] border ${isCorrect ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300" : "bg-[#121827] border-slate-800 text-slate-300"}`}>
-                                     {isCorrect && <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Your Answer (Correct)</p>}
-                                     <p className="text-sm font-medium pl-2">{studentAns || "(No answer)"}</p>
-                                  </div>
-                                  {!isCorrect && (
-                                    <div className="w-full p-5 rounded-[20px] border bg-emerald-950/20 border-emerald-900/40 text-emerald-300">
-                                      <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Correct Answer</p>
-                                      <p className="text-sm font-medium pl-2">{correctAns}</p>
-                                    </div>
-                                  )}
-                               </div>
-                             );
-                           }
-                           
                            return (
-                             <div className="space-y-3 pt-2">
-                               {opts.map((opt, i) => {
-                                 const isStudentChoice = studentAns === opt;
-                                 const isCorrectChoice = correctAns === opt;
-                                 let style = "bg-transparent border-slate-700/70 text-slate-300";
-                                 if (isCorrectChoice) style = "bg-emerald-900/20 border-emerald-600/50 text-emerald-400";
-                                 else if (isStudentChoice && !isCorrectChoice) style = "bg-rose-900/10 border-rose-800/40 text-rose-400 opacity-60";
-                                 
-                                 return (
-                                   <div key={i} className={`w-full p-4 rounded-[16px] border text-sm font-medium flex items-center justify-between transition-colors ${style}`}>
-                                     <div className="flex items-center gap-4 pl-1">
-                                       <span>{opt}</span>
-                                     </div>
-                                     <div className="flex items-center gap-2 text-[10px] font-bold shrink-0">
-                                       {isCorrectChoice && <span className="text-emerald-400 tracking-widest hidden sm:inline">✓ CORRECT</span>}
-                                       {isStudentChoice && !isCorrectChoice && <span className="text-rose-400 tracking-widest hidden sm:inline opacity-70">✗ YOUR CHOICE</span>}
-                                     </div>
+                             <div className="space-y-4 pt-2">
+                               {opts.length === 0 ? (
+                                 <>
+                                   <div className={`w-full p-5 rounded-[20px] border ${studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim() ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300" : "bg-[#121827] border-slate-800 text-slate-300"}`}>
+                                      {studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim() && <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Your Answer (Correct)</p>}
+                                      <p className="text-sm font-medium pl-2">{studentAns || "(No answer)"}</p>
                                    </div>
-                                 );
-                               })}
+                                   {studentAns?.toLowerCase().trim() !== correctAns?.toLowerCase().trim() && (
+                                     <div className="w-full p-5 rounded-[20px] border bg-emerald-950/20 border-emerald-900/40 text-emerald-300">
+                                       <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Correct Answer</p>
+                                       <p className="text-sm font-medium pl-2">{correctAns}</p>
+                                     </div>
+                                   )}
+                                 </>
+                               ) : (
+                                 <div className="space-y-3">
+                                   {opts.map((opt, i) => {
+                                     const isStudentChoice = studentAns === opt;
+                                     const isCorrectChoice = correctAns === opt;
+                                     let style = "bg-transparent border-slate-700/70 text-slate-300";
+                                     if (isCorrectChoice) style = "bg-emerald-900/20 border-emerald-600/50 text-emerald-400";
+                                     else if (isStudentChoice && !isCorrectChoice) style = "bg-rose-900/10 border-rose-800/40 text-rose-400 opacity-60";
+                                     
+                                     return (
+                                       <div key={i} className={`w-full p-4 rounded-[16px] border text-sm font-medium flex items-center justify-between transition-colors ${style}`}>
+                                         <div className="flex items-center gap-4 pl-1">
+                                           <span>{opt}</span>
+                                         </div>
+                                         <div className="flex items-center gap-2 text-[10px] font-bold shrink-0">
+                                           {isCorrectChoice && <span className="text-emerald-400 tracking-widest hidden sm:inline">✓ CORRECT</span>}
+                                           {isStudentChoice && !isCorrectChoice && <span className="text-rose-400 tracking-widest hidden sm:inline opacity-70">✗ YOUR CHOICE</span>}
+                                         </div>
+                                       </div>
+                                     );
+                                   })}
+                                 </div>
+                               )}
+
+                               {(q.explanation || q.explanationImageUrl) && (
+                                  <div className="mt-4 p-4 bg-amber-950/20 border border-amber-500/20 rounded-[16px] space-y-2">
+                                    <h5 className="text-[11px] font-bold text-[#CA8E25] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                                      <BookOpen className="w-3.5 h-3.5" /> Explanation
+                                    </h5>
+                                    {q.explanation && (
+                                      <p className="text-xs text-slate-300 leading-relaxed">
+                                        {q.explanation}
+                                      </p>
+                                    )}
+                                    {q.explanationImageUrl && (
+                                      <img
+                                        src={q.explanationImageUrl}
+                                        alt={q.explanation || "Explanation image"}
+                                        className="max-w-full rounded-lg border border-amber-500/30 object-contain max-h-80"
+                                      />
+                                    )}
+                                  </div>
+                                )}
                              </div>
                            );
                          }

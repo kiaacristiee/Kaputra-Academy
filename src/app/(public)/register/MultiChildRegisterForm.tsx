@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { submitRegistration } from "@/actions/register";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ export function MultiChildRegisterForm() {
     { id: "1", studentName: "", dateOfBirth: "" },
   ]);
   const [submitting, setSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const handleAddChild = () => {
     setChildren((prev) => [
@@ -38,10 +39,19 @@ export function MultiChildRegisterForm() {
     );
   };
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (isSubmittingRef.current) {
+      e.preventDefault();
+      return;
+    }
+    isSubmittingRef.current = true;
+    setSubmitting(true);
+  };
+
   return (
     <form
       action={submitRegistration}
-      onSubmit={() => setSubmitting(true)}
+      onSubmit={handleSubmit}
       className="space-y-8"
     >
       {/* Hidden input to pass multi-child JSON data */}

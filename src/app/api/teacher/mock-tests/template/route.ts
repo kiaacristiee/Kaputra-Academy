@@ -21,7 +21,9 @@ export async function GET() {
     "Kunci Jawaban", 
     "Topik", 
     "Tingkat Kesulitan",
-    "Nama File Gambar"
+    "Nama File Gambar",
+    "Explanation",
+    "Explanation Image"
   ];
   
   // Example data row
@@ -34,7 +36,9 @@ export async function GET() {
     "A",
     "Biologi",
     "Mudah",
-    "hewan1.png"
+    "hewan1.png",
+    "Kucing adalah hewan peliharaan yang umum ditemui.",
+    "hewan1_explain.png"
   ];
 
   // Create workbook and worksheet

@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
 import ReportCMSClient from "./ReportCMSClient";
+import { getVisibleStudentIds } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function TeacherReportCMSPage() {
     redirect("/login");
   }
 
+  const visibleStudentIds = await getVisibleStudentIds(session.user);
+
   // Get teacher's assigned courses
   const assignments = await prisma.teacherAssignment.findMany({
     where: { teacherId: session.user.id },
@@ -24,9 +27,14 @@ export default async function TeacherReportCMSPage() {
   const courseIds = assignments.map((a) => a.courseId);
   const courses = assignments.map((a) => ({ id: a.course.id, title: a.course.title }));
 
-  // Get all students enrolled in teacher's courses
+  // Get students enrolled in teacher's courses who are assigned to this teacher
   const enrollments = await prisma.enrollment.findMany({
-    where: { itemId: { in: courseIds }, itemType: "CLASS", status: "ACTIVE" },
+    where: {
+      itemId: { in: courseIds },
+      itemType: "CLASS",
+      status: "ACTIVE",
+      ...(visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {}),
+    },
     include: { student: { select: { id: true, name: true, studentIdStr: true } } },
   });
   const uniqueStudentsMap = new Map<string, { id: string; name: string; studentIdStr: string | null }>();
@@ -37,15 +45,19 @@ export default async function TeacherReportCMSPage() {
   });
   const students = Array.from(uniqueStudentsMap.values());
 
-  // Fetch existing reports for teacher's courses
+  // Fetch existing reports for teacher's assigned students in teacher's courses
   const reports = await prisma.academicReport.findMany({
-    where: { courseId: { in: courseIds } },
+    where: {
+      courseId: { in: courseIds },
+      ...(visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {}),
+    },
     include: {
       student: { select: { id: true, name: true, studentIdStr: true } },
       course: { select: { title: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
+
 
   const formatted = reports.map((r) => ({
     id: r.id,

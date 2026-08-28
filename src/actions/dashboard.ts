@@ -406,6 +406,7 @@ export async function createBankQuestion(data: {
   options: string[];
   correctAnswer: string;
   explanation?: string;
+  explanationImageUrl?: string;
   topic?: string;
   difficulty?: string;
   imageUrl?: string;
@@ -420,6 +421,7 @@ export async function createBankQuestion(data: {
         options: JSON.stringify(data.options),
         correctAnswer: data.correctAnswer,
         explanation: data.explanation,
+        explanationImageUrl: data.explanationImageUrl,
         topic: data.topic,
         difficulty: data.difficulty,
         imageUrl: data.imageUrl,
@@ -436,6 +438,7 @@ export async function updateBankQuestion(id: string, data: {
   options: string[];
   correctAnswer: string;
   explanation?: string;
+  explanationImageUrl?: string;
   topic?: string;
   difficulty?: string;
   imageUrl?: string;
@@ -449,6 +452,7 @@ export async function updateBankQuestion(id: string, data: {
         options: JSON.stringify(data.options),
         correctAnswer: data.correctAnswer,
         explanation: data.explanation || null,
+        explanationImageUrl: data.explanationImageUrl !== undefined ? data.explanationImageUrl : undefined,
         topic: data.topic || null,
         difficulty: data.difficulty || null,
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),

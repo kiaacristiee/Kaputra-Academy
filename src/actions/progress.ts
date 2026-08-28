@@ -4,10 +4,11 @@ import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { canAccessStudent } from "@/lib/permissions";
 
 async function checkTeacher() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "TEACHER") {
+  if (!session?.user?.id || !["TEACHER", "ADMIN", "SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role)) {
     throw new Error("Unauthorized");
   }
   return session.user;
@@ -23,7 +24,13 @@ export async function updateStudentProgress(
   }
 ) {
   try {
-    await checkTeacher();
+    const user = await checkTeacher();
+    const existing = await prisma.academicReport.findUnique({ where: { id: reportId } });
+    if (!existing) throw new Error("Report not found");
+    if (!(await canAccessStudent(user, existing.studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
+
     const item = await prisma.academicReport.update({
       where: { id: reportId },
       data: {
@@ -50,7 +57,11 @@ export async function createStudentReport(data: {
   completedModules: string;
 }) {
   try {
-    await checkTeacher();
+    const user = await checkTeacher();
+    if (!(await canAccessStudent(user, data.studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
+
     const item = await prisma.academicReport.create({
       data: {
         studentId: data.studentId,
@@ -93,7 +104,13 @@ export async function updateAcademicReport(
   }
 ) {
   try {
-    await checkTeacher();
+    const user = await checkTeacher();
+    const existing = await prisma.academicReport.findUnique({ where: { id: reportId } });
+    if (!existing) throw new Error("Report not found");
+    if (!(await canAccessStudent(user, existing.studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
+
     const item = await prisma.academicReport.update({
       where: { id: reportId },
       data: {
@@ -120,7 +137,13 @@ export async function updateAcademicReport(
 
 export async function deleteAcademicReport(reportId: string) {
   try {
-    await checkTeacher();
+    const user = await checkTeacher();
+    const existing = await prisma.academicReport.findUnique({ where: { id: reportId } });
+    if (!existing) throw new Error("Report not found");
+    if (!(await canAccessStudent(user, existing.studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
+
     await prisma.academicReport.delete({
       where: { id: reportId },
     });
@@ -134,7 +157,10 @@ export async function deleteAcademicReport(reportId: string) {
 
 export async function generateDraftReport(studentId: string, courseId: string) {
   try {
-    await checkTeacher();
+    const user = await checkTeacher();
+    if (!(await canAccessStudent(user, studentId))) {
+      throw new Error("Unauthorized: You are not assigned to this student");
+    }
 
     const student = await prisma.user.findUnique({
       where: { id: studentId },
@@ -197,3 +223,4 @@ export async function generateDraftReport(studentId: string, courseId: string) {
     return { success: false, error: error.message };
   }
 }
+

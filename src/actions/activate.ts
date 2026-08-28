@@ -5,19 +5,20 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 
 export async function activateAccounts(formData: FormData) {
-  const studentId = formData.get("studentId") as string;
   const token = (formData.get("token") as string || "").trim();
   const studentPassword = formData.get("studentPassword") as string;
   const parentPassword = formData.get("parentPassword") as string;
+  const studentId = formData.get("studentId") as string;
 
   if ((!studentId && !token) || !studentPassword) {
     throw new Error("Missing required fields");
   }
 
-  let student: any = null;
+  let parentUser: any = null;
+  let allChildren: any[] = [];
 
   if (token) {
-    // Lookup by activation token
+    // Lookup by activation token — token belongs to the PARENT account
     const tokenUser = await prisma.user.findFirst({
       where: { activationToken: token },
       include: { parent: true, children: true },
@@ -31,38 +32,46 @@ export async function activateAccounts(formData: FormData) {
       throw new Error("Activation link has expired. Please request a new activation link.");
     }
 
-    if (tokenUser.role === "STUDENT") {
-      student = tokenUser;
-    } else if (tokenUser.role === "PARENT") {
-      student = tokenUser.children[0] || null;
-      if (student) {
-        student.parent = tokenUser;
-      }
+    if (tokenUser.role === "PARENT") {
+      parentUser = tokenUser;
+      allChildren = tokenUser.children || [];
+    } else if (tokenUser.role === "STUDENT") {
+      // Legacy: token on student directly
+      parentUser = tokenUser.parent || null;
+      allChildren = [tokenUser];
     }
   }
 
-  if (!student && studentId) {
-    // Fallback lookup by studentId
-    student = await prisma.user.findUnique({
+  // Fallback lookup by studentId (legacy single-child path)
+  if (allChildren.length === 0 && studentId) {
+    const student = await prisma.user.findUnique({
       where: { studentIdStr: studentId },
       include: { parent: true },
     });
+
+    if (student) {
+      allChildren = [student];
+      parentUser = student.parent || null;
+    }
   }
 
-  if (!student) {
+  if (allChildren.length === 0) {
     throw new Error("Student account not found");
   }
 
-  if (student.isActive) {
+  // Check if already activated (use first child as representative check)
+  if (allChildren[0].isActive) {
     throw new Error("Account is already activated.");
   }
 
-  // Hash student password
+  // Hash student password once — applied to ALL children
   const studentPasswordHash = await bcrypt.hash(studentPassword, 10);
 
-  // Update Student User to active & clear single-use token
-  await prisma.user.update({
-    where: { id: student.id },
+  // Activate ALL children linked to this parent
+  const childIds = allChildren.map((c: any) => c.id);
+
+  await prisma.user.updateMany({
+    where: { id: { in: childIds } },
     data: {
       passwordHash: studentPasswordHash,
       isActive: true,
@@ -71,8 +80,8 @@ export async function activateAccounts(formData: FormData) {
     },
   });
 
-  // Update Parent User to active/verified, clear token, set password
-  if (student.parent) {
+  // Activate Parent account, clear token, set password
+  if (parentUser) {
     const parentUpdateData: {
       isActive: boolean;
       activationToken: null;
@@ -89,7 +98,7 @@ export async function activateAccounts(formData: FormData) {
     }
 
     await prisma.user.update({
-      where: { id: student.parent.id },
+      where: { id: parentUser.id },
       data: parentUpdateData,
     });
   }

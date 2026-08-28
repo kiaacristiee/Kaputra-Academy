@@ -1,7 +1,7 @@
 import prisma from "./db";
 
 // Helper to generate the next Student ID based on initials and DOB (e.g., MDC211006)
-export async function generateStudentId(name: string, dobInput: string | Date): Promise<string> {
+export async function generateStudentId(name: string, dobInput: string | Date, dbClient: any = prisma): Promise<string> {
   const cleanName = name.trim().replace(/\s+/g, " ");
   const words = cleanName.split(" ");
   let initials = words.map(w => w.charAt(0)).join("").toUpperCase();
@@ -19,7 +19,7 @@ export async function generateStudentId(name: string, dobInput: string | Date): 
   const baseId = `${initials}${dobStr}`;
 
   // Find unique ID in db (check User table) with a single query to avoid connection pool exhaustion
-  const existingUsers = await prisma.user.findMany({
+  const existingUsers = await dbClient.user.findMany({
     where: {
       studentIdStr: {
         startsWith: baseId,
@@ -30,10 +30,11 @@ export async function generateStudentId(name: string, dobInput: string | Date): 
     },
   });
 
+
   const existingIds = new Set(
     existingUsers
-      .map((u) => u.studentIdStr)
-      .filter((id): id is string => !!id)
+      .map((u: { studentIdStr: string | null }) => u.studentIdStr)
+      .filter((id: string | null): id is string => !!id)
   );
 
   let studentId = baseId;

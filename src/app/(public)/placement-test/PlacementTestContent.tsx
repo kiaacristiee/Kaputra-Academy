@@ -192,29 +192,42 @@ export default function PlacementTestContent() {
                 <h3 className="text-lg font-bold">
                   {idx + 1}. {q.question}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {q.options.map((option) => {
-                    const isSelected = answers[q.id] === option;
-                    return (
-                      <button
-                        key={option}
-                        onClick={() => handleSelectOption(q.id, option)}
-                        className={`w-full text-left p-4 rounded-xl border font-semibold transition-all flex items-center justify-between ${isSelected
-                            ? "bg-slate-950 border-[#CA8E25] text-white shadow-lg shadow-[#CA8E25]/10"
-                            : "bg-slate-950/40 border-slate-800 text-slate-300 hover:bg-slate-950/80 hover:border-slate-700"
-                          }`}
-                      >
-                        <span>{option}</span>
-                        <div
-                          className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? "border-[#CA8E25] bg-[#CA8E25]" : "border-slate-700"
+                {q.options && q.options.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {q.options.map((option) => {
+                      const isSelected = answers[q.id] === option;
+                      return (
+                        <button
+                          key={option}
+                          onClick={() => handleSelectOption(q.id, option)}
+                          className={`w-full text-left p-4 rounded-xl border font-semibold transition-all flex items-center justify-between ${isSelected
+                              ? "bg-slate-950 border-[#CA8E25] text-white shadow-lg shadow-[#CA8E25]/10"
+                              : "bg-slate-950/40 border-slate-800 text-slate-300 hover:bg-slate-950/80 hover:border-slate-700"
                             }`}
                         >
-                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span>{option}</span>
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? "border-[#CA8E25] bg-[#CA8E25]" : "border-slate-700"
+                              }`}
+                          >
+                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-black" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold block mb-1.5 uppercase tracking-wider">Your Answer</label>
+                    <Input
+                      type="text"
+                      placeholder="Type your answer here..."
+                      value={answers[q.id] || ""}
+                      onChange={(e) => handleSelectOption(q.id, e.target.value)}
+                      className="bg-slate-950 border-slate-800 text-white rounded-xl focus-visible:ring-[#CA8E25]"
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>

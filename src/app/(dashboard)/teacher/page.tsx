@@ -62,7 +62,7 @@ export default async function TeacherDashboardPage() {
     };
   });
 
-  const totalStudents = assignedStudentCount || enrollments.length;
+  const totalStudents = assignedStudentCount;
   const activeClassesCount = coursesWithStats.filter((c) => c.isPublished).length;
 
   return (

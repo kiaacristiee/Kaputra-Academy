@@ -24,6 +24,7 @@ interface MockQuestion {
   options: string;
   correctAnswer: string;
   explanation: string | null;
+  explanationImageUrl?: string | null;
 }
 
 interface MockSubmission {
@@ -275,14 +276,23 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
             </div>
 
             {/* Explanation */}
-            {activeQuiz.questions[currentQuestionIdx]?.explanation && (
-              <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl mt-4">
+            {(activeQuiz.questions[currentQuestionIdx]?.explanation || activeQuiz.questions[currentQuestionIdx]?.explanationImageUrl) && (
+              <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl mt-4 space-y-2">
                 <h5 className="text-[10px] font-bold text-blue-400 flex items-center gap-1 mb-1">
                   <HelpCircle className="w-3 h-3" /> Explanation
                 </h5>
-                <p className="text-[12px] text-slate-400 leading-relaxed">
-                  {activeQuiz.questions[currentQuestionIdx].explanation}
-                </p>
+                {activeQuiz.questions[currentQuestionIdx].explanation && (
+                  <p className="text-[12px] text-slate-400 leading-relaxed">
+                    {activeQuiz.questions[currentQuestionIdx].explanation}
+                  </p>
+                )}
+                {activeQuiz.questions[currentQuestionIdx].explanationImageUrl && (
+                  <img
+                    src={activeQuiz.questions[currentQuestionIdx].explanationImageUrl}
+                    alt={activeQuiz.questions[currentQuestionIdx].explanation || "Explanation image"}
+                    className="max-w-full rounded-lg border border-blue-900/30 object-contain max-h-80"
+                  />
+                )}
               </div>
             )}
 

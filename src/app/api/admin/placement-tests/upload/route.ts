@@ -98,8 +98,8 @@ export async function POST(req: Request) {
       newQuestions.push({
         id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         question: String(teksSoal).trim(),
-        options: options.length > 0 ? options : ["Option A", "Option B", "Option C", "Option D"],
-        correctAnswer: correctAns || (options.length > 0 ? options[0] : "Option A"),
+        options: options,
+        correctAnswer: correctAns || (options.length > 0 ? options[0] : ""),
       });
     }
 

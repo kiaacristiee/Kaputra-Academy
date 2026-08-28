@@ -258,24 +258,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent pointer-events-none" />
               </div>
 
-              {/* Floating Stat Card */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-                className="absolute -bottom-6 -right-6 md:right-4 lg:-right-8 bg-white p-5 rounded-2xl shadow-xl border border-slate-100 max-w-[220px]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-[#0A2458] shrink-0">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-lg">500+</h4>
-                    <p className="text-xs text-slate-500">Successful Alumni</p>
-                  </div>
-                </div>
-              </motion.div>
+
 
               {/* Grid Dots */}
               <div className="absolute -top-8 -left-8 grid grid-cols-4 gap-2 opacity-30 pointer-events-none">
@@ -1707,114 +1690,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Parent Reviews Section */}
-      <section className="py-24 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <span className="text-sm font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
-              Parents' Reviews
-            </span>
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight">
-              Loved By Parents, Trusted By Families
-            </h2>
-            <p className="text-lg text-slate-600">
-              See how our curriculum and mentoring approach are making a tangible impact.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Review 1 */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="bg-slate-50 p-8 rounded-2xl border border-slate-100 flex flex-col justify-between relative"
-            >
-              <Quote className="absolute top-6 right-6 h-8 w-8 text-blue-500/10 pointer-events-none" />
-              <div className="space-y-4">
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-blue-500 text-blue-500" />
-                  ))}
-                </div>
-                <p className="text-slate-650 text-sm leading-relaxed italic">
-                  "Kaputra Academy ...."
-                </p>
-              </div>
-              <div className="mt-8 pt-4 border-t border-slate-200/60 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-sm">
-                  AJ
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">Amanda Jenkins</h4>
-                  <p className="text-xs text-slate-500">Parent of Leo (Grade 5)</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Review 2 */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className="bg-slate-50 p-8 rounded-2xl border border-slate-100 flex flex-col justify-between relative"
-            >
-              <Quote className="absolute top-6 right-6 h-8 w-8 text-blue-500/10 pointer-events-none" />
-              <div className="space-y-4">
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-blue-500 text-blue-500" />
-                  ))}
-                </div>
-                <p className="text-slate-650 text-sm leading-relaxed italic">
-                  "The learning structure..."
-                </p>
-              </div>
-              <div className="mt-8 pt-4 border-t border-slate-200/60 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-sm">
-                  MC
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">Marcus Cheng</h4>
-                  <p className="text-xs text-slate-500">Parent of Chloe (Grade 8)</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Review 3 */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="bg-slate-50 p-8 rounded-2xl border border-slate-100 flex flex-col justify-between relative"
-            >
-              <Quote className="absolute top-6 right-6 h-8 w-8 text-blue-500/10 pointer-events-none" />
-              <div className="space-y-4">
-                <div className="flex gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-blue-500 text-blue-500" />
-                  ))}
-                </div>
-                <p className="text-slate-650 text-sm leading-relaxed italic">
-                  "Outstanding mentors..."
-                </p>
-              </div>
-              <div className="mt-8 pt-4 border-t border-slate-200/60 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-sm">
-                  SW
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">Sarah Wijaya</h4>
-                  <p className="text-xs text-slate-500">Parent of Nathan (Grade 9)</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
 
       {/* Featured Courses Section */}
       <section className="py-24 bg-slate-50">

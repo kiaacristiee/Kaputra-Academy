@@ -1,8 +1,10 @@
 import prisma from "@/lib/db";
+import { canAccessStudent } from "@/lib/permissions";
 
 // ─────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────
+
 
 interface SessionUser {
   id: string;
@@ -451,8 +453,10 @@ export async function buildAIContext(user: SessionUser): Promise<AIContext> {
   const role = user.role || "STUDENT";
 
   if (role === "PARENT") {
-    // If parent is viewing as a specific student, build student context
+    // If parent is viewing as a specific student, check authorization and build student context
     if (user.viewingAsStudentId) {
+      const allowed = await canAccessStudent({ id: user.id, role: user.role }, user.viewingAsStudentId);
+      if (!allowed) return null;
       return buildStudentContext(user.viewingAsStudentId);
     }
     return buildParentContext(user.id);
@@ -465,6 +469,7 @@ export async function buildAIContext(user: SessionUser): Promise<AIContext> {
   // Teachers / Admins get basic context without personalized student data
   return null;
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // Format context into a prompt-friendly string

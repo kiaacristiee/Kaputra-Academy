@@ -60,6 +60,9 @@ model User {
   assignedTeachers    StudentTeacherAssignment[] @relation("StudentTeacherStudent")
   campTeacherSchedules CampSchedule[]           @relation("CampScheduleTeacher")
   assignedStudents    StudentTeacherAssignment[] @relation("StudentTeacherTeacher")
+
+  @@index([parentId])
+  @@index([role])
 }
 
 model Category {
@@ -133,6 +136,7 @@ model StudentTeacherAssignment {
   student User @relation("StudentTeacherStudent", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([teacherId, studentId])
+  @@index([studentId])
 }
 
 model Registration {
@@ -155,6 +159,9 @@ model Registration {
   course            Course             @relation(fields: [courseId], references: [id])
   payment           Payment?
   placementTest     PlacementTest?
+
+  @@index([studentId])
+  @@index([parentEmail])
 }
 
 model Payment {
@@ -207,6 +214,9 @@ model Enrollment {
   enrolledAt DateTime @default(now())
 
   student    User     @relation(fields: [studentId], references: [id])
+
+  @@index([studentId])
+  @@index([itemId])
 }
 
 model Invoice {
@@ -237,6 +247,9 @@ model Invoice {
 
   student              User      @relation(fields: [studentId], references: [id])
   verifications        PaymentVerification[]
+
+  @@index([studentId])
+  @@index([status])
 }
 
 model PaymentVerification {
@@ -348,8 +361,9 @@ model MockQuestion {
   questionText String   
   options      String   // JSON string of options Array
   correctAnswer String  // the correct answer index or text
-  explanation  String?  
-  topic        String?
+  explanation           String?  
+  explanationImageUrl    String?
+  topic                 String?
   difficulty   String?
   imageUrl     String?
   createdAt    DateTime @default(now())

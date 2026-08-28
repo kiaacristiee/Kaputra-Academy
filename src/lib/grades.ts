@@ -1,4 +1,5 @@
 export const STUDENT_GRADES = [
+  { value: "KINDERGARTEN", label: "Kindergarten" },
   { value: "GRADE_1", label: "Grade 1" },
   { value: "GRADE_2", label: "Grade 2" },
   { value: "GRADE_3", label: "Grade 3" },
