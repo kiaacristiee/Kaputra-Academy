@@ -50,22 +50,11 @@ export async function POST(req: Request) {
       
       if (ext === ".xlsx" || ext === ".xls" || ext === ".csv") {
         excelEntries.push(entry);
-      } else if (ext === ".png" || ext === ".jpg" || ext === ".jpeg") {
+      } else if (ext === ".png" || ext === ".jpg" || ext === ".jpeg" || ext === ".webp" || ext === ".gif") {
         const originalName = path.basename(filename).trim().toLowerCase();
-        const newFileName = `${uuidv4()}${ext}`;
-
-        try {
-          const uploadsDir = path.join(process.cwd(), "public", "uploads", "questions");
-          await fs.mkdir(uploadsDir, { recursive: true });
-          const savePath = path.join(uploadsDir, newFileName);
-          await fs.writeFile(savePath, entry.getData());
-          imageMap[originalName] = `/uploads/questions/${newFileName}`;
-        } catch (fsError) {
-          console.warn("Serverless disk write fallback activated for zip image:", fsError);
-          const mimeType = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : "image/png";
-          const base64Data = entry.getData().toString("base64");
-          imageMap[originalName] = `data:${mimeType};base64,${base64Data}`;
-        }
+        const mimeType = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/gif";
+        const base64Data = entry.getData().toString("base64");
+        imageMap[originalName] = `data:${mimeType};base64,${base64Data}`;
       }
     }
 

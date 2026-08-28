@@ -443,13 +443,18 @@ export default function VideosClient({
                   <div>
                     <label className="text-xs text-slate-400 font-bold block mb-1">Content Visibility</label>
                     <select
-                      value={formData.isTrial ? "TRIAL" : activeCourse.type === "COMPETITION" ? "COMPETITION" : "REGULAR"}
+                      value={formData.isTrial ? "TRIAL" : activeCourse?.type === "COMPETITION" ? "COMPETITION" : "REGULAR"}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setFormData({
-                          ...formData,
-                          isTrial: val === "TRIAL",
-                        });
+                        if (val === "TRIAL") {
+                          setFormData({ ...formData, isTrial: true });
+                        } else {
+                          const matchIdx = courses.findIndex((c) => c.type === val);
+                          if (matchIdx !== -1) {
+                            setSelectedCourseIdx(matchIdx);
+                          }
+                          setFormData({ ...formData, isTrial: false });
+                        }
                       }}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
                     >

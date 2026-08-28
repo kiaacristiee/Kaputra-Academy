@@ -1722,7 +1722,14 @@ export default function MockTestClient({
                   <label className="text-xs text-slate-400 font-bold block mb-1">Target Course</label>
                   <select
                     value={formData.courseId}
-                    onChange={(e) => setFormData({ ...formData, courseId: e.target.value })}
+                    onChange={(e) => {
+                      const newCourseId = e.target.value;
+                      setFormData({
+                        ...formData,
+                        courseId: newCourseId,
+                        isTrial: false,
+                      });
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
                   >
                     {courses.map((c) => (
@@ -1896,13 +1903,29 @@ export default function MockTestClient({
                 <div>
                   <label className="text-xs text-slate-400 font-bold block mb-1">Content Visibility</label>
                   <select
-                    value={formData.isTrial ? "TRIAL" : activeCourse?.type === "COMPETITION" ? "COMPETITION" : "REGULAR"}
+                    value={
+                      formData.isTrial
+                        ? "TRIAL"
+                        : (courses.find((c) => c.id === formData.courseId) || activeCourse)?.type === "COMPETITION"
+                        ? "COMPETITION"
+                        : "REGULAR"
+                    }
                     onChange={(e) => {
                       const val = e.target.value;
-                      setFormData({
-                        ...formData,
-                        isTrial: val === "TRIAL",
-                      });
+                      if (val === "TRIAL") {
+                        setFormData({
+                          ...formData,
+                          isTrial: true,
+                        });
+                      } else {
+                        const currentCourse = courses.find((c) => c.id === formData.courseId) || activeCourse;
+                        const matchingCourse = courses.find((c) => c.type === val);
+                        setFormData({
+                          ...formData,
+                          isTrial: false,
+                          courseId: (currentCourse?.type === val ? formData.courseId : matchingCourse?.id) || formData.courseId,
+                        });
+                      }
                     }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
                   >

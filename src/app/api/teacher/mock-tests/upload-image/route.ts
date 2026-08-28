@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import fs from "fs/promises";
 import path from "path";
-import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   
-  if (!session || session.user.role !== "TEACHER") {
+  if (!session || !["TEACHER", "ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,16 +27,10 @@ export async function POST(req: Request) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const mimeType = file.type || (ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/gif");
+    const base64Data = buffer.toString("base64");
+    const url = `data:${mimeType};base64,${base64Data}`;
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "questions");
-    await fs.mkdir(uploadsDir, { recursive: true });
-
-    const newFileName = `${uuidv4()}${ext}`;
-    const savePath = path.join(uploadsDir, newFileName);
-    
-    await fs.writeFile(savePath, buffer);
-
-    const url = `/uploads/questions/${newFileName}`;
     return NextResponse.json({ success: true, url });
 
   } catch (error) {

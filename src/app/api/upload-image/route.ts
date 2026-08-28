@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import fs from "fs/promises";
 import path from "path";
-import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -28,21 +26,9 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(arrayBuffer);
 
     const ext = path.extname(file.name).toLowerCase() || ".png";
-    const newFileName = `${uuidv4()}${ext}`;
-
-    let imageUrl: string;
-
-    try {
-      const uploadsDir = path.join(process.cwd(), "public", "uploads", "questions");
-      await fs.mkdir(uploadsDir, { recursive: true });
-      const savePath = path.join(uploadsDir, newFileName);
-      await fs.writeFile(savePath, buffer);
-      imageUrl = `/uploads/questions/${newFileName}`;
-    } catch (fsError) {
-      console.warn("Serverless disk write fallback activated:", fsError);
-      const base64Data = buffer.toString("base64");
-      imageUrl = `data:${file.type};base64,${base64Data}`;
-    }
+    const mimeType = file.type || (ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/gif");
+    const base64Data = buffer.toString("base64");
+    const imageUrl = `data:${mimeType};base64,${base64Data}`;
 
     return NextResponse.json({ success: true, url: imageUrl });
   } catch (error: any) {
