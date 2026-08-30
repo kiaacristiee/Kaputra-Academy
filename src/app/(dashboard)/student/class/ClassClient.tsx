@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import InteractivePlayer from "@/components/InteractivePlayer";
 import { submitMockTest } from "@/actions/dashboard";
+import { evaluateQuestionAnswer } from "@/lib/quizGrading";
 
 interface ClassItem {
   id: string;
@@ -40,6 +41,8 @@ interface MockQuestion {
   questionText: string;
   options: string;
   correctAnswer: string;
+  acceptedAnswers?: string | null;
+  allowAnyOrder?: boolean;
   explanation: string | null;
   explanationImageUrl?: string | null;
   imageUrl?: string | null;
@@ -836,7 +839,7 @@ export default function ClassClient({
                     <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Time Per Question</h5>
                     {activeTest.questions.map((q, idx) => {
                       const spent = timeSpentPerQuestion[q.id] || 0;
-                      const isCorrect = testAnswers[q.id]?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim();
+                      const isCorrect = evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect;
                       return (
                         <div key={q.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-950/60 border border-slate-800/40 text-[12px]">
                           <div className="flex items-center gap-2 text-slate-300 truncate max-w-[70%]">
@@ -880,9 +883,7 @@ export default function ClassClient({
                       {(() => {
                         const q = activeTest.questions[currentQuestionIdx];
                         if (!q) return null;
-                        const studentAns = testAnswers[q.id]?.toLowerCase().trim() || "";
-                        const correctAns = q.correctAnswer?.toLowerCase().trim() || "";
-                        const isCorrect = studentAns === correctAns;
+                        const isCorrect = evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect;
                         const spent = timeSpentPerQuestion[q.id] || 0;
                         const min = Math.floor(spent / 60);
                         const sec = spent % 60;

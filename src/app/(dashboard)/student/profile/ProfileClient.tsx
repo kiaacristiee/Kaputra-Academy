@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, Phone, Mail, Calendar, Key, AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
+import { User, Phone, Mail, Calendar, Key, AlertCircle, CheckCircle, ShieldCheck, GraduationCap, BookOpen, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -22,9 +22,12 @@ interface ProfileClientProps {
       phone: string | null;
     } | null;
   };
+  enrolledGrades: string;
+  enrolledCourses: { id: string; title: string; type: string }[];
+  enrolledCamps: { id: string; name: string }[];
 }
 
-export default function ProfileClient({ user }: ProfileClientProps) {
+export default function ProfileClient({ user, enrolledGrades, enrolledCourses, enrolledCamps }: ProfileClientProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -75,7 +78,7 @@ export default function ProfileClient({ user }: ProfileClientProps) {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-white">My Profile</h1>
-        <p className="text-slate-400">View your student credentials, guardian info, and secure your account.</p>
+        <p className="text-slate-400">View your student credentials, grade details, enrolled programs, and secure your account.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -104,6 +107,14 @@ export default function ProfileClient({ user }: ProfileClientProps) {
               </div>
 
               <div className="space-y-1">
+                <span className="text-slate-400 text-xs block">Enrolled Grade Level</span>
+                <span className="font-bold text-white flex items-center gap-2 mt-2">
+                  <GraduationCap className="h-4.5 w-4.5 text-[#CA8E25]" />
+                  {enrolledGrades}
+                </span>
+              </div>
+
+              <div className="space-y-1">
                 <span className="text-slate-400 text-xs block">Date of Birth</span>
                 <span className="font-bold text-white flex items-center gap-2 mt-2">
                   <Calendar className="h-4 w-4 text-[#CA8E25]" />
@@ -116,20 +127,58 @@ export default function ProfileClient({ user }: ProfileClientProps) {
               </div>
 
               <div className="space-y-1">
-                <span className="text-slate-400 text-xs block">Email Address</span>
-                <span className="font-bold text-white flex items-center gap-2 mt-2">
-                  <Mail className="h-4 w-4 text-[#CA8E25]" />
-                  {user.email}
-                </span>
-              </div>
-
-              <div className="space-y-1">
                 <span className="text-slate-400 text-xs block">Phone Number</span>
                 <span className="font-bold text-white flex items-center gap-2 mt-2">
                   <Phone className="h-4 w-4 text-[#CA8E25]" />
                   {user.phone || "Not specified"}
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* Enrolled Courses & Camps Card */}
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-[#CA8E25]" />
+              Enrolled Courses & Programs
+            </h3>
+
+            {/* Regular & Competition Courses */}
+            <div className="space-y-3">
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Regular / Competition Classes</span>
+              {enrolledCourses.length > 0 ? (
+                <div className="flex flex-wrap gap-2.5">
+                  {enrolledCourses.map((c) => (
+                    <div key={c.id} className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 flex items-center gap-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-600/10 px-2 py-0.5 rounded border border-blue-500/20">
+                        {c.type}
+                      </span>
+                      <span className="text-xs font-bold text-white">{c.title}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">No active class enrollments found.</p>
+              )}
+            </div>
+
+            {/* Camp Programs */}
+            <div className="space-y-3 pt-3 border-t border-slate-900">
+              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Enrolled Camp Programs</span>
+              {enrolledCamps.length > 0 ? (
+                <div className="flex flex-wrap gap-2.5">
+                  {enrolledCamps.map((camp) => (
+                    <div key={camp.id} className="bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 flex items-center gap-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        CAMP
+                      </span>
+                      <span className="text-xs font-bold text-white">{camp.name}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">No active camp program enrollments found.</p>
+              )}
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/db";
+import { evaluateQuestionAnswer } from "@/lib/quizGrading";
 
 const DEFAULT_CONFIG = {
   passingScore: 60,
@@ -155,7 +156,15 @@ export async function submitPlacementTest(code: string, answers: Record<string, 
     const totalQuestions = config.questions.length;
     
     config.questions.forEach((q) => {
-      if (safeAnswers[q.id] === q.correctAnswer) {
+      const studentAns = String(safeAnswers[q.id] || "");
+      const res = evaluateQuestionAnswer(
+        {
+          options: q.options || [],
+          correctAnswer: q.correctAnswer,
+        },
+        studentAns
+      );
+      if (res.isCorrect) {
         correctCount++;
       }
     });

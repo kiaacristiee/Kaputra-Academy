@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
+import { getHomeworkVisibilityWhereClause } from "@/lib/homeworkScope";
 import ClassClient from "./ClassClient";
 import { Info } from "lucide-react";
 
@@ -52,6 +53,8 @@ export default async function ClassPage() {
   const isStaff = ["ADMIN", "TEACHER", "OWNER", "CO_OWNER"].includes(role);
 
   // Fetch enrolled courses, videos, materials, and quizzes concurrently
+  const visibilityWhere = isStaff ? {} : await getHomeworkVisibilityWhereClause(session.user);
+
   const [enrolledCourses, videos, materials, mockTests] = await Promise.all([
     prisma.course.findMany({
       where: {
@@ -88,8 +91,10 @@ export default async function ClassPage() {
     }),
     prisma.mockTest.findMany({
       where: {
-        ...(isStaff ? {} : { courseId: { in: courseIds.length > 0 ? courseIds : ["NONE"] } }),
-        ...(isStaff ? {} : { isPublished: true }),
+        AND: [
+          isStaff ? {} : { courseId: { in: courseIds.length > 0 ? courseIds : ["NONE"] } },
+          visibilityWhere,
+        ],
       },
       include: {
         questions: true,

@@ -4,6 +4,8 @@ import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { evaluateQuestionAnswer } from "@/lib/quizGrading";
+import { canUserAccessHomework, getHomeworkVisibilityWhereClause } from "@/lib/homeworkScope";
 
 // Role helper
 async function checkAuth(allowedRoles: string[]) {
@@ -292,10 +294,19 @@ export async function deleteMaterial(id: string) {
 
 export async function getMockTests(courseId?: string, isTrial: boolean = false) {
   try {
+    const session = await getServerSession(authOptions);
+    let visibilityWhere: any = {};
+    if (session?.user?.id) {
+      visibilityWhere = await getHomeworkVisibilityWhereClause(session.user);
+    }
+
     const tests = await prisma.mockTest.findMany({
       where: {
-        courseId: courseId || undefined,
-        isTrial,
+        AND: [
+          { courseId: courseId || undefined },
+          { isTrial },
+          visibilityWhere,
+        ],
       },
       include: {
         questions: true,
@@ -317,12 +328,20 @@ export async function createMockTest(data: {
   isPublished: boolean;
   isTrial: boolean;
   targetedGrade?: string | null;
+  targetedGrades?: string[] | string | null;
   questionIds: string[];
   questionOrder?: string[];
 }) {
   try {
     await checkAuth(["ADMIN", "TEACHER"]);
-    const { questionIds, questionOrder, courseId, campProgramId, targetedGrade, ...testData } = data;
+    const { questionIds, questionOrder, courseId, campProgramId, targetedGrade, targetedGrades, ...testData } = data;
+
+    let formattedTargetedGrades: string | null = null;
+    if (Array.isArray(targetedGrades)) {
+      formattedTargetedGrades = JSON.stringify(targetedGrades);
+    } else if (typeof targetedGrades === "string") {
+      formattedTargetedGrades = targetedGrades;
+    }
 
     const test = await prisma.mockTest.create({
       data: {
@@ -330,6 +349,7 @@ export async function createMockTest(data: {
         courseId: courseId || null,
         campProgramId: campProgramId || null,
         targetedGrade: targetedGrade || null,
+        targetedGrades: formattedTargetedGrades,
         questionOrder: questionOrder ? JSON.stringify(questionOrder) : JSON.stringify(questionIds),
         questions: {
           connect: questionIds.map((id) => ({ id })),
@@ -358,21 +378,36 @@ export async function updateMockTest(
     isPublished: boolean;
     isTrial: boolean;
     targetedGrade?: string | null;
+    targetedGrades?: string[] | string | null;
     questionIds?: string[];
     questionOrder?: string[];
     courseId?: string;
+    campProgramId?: string;
   }
 ) {
   try {
     await checkAuth(["ADMIN", "TEACHER"]);
-    const { questionIds, questionOrder, courseId, targetedGrade, ...testData } = data;
+    const { questionIds, questionOrder, courseId, campProgramId, targetedGrade, targetedGrades, ...testData } = data;
+
+    let formattedTargetedGrades: string | null | undefined = undefined;
+    if (targetedGrades !== undefined) {
+      if (Array.isArray(targetedGrades)) {
+        formattedTargetedGrades = JSON.stringify(targetedGrades);
+      } else if (typeof targetedGrades === "string") {
+        formattedTargetedGrades = targetedGrades;
+      } else {
+        formattedTargetedGrades = null;
+      }
+    }
 
     const test = await prisma.mockTest.update({
       where: { id },
       data: {
         ...testData,
         ...(courseId !== undefined ? { courseId: courseId || null } : {}),
+        ...(campProgramId !== undefined ? { campProgramId: campProgramId || null } : {}),
         ...(targetedGrade !== undefined ? { targetedGrade: targetedGrade || null } : {}),
+        ...(formattedTargetedGrades !== undefined ? { targetedGrades: formattedTargetedGrades } : {}),
         questionOrder: questionOrder
           ? JSON.stringify(questionOrder)
           : questionIds
@@ -398,6 +433,29 @@ export async function updateMockTest(
   }
 }
 
+/**
+ * Toggle published state of a MockTest.
+ * Used by Drafts tab (publish) and Published tab (unpublish).
+ * Submissions and marks are never touched.
+ */
+export async function toggleMockTestPublished(id: string, isPublished: boolean) {
+  try {
+    await checkAuth(["ADMIN", "TEACHER"]);
+    const test = await prisma.mockTest.update({
+      where: { id },
+      data: { isPublished },
+    });
+    revalidatePath("/student/trial");
+    revalidatePath("/teacher/mock-tests");
+    revalidatePath("/student/mock-test");
+    revalidatePath("/student/class");
+    revalidatePath("/student/camps");
+    return { success: true, test };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 // === QUESTION BANK ACTIONS ===
 export async function createBankQuestion(data: {
   courseId?: string;
@@ -405,6 +463,8 @@ export async function createBankQuestion(data: {
   questionText: string;
   options: string[];
   correctAnswer: string;
+  acceptedAnswers?: string[];
+  allowAnyOrder?: boolean;
   explanation?: string;
   explanationImageUrl?: string;
   topic?: string;
@@ -420,6 +480,8 @@ export async function createBankQuestion(data: {
         questionText: data.questionText,
         options: JSON.stringify(data.options),
         correctAnswer: data.correctAnswer,
+        acceptedAnswers: data.acceptedAnswers ? JSON.stringify(data.acceptedAnswers) : null,
+        allowAnyOrder: !!data.allowAnyOrder,
         explanation: data.explanation,
         explanationImageUrl: data.explanationImageUrl,
         topic: data.topic,
@@ -437,6 +499,8 @@ export async function updateBankQuestion(id: string, data: {
   questionText: string;
   options: string[];
   correctAnswer: string;
+  acceptedAnswers?: string[];
+  allowAnyOrder?: boolean;
   explanation?: string;
   explanationImageUrl?: string;
   topic?: string;
@@ -451,6 +515,8 @@ export async function updateBankQuestion(id: string, data: {
         questionText: data.questionText,
         options: JSON.stringify(data.options),
         correctAnswer: data.correctAnswer,
+        acceptedAnswers: data.acceptedAnswers ? JSON.stringify(data.acceptedAnswers) : null,
+        allowAnyOrder: data.allowAnyOrder !== undefined ? !!data.allowAnyOrder : undefined,
         explanation: data.explanation || null,
         explanationImageUrl: data.explanationImageUrl !== undefined ? data.explanationImageUrl : undefined,
         topic: data.topic || null,
@@ -459,6 +525,63 @@ export async function updateBankQuestion(id: string, data: {
       },
     });
     return { success: true, question: q };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function addAcceptedAnswerToQuestion(questionId: string, newVariant: string) {
+  try {
+    await checkAuth(["ADMIN", "TEACHER"]);
+    if (!newVariant || !newVariant.trim()) throw new Error("Accepted answer cannot be empty.");
+
+    const question = await prisma.mockQuestion.findUnique({
+      where: { id: questionId },
+    });
+    if (!question) throw new Error("Question not found.");
+
+    let currentVariants: string[] = [];
+    if (question.acceptedAnswers) {
+      try {
+        currentVariants = JSON.parse(question.acceptedAnswers);
+      } catch {
+        currentVariants = [];
+      }
+    }
+
+    const trimmedVariant = newVariant.trim();
+    if (!currentVariants.includes(trimmedVariant)) {
+      currentVariants.push(trimmedVariant);
+    }
+
+    const updatedQuestion = await prisma.mockQuestion.update({
+      where: { id: questionId },
+      data: {
+        acceptedAnswers: JSON.stringify(currentVariants),
+      },
+    });
+
+    revalidatePath("/teacher/quiz-results");
+    revalidatePath("/teacher/mock-tests");
+    return { success: true, question: updatedQuestion };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function overrideSubmissionScore(submissionId: string, newScore: number, isPassed: boolean) {
+  try {
+    await checkAuth(["ADMIN", "TEACHER"]);
+    const submission = await prisma.mockSubmission.update({
+      where: { id: submissionId },
+      data: {
+        score: Math.min(100, Math.max(0, newScore)),
+        isPassed: !!isPassed,
+      },
+    });
+
+    revalidatePath("/teacher/quiz-results");
+    return { success: true, submission };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -589,6 +712,11 @@ export async function submitMockTest(testId: string, answers: Record<string, str
 
     if (!test) throw new Error("Quiz not found");
 
+    const canAccess = await canUserAccessHomework(user, testId);
+    if (!canAccess) {
+      throw new Error("Quiz not found");
+    }
+
     const existingSubmission = await prisma.mockSubmission.findFirst({
       where: {
         mockTestId: testId,
@@ -602,10 +730,12 @@ export async function submitMockTest(testId: string, answers: Record<string, str
 
     let correctCount = 0;
     test.questions.forEach((q) => {
-      const studentAns = String(answers?.[q.id] || "").toLowerCase().trim();
-      const correctAns = String(q.correctAnswer || "").toLowerCase().trim();
-      if (studentAns && studentAns === correctAns) {
+      const studentAns = String(answers?.[q.id] || "");
+      const res = evaluateQuestionAnswer(q, studentAns);
+      if (res.isCorrect) {
         correctCount++;
+      } else if (res.isNearMiss) {
+        console.log(`[Quiz Near-Miss] Student ID ${user.id} on Question ${q.id}: typed "${studentAns}", key is "${q.correctAnswer}"`);
       }
     });
 

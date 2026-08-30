@@ -25,7 +25,9 @@ import {
   ArrowUp,
   ArrowDown,
   AlertCircle,
-  Eye
+  Eye,
+  EyeOff,
+  SendHorizonal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,8 +42,10 @@ import {
   deleteQuestionFolder,
   deleteBankQuestionsInBulk,
   moveQuestionsToFolder,
-  updateBankQuestion
+  updateBankQuestion,
+  toggleMockTestPublished
 } from "@/actions/dashboard";
+import { evaluateQuestionAnswer } from "@/lib/quizGrading";
 import Link from "next/link";
 import { STUDENT_GRADES, getGradeLabel } from "@/lib/grades";
 
@@ -50,6 +54,8 @@ interface MockQuestion {
   questionText: string;
   options: string; // JSON Array string
   correctAnswer: string;
+  acceptedAnswers?: string | null;
+  allowAnyOrder?: boolean;
   explanation: string | null;
   explanationImageUrl?: string | null;
   imageUrl?: string | null;
@@ -76,6 +82,7 @@ interface MockTest {
   isPublished: boolean;
   isTrial: boolean;
   targetedGrade?: string | null;
+  updatedAt?: Date | string | null;
   questions: MockQuestion[];
   submissions: MockSubmission[];
 }
@@ -93,6 +100,7 @@ interface MockTestClientProps {
   userRole: string;
   initialBankQuestions?: MockQuestion[];
   initialFolders?: any[];
+  initialCamps?: { id: string; name: string }[];
 }
 
 export default function MockTestClient({
@@ -100,7 +108,8 @@ export default function MockTestClient({
   isUnlocked,
   userRole,
   initialBankQuestions = [],
-  initialFolders = []
+  initialFolders = [],
+  initialCamps = [],
 }: MockTestClientProps) {
   const [activeTab, setActiveTab] = useState<"mockTests" | "bankSoal">("mockTests");
   const [bankQuestions, setBankQuestions] = useState<MockQuestion[]>(initialBankQuestions);
@@ -115,6 +124,9 @@ export default function MockTestClient({
   
   // Quiz Grade Filter
   const [selectedQuizGradeFilter, setSelectedQuizGradeFilter] = useState<string>("ALL");
+
+  // Paper status tab (CMS only): "published" | "drafts" | "all"
+  const [paperStatusTab, setPaperStatusTab] = useState<"published" | "drafts" | "all">("published");
 
   // Bank Question form states
   const [isBankFormOpen, setIsBankFormOpen] = useState(false);
@@ -159,6 +171,7 @@ export default function MockTestClient({
     isTrial: false,
     targetedGrade: "ALL",
     courseId: "",
+    campProgramId: "",
     selectedQuestionIds: [] as string[],
   });
 
@@ -223,8 +236,8 @@ export default function MockTestClient({
 
     let correctCount = 0;
     orderedQuestions.forEach((q) => {
-      const studentAns = (parsedAnswers as Record<string, string>)[q.id];
-      if (studentAns?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim()) {
+      const studentAns = (parsedAnswers as Record<string, string>)[q.id] || "";
+      if (evaluateQuestionAnswer(q, studentAns).isCorrect) {
         correctCount++;
       }
     });
@@ -350,6 +363,7 @@ export default function MockTestClient({
         isTrial: test.isTrial,
         targetedGrade: test.targetedGrade || "ALL",
         courseId: (test as any).courseId || (activeCourse ? activeCourse.id : courses[0]?.id || ""),
+        campProgramId: (test as any).campProgramId || "",
         selectedQuestionIds: initialOrder,
       });
     } else {
@@ -363,6 +377,7 @@ export default function MockTestClient({
         isTrial: false,
         targetedGrade: "ALL",
         courseId: activeCourse ? activeCourse.id : courses[0]?.id || "",
+        campProgramId: "",
         selectedQuestionIds: [],
       });
     }
@@ -429,13 +444,16 @@ export default function MockTestClient({
       alert("Please enter a title for the Mock Paper.");
       return;
     }
-    if (formData.selectedQuestionIds.length === 0) {
-      alert("This folder does not contain any questions / No questions selected. Please import questions into the Mock Paper before saving.");
+
+    // Validate question count only when publishing
+    if (formData.isPublished && formData.selectedQuestionIds.length === 0) {
+      alert("Cannot publish: this paper has no questions. Add at least one question before publishing, or save as a Draft.");
       return;
     }
 
-    const targetCourseId = formData.courseId || activeCourse?.id;
-    if (!targetCourseId && courses.length > 0) {
+    const isCamp = Boolean(formData.campProgramId);
+    const targetCourseId = isCamp ? undefined : (formData.courseId || activeCourse?.id);
+    if (!isCamp && !targetCourseId && courses.length > 0) {
       alert("Please select a target course for this Mock Paper.");
       return;
     }
@@ -451,6 +469,7 @@ export default function MockTestClient({
         isTrial: formData.isTrial,
         targetedGrade,
         courseId: targetCourseId,
+        campProgramId: formData.campProgramId || undefined,
         questionIds: formData.selectedQuestionIds,
         questionOrder: formData.selectedQuestionIds,
       });
@@ -463,6 +482,7 @@ export default function MockTestClient({
     } else {
       const res = await createMockTest({
         courseId: targetCourseId,
+        campProgramId: formData.campProgramId || undefined,
         title: formData.title,
         timeLimit: Number(formData.timeLimit),
         passingScore: Number(formData.passingScore),
@@ -1132,67 +1152,129 @@ export default function MockTestClient({
               <BookOpen className="w-12 h-12 text-slate-700 mx-auto mb-3" />
               <p>No active courses allocated to view mock tests.</p>
             </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                  <div className="w-full sm:w-64 space-y-1">
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#CA8E25] block">Filter Course</span>
-                    <select
-                      value={selectedCourseIdx}
-                      onChange={(e) => setSelectedCourseIdx(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
-                    >
-                      {courses.map((course, idx) => (
-                        <option key={course.id} value={idx}>
-                          {course.title} ({course.type})
-                        </option>
-                      ))}
-                    </select>
+          ) : (() => {
+            // Collect all mock tests across courses for staff; students see only their course's tests
+            const allTests = courses.flatMap((c) => c.mockTests.map((t) => ({ ...t, _courseTitle: c.title, _courseType: c.type })));
+
+            const draftCount = isStaff ? allTests.filter((t) => !t.isPublished).length : 0;
+
+            // Build visible list for student (per course) or staff (tabbed across all)
+            const visibleTests = isStaff
+              ? allTests.filter((t) => {
+                  const gradeOk = selectedQuizGradeFilter === "ALL" || t.targetedGrade === selectedQuizGradeFilter;
+                  const tabOk =
+                    paperStatusTab === "all" ||
+                    (paperStatusTab === "published" && t.isPublished) ||
+                    (paperStatusTab === "drafts" && !t.isPublished);
+                  return gradeOk && tabOk;
+                })
+              : (activeCourse?.mockTests ?? []).filter(
+                  (t) => selectedQuizGradeFilter === "ALL" || t.targetedGrade === selectedQuizGradeFilter
+                );
+
+            return (
+              <div className="space-y-6">
+                {/* Toolbar */}
+                <div className="bg-slate-950 border border-slate-800 p-5 rounded-3xl flex flex-col gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                      {/* Course filter (student only) */}
+                      {!isStaff && (
+                        <div className="w-full sm:w-64 space-y-1">
+                          <span className="text-[10px] uppercase font-bold tracking-widest text-[#CA8E25] block">Filter Course</span>
+                          <select
+                            value={selectedCourseIdx}
+                            onChange={(e) => setSelectedCourseIdx(Number(e.target.value))}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
+                          >
+                            {courses.map((course, idx) => (
+                              <option key={course.id} value={idx}>
+                                {course.title} ({course.type})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div className="w-full sm:w-48 space-y-1">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-[#CA8E25] block">Filter Grade</span>
+                        <select
+                          value={selectedQuizGradeFilter}
+                          onChange={(e) => setSelectedQuizGradeFilter(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
+                        >
+                          <option value="ALL">All Grades</option>
+                          {STUDENT_GRADES.map((g) => (
+                            <option key={g.value} value={g.value}>
+                              {g.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {isStaff && (
+                      <Button
+                        onClick={() => handleOpenCms()}
+                        className="w-full md:w-auto bg-blue-650 hover:bg-blue-600 text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" /> Create Mock Paper
+                      </Button>
+                    )}
                   </div>
 
-                  <div className="w-full sm:w-48 space-y-1">
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#CA8E25] block">Filter Grade</span>
-                    <select
-                      value={selectedQuizGradeFilter}
-                      onChange={(e) => setSelectedQuizGradeFilter(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white"
-                    >
-                      <option value="ALL">All Grades</option>
-                      {STUDENT_GRADES.map((g) => (
-                        <option key={g.value} value={g.value}>
-                          {g.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Published / Drafts / All tabs — staff only */}
+                  {isStaff && (
+                    <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl self-start">
+                      {(["published", "drafts", "all"] as const).map((tab) => {
+                        const labels: Record<string, string> = { published: "Published", drafts: "Drafts", all: "All" };
+                        const isDraftsTab = tab === "drafts";
+                        return (
+                          <button
+                            key={tab}
+                            onClick={() => setPaperStatusTab(tab)}
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                              paperStatusTab === tab
+                                ? tab === "drafts"
+                                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                  : "bg-[#CA8E25] text-black"
+                                : "text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            {isDraftsTab ? <EyeOff className="w-3 h-3" /> : tab === "published" ? <Eye className="w-3 h-3" /> : null}
+                            {labels[tab]}
+                            {isDraftsTab && draftCount > 0 && (
+                              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none ${
+                                paperStatusTab === "drafts"
+                                  ? "bg-amber-500/30 text-amber-300"
+                                  : "bg-slate-700 text-slate-300"
+                              }`}>
+                                {draftCount}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
-                {isStaff && (
-                  <Button
-                    onClick={() => handleOpenCms()}
-                    className="w-full md:w-auto bg-blue-650 hover:bg-blue-600 text-white rounded-xl px-5 py-2.5 flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> Create Mock Paper
-                  </Button>
-                )}
-              </div>
-
-              {/* Test Cards */}
-              <div className="grid grid-cols-1 gap-6">
-                {activeCourse?.mockTests.filter((t) => selectedQuizGradeFilter === "ALL" || t.targetedGrade === selectedQuizGradeFilter).length > 0 ? (
-                  activeCourse.mockTests
-                    .filter((t) => selectedQuizGradeFilter === "ALL" || t.targetedGrade === selectedQuizGradeFilter)
-                    .map((test) => {
+                {/* Test Cards */}
+                <div className="grid grid-cols-1 gap-4">
+                  {visibleTests.length > 0 ? (
+                    visibleTests.map((test) => {
                       const latestSubmission = test.submissions[0];
+                      const isDraft = !test.isPublished;
                       return (
                         <div
                           key={test.id}
-                          className="bg-slate-950 border border-slate-800 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-slate-750 transition"
+                          className={`bg-slate-950 border p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-slate-700 transition ${
+                            isDraft ? "border-amber-500/20 bg-amber-950/5" : "border-slate-800"
+                          }`}
                         >
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-white text-lg flex items-center gap-2">
+                          <div className="space-y-2 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-bold text-white text-lg flex items-center gap-2 flex-wrap">
                                 {test.title}
                                 {test.targetedGrade && (
                                   <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[8px] font-bold px-2 py-0.5 rounded-full">
@@ -1204,85 +1286,174 @@ export default function MockTestClient({
                                     Trial
                                   </span>
                                 )}
-                                {!test.isPublished && (
-                                  <span className="bg-red-500/10 border border-red-500/20 text-red-450 text-[8px] font-bold px-2 py-0.5 rounded-full">
-                                    Draft
+                                {isDraft && (
+                                  <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[8px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <EyeOff className="w-2.5 h-2.5" /> Draft
+                                  </span>
+                                )}
+                                {!isDraft && isStaff && (
+                                  <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <Eye className="w-2.5 h-2.5" /> Live
                                   </span>
                                 )}
                               </h4>
-                            </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
-                            <span className="flex items-center gap-1 font-mono">
-                              <Clock className="w-3.5 h-3.5 text-[#CA8E25]" /> {test.timeLimit} Minutes
-                            </span>
-                            <span>•</span>
-                            <span>{test.questions.length} Questions</span>
-                            <span>•</span>
-                            <span>Passing Grade: {test.passingScore}%</span>
-                          </div>
-                          {latestSubmission && (
-                            <div className="text-xs pt-1">
-                              <span className="text-slate-500">Last Attempt: </span>
-                              <span className={`font-bold ${latestSubmission.isPassed ? "text-emerald-450" : "text-red-450"}`}>
-                                {latestSubmission.score}% ({latestSubmission.isPassed ? "PASSED" : "FAILED"})
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 w-full md:w-auto">
-                          {hasAttempted(test) && !isStaff ? (
-                            <Button
-                              onClick={() => handleReviewTest(test)}
-                              className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-1.5 border border-slate-700"
-                            >
-                              <FileText className="w-3.5 h-3.5" /> Review Answers
-                            </Button>
-                          ) : (
-                            <Button
-                              onClick={() => handleStartTest(test)}
-                              className="flex-1 md:flex-none bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-1.5"
-                            >
-                              {latestSubmission && isStaff ? (
-                                <><RotateCcw className="w-3.5 h-3.5" /> Retake (Staff)</>
-                              ) : (
-                                <><Play className="w-3.5 h-3.5" /> Start Quiz</>
+                              {/* Course badge for staff (shown when viewing All) */}
+                              {isStaff && (test as any)._courseTitle && (
+                                <span className="text-[9px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full">
+                                  {(test as any)._courseTitle} · {(test as any)._courseType}
+                                </span>
                               )}
-                            </Button>
-                          )}
-
-                          {isStaff && (
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenCms(test)}
-                                className="text-slate-400 hover:text-white"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(test.id)}
-                                className="text-red-450 hover:text-red-500"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
                             </div>
-                          )}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
+                              <span className="flex items-center gap-1 font-mono">
+                                <Clock className="w-3.5 h-3.5 text-[#CA8E25]" /> {test.timeLimit} Minutes
+                              </span>
+                              <span>•</span>
+                              <span>{test.questions.length} Questions</span>
+                              <span>•</span>
+                              <span>Passing Grade: {test.passingScore}%</span>
+                              {isDraft && test.updatedAt && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-amber-500/70">
+                                    Last edited {new Date(test.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            {latestSubmission && (
+                              <div className="text-xs pt-1">
+                                <span className="text-slate-500">Last Attempt: </span>
+                                <span className={`font-bold ${latestSubmission.isPassed ? "text-emerald-450" : "text-red-450"}`}>
+                                  {latestSubmission.score}% ({latestSubmission.isPassed ? "PASSED" : "FAILED"})
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap justify-end">
+                            {/* Student actions */}
+                            {!isStaff && (
+                              hasAttempted(test) ? (
+                                <Button
+                                  onClick={() => handleReviewTest(test)}
+                                  className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-1.5 border border-slate-700"
+                                >
+                                  <FileText className="w-3.5 h-3.5" /> Review Answers
+                                </Button>
+                              ) : (
+                                <Button
+                                  onClick={() => handleStartTest(test)}
+                                  className="flex-1 md:flex-none bg-[#CA8E25] hover:bg-[#D89A2B] text-black font-semibold rounded-xl px-5 py-2.5 text-xs flex items-center justify-center gap-1.5"
+                                >
+                                  <Play className="w-3.5 h-3.5" /> Start Quiz
+                                </Button>
+                              )
+                            )}
+
+                            {/* Staff actions */}
+                            {isStaff && (
+                              <>
+                                {/* Start / Retake for staff preview */}
+                                <Button
+                                  onClick={() => handleStartTest(test)}
+                                  className="bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl px-4 py-2.5 text-xs flex items-center justify-center gap-1.5 border border-slate-700"
+                                >
+                                  {latestSubmission ? (
+                                    <><RotateCcw className="w-3.5 h-3.5" /> Retake</>
+                                  ) : (
+                                    <><Play className="w-3.5 h-3.5" /> Preview</>
+                                  )}
+                                </Button>
+
+                                {/* Publish / Unpublish quick action */}
+                                {isDraft ? (
+                                  <Button
+                                    onClick={async () => {
+                                      if (test.questions.length === 0) {
+                                        alert("Cannot publish: this paper has no questions. Open the editor to add questions first.");
+                                        return;
+                                      }
+                                      if (!confirm(`Publish "${test.title}"? Students will be able to see it immediately.`)) return;
+                                      const res = await toggleMockTestPublished(test.id, true);
+                                      if (res.success) {
+                                        window.location.reload();
+                                      } else {
+                                        alert("Failed to publish: " + res.error);
+                                      }
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl px-4 py-2.5 text-xs flex items-center gap-1.5"
+                                  >
+                                    <SendHorizonal className="w-3.5 h-3.5" /> Publish
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    onClick={async () => {
+                                      if (!confirm(`Unpublish "${test.title}"? Students will no longer see it. All existing submissions are preserved.`)) return;
+                                      const res = await toggleMockTestPublished(test.id, false);
+                                      if (res.success) {
+                                        window.location.reload();
+                                      } else {
+                                        alert("Failed to unpublish: " + res.error);
+                                      }
+                                    }}
+                                    className="bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold rounded-xl px-4 py-2.5 text-xs flex items-center gap-1.5 border border-slate-600"
+                                  >
+                                    <EyeOff className="w-3.5 h-3.5" /> Unpublish
+                                  </Button>
+                                )}
+
+                                {/* Edit & Delete */}
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleOpenCms(test)}
+                                    className="text-slate-400 hover:text-white"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDelete(test.id)}
+                                    className="text-red-450 hover:text-red-500"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="py-16 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl">
-                    No mock examinations scheduled for this program.
-                  </div>
-                )}
+                      );
+                    })
+                  ) : (
+                    <div className="py-16 text-center text-slate-500 bg-slate-950/20 border border-slate-850 rounded-3xl space-y-2">
+                      {isStaff && paperStatusTab === "drafts" ? (
+                        <>
+                          <EyeOff className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+                          <p className="font-semibold text-slate-400">No drafts yet.</p>
+                          <p className="text-xs text-slate-500">Papers you save without publishing will appear here.</p>
+                        </>
+                      ) : isStaff && paperStatusTab === "published" ? (
+                        <>
+                          <Eye className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+                          <p className="text-slate-400">No published papers yet.</p>
+                          <p className="text-xs text-slate-500">Create a mock paper and publish it to make it visible to students.</p>
+                        </>
+                      ) : (
+                        <>
+                          <BookOpen className="w-10 h-10 text-slate-700 mx-auto mb-3" />
+                          <p>No mock examinations scheduled for this program.</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )
+            );
+          })()
         )
       ) : (
         /* Test Taking / Review layout */
@@ -1706,9 +1877,20 @@ export default function MockTestClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-2xl bg-slate-900 border border-slate-850 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-lg flex items-center gap-2">
+              <h3 className="font-bold text-white text-lg flex items-center gap-2 flex-wrap">
                 <FileText className="w-5 h-5 text-blue-500" />
                 {editingTest ? "Edit Mock Paper" : "Create Mock Paper"}
+                {editingTest && (
+                  editingTest.isPublished ? (
+                    <span className="text-[10px] font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Eye className="w-3 h-3" /> Live — visible to students
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold bg-amber-500/15 border border-amber-500/30 text-amber-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <EyeOff className="w-3 h-3" /> Draft — hidden from students
+                    </span>
+                  )
+                )}
               </h3>
               <button onClick={() => setIsCmsOpen(false)} className="text-slate-450 hover:text-white">
                 <X className="w-5 h-5" />
@@ -1906,6 +2088,8 @@ export default function MockTestClient({
                     value={
                       formData.isTrial
                         ? "TRIAL"
+                        : formData.campProgramId
+                        ? "CAMP"
                         : (courses.find((c) => c.id === formData.courseId) || activeCourse)?.type === "COMPETITION"
                         ? "COMPETITION"
                         : "REGULAR"
@@ -1916,6 +2100,13 @@ export default function MockTestClient({
                         setFormData({
                           ...formData,
                           isTrial: true,
+                          campProgramId: "",
+                        });
+                      } else if (val === "CAMP") {
+                        setFormData({
+                          ...formData,
+                          isTrial: false,
+                          campProgramId: initialCamps[0]?.id || "",
                         });
                       } else {
                         const currentCourse = courses.find((c) => c.id === formData.courseId) || activeCourse;
@@ -1923,6 +2114,7 @@ export default function MockTestClient({
                         setFormData({
                           ...formData,
                           isTrial: false,
+                          campProgramId: "",
                           courseId: (currentCourse?.type === val ? formData.courseId : matchingCourse?.id) || formData.courseId,
                         });
                       }
@@ -1931,9 +2123,27 @@ export default function MockTestClient({
                   >
                     <option value="REGULAR">Regular Class</option>
                     <option value="COMPETITION">Competition Class</option>
+                    {initialCamps.length > 0 && <option value="CAMP">Camp Program</option>}
                     <option value="TRIAL">Trial Content</option>
                   </select>
                 </div>
+
+                {Boolean(formData.campProgramId) && initialCamps.length > 0 && (
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold block mb-1">Target Camp Program</label>
+                    <select
+                      value={formData.campProgramId}
+                      onChange={(e) => setFormData({ ...formData, campProgramId: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-slate-700"
+                    >
+                      {initialCamps.map((camp) => (
+                        <option key={camp.id} value={camp.id}>
+                          {camp.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Questions in Mock Paper (Review, Reorder & Remove) */}

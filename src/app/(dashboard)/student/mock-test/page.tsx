@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
+import { getHomeworkVisibilityWhereClause } from "@/lib/homeworkScope";
 import MockTestClient from "./MockTestClient";
 
 export const dynamic = "force-dynamic";
@@ -71,7 +72,8 @@ export default async function MockTestPage() {
       },
     });
   } else {
-    // Student: find courses they are enrolled in — show only published, non-trial quizzes
+    // Student: find courses they are enrolled in — show only published, non-trial quizzes matching student's grade
+    const visibilityWhere = await getHomeworkVisibilityWhereClause(session.user);
     const courseIds = activeEnrollments.map((e) => e.itemId);
     courses = await prisma.course.findMany({
       where: {
@@ -79,7 +81,10 @@ export default async function MockTestPage() {
       },
       include: {
         mockTests: {
-          where: { isPublished: true, isTrial: false },
+          where: {
+            isTrial: false,
+            ...visibilityWhere,
+          },
           include: {
             questions: true,
             submissions: {

@@ -17,12 +17,16 @@ import {
   BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { evaluateQuestionAnswer } from "@/lib/quizGrading";
+import { addAcceptedAnswerToQuestion, overrideSubmissionScore } from "@/actions/dashboard";
 
 interface MockQuestion {
   id: string;
   questionText: string;
   options: string;
   correctAnswer: string;
+  acceptedAnswers?: string | null;
+  allowAnyOrder?: boolean;
   explanation: string | null;
   explanationImageUrl?: string | null;
 }
@@ -89,6 +93,10 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
     setReviewMode(true);
   };
 
+  // Add accepted answer & score override state
+  const [isSavingVariant, setIsSavingVariant] = useState(false);
+  const [variantMsg, setVariantMsg] = useState<{ [qId: string]: string }>({});
+
   const getSubmissionStats = (submission: MockSubmission, test: MockTest) => {
     let parsedAnswers: Record<string, string> = {};
     let parsedTimeSpent: Record<string, number> = {};
@@ -101,15 +109,30 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
     let totalTime = 0;
 
     test.questions.forEach((q) => {
-      const studentAns = parsedAnswers[q.id]?.toLowerCase().trim() || "";
-      const correctAns = q.correctAnswer?.toLowerCase().trim() || "";
-      if (studentAns === correctAns) correctCount++;
+      const studentAns = parsedAnswers[q.id] || "";
+      const res = evaluateQuestionAnswer(q, studentAns);
+      if (res.isCorrect) correctCount++;
       else wrongCount++;
       
       totalTime += (parsedTimeSpent[q.id] || 0);
     });
 
     return { parsedAnswers, parsedTimeSpent, correctCount, wrongCount, totalTime };
+  };
+
+  const handleAddAcceptedVariant = async (questionId: string, studentAns: string) => {
+    if (!studentAns || !studentAns.trim()) return;
+    setIsSavingVariant(true);
+    const res = await addAcceptedAnswerToQuestion(questionId, studentAns.trim());
+    setIsSavingVariant(false);
+    if (res.success) {
+      setVariantMsg((prev) => ({
+        ...prev,
+        [questionId]: `✓ Added "${studentAns.trim()}" to accepted answers! Future submissions will accept this.`
+      }));
+    } else {
+      alert("Failed to add accepted answer: " + res.error);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -158,13 +181,15 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
               const isCurrent = idx === currentQuestionIdx;
               let btnStyle = "bg-slate-900 border-slate-800 text-slate-500";
 
-              const studentAns = parsedAnswers[q.id]?.toLowerCase().trim() || "";
-              const correctAns = q.correctAnswer?.toLowerCase().trim() || "";
-              const isCorrect = studentAns === correctAns;
+              const studentAns = parsedAnswers[q.id] || "";
+              const evalRes = evaluateQuestionAnswer(q, studentAns);
+
               if (isCurrent) {
                 btnStyle = "bg-[#CA8E25] border-[#CA8E25] text-black ring-2 ring-[#CA8E25]/30";
-              } else if (isCorrect) {
+              } else if (evalRes.isCorrect) {
                 btnStyle = "bg-emerald-500/15 border-emerald-500/30 text-emerald-400";
+              } else if (evalRes.isNearMiss) {
+                btnStyle = "bg-amber-500/15 border-amber-500/30 text-amber-400";
               } else {
                 btnStyle = "bg-red-500/15 border-red-500/30 text-red-400";
               }
@@ -212,28 +237,73 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
                 let opts: string[] = [];
                 try { opts = JSON.parse(q.options); } catch { opts = []; }
 
-                const studentAns = parsedAnswers[q.id];
+                const studentAns = parsedAnswers[q.id] || "";
                 const isShortAnswer = opts.length === 0;
 
                 if (isShortAnswer) {
-                  const s = studentAns?.toLowerCase().trim() || "";
-                  const c = q.correctAnswer?.toLowerCase().trim() || "";
-                  const isCorrect = s === c;
+                  const evalRes = evaluateQuestionAnswer(q, studentAns);
+                  const isCorrect = evalRes.isCorrect;
+                  const isNearMiss = evalRes.isNearMiss;
+
+                  let acceptedList: string[] = [];
+                  if (q.acceptedAnswers) {
+                    try { acceptedList = JSON.parse(q.acceptedAnswers); } catch {}
+                  }
 
                   return (
                     <div className="space-y-3">
-                      <div className={`p-4 rounded-xl border ${isCorrect ? "bg-emerald-500/10 border-emerald-500/30" : "bg-red-500/10 border-red-500/30"}`}>
-                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1 block">Student Answer</label>
-                        <p className={`font-medium text-sm ${isCorrect ? "text-emerald-400" : "text-red-400"}`}>
+                      <div className={`p-4 rounded-xl border ${
+                        isCorrect ? "bg-emerald-500/10 border-emerald-500/30"
+                        : isNearMiss ? "bg-amber-500/10 border-amber-500/30"
+                        : "bg-red-500/10 border-red-500/30"
+                      }`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Student Answer</label>
+                          {isNearMiss && (
+                            <span className="text-[10px] bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded border border-amber-500/30">
+                              ⚠️ Near Miss (Order/Spacing)
+                            </span>
+                          )}
+                        </div>
+                        <p className={`font-medium text-sm ${isCorrect ? "text-emerald-400" : isNearMiss ? "text-amber-400" : "text-red-400"}`}>
                           {studentAns || "(No answer)"}
                         </p>
                       </div>
-                      {!isCorrect && (
-                        <div className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/30">
-                          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1 block">Correct Answer</label>
-                          <p className="font-medium text-sm text-emerald-400">
-                            {q.correctAnswer}
-                          </p>
+
+                      <div className="p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/30 space-y-2">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Stored Answer (Kunci Jawaban)</label>
+                        <p className="font-medium text-sm text-emerald-400">
+                          {q.correctAnswer}
+                        </p>
+                        {acceptedList.length > 0 && (
+                          <div className="pt-2 border-t border-emerald-500/20">
+                            <span className="text-[10px] text-slate-400 font-semibold block mb-1">Also Accepted Variants:</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {acceptedList.map((v, idx) => (
+                                <span key={idx} className="text-[11px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded border border-emerald-500/30">
+                                  {v}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Add to Accepted Answers Action for Teacher */}
+                      {!isCorrect && studentAns.trim() !== "" && (
+                        <div className="pt-2">
+                          {variantMsg[q.id] ? (
+                            <p className="text-xs text-emerald-400 font-semibold">{variantMsg[q.id]}</p>
+                          ) : (
+                            <Button
+                              size="sm"
+                              disabled={isSavingVariant}
+                              onClick={() => handleAddAcceptedVariant(q.id, studentAns)}
+                              className="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30 text-xs font-bold rounded-lg h-8 px-3"
+                            >
+                              + Add "{studentAns.trim()}" to Accepted Answers
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>

@@ -35,7 +35,7 @@ export default async function TeacherMockTestsPage() {
                 },
               },
             },
-            orderBy: { createdAt: "desc" },
+            orderBy: { updatedAt: "desc" },
           },
         },
       },
@@ -56,7 +56,7 @@ export default async function TeacherMockTestsPage() {
               },
             },
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { updatedAt: "desc" },
         },
       },
     });
@@ -64,15 +64,19 @@ export default async function TeacherMockTestsPage() {
 
 
   // Fetch all bank questions with folder info
-  const bankQuestions = await prisma.mockQuestion.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-
-  // Fetch all folders with question counts
-  const folders = await prisma.questionFolder.findMany({
-    include: { _count: { select: { questions: true } } },
-    orderBy: { name: "asc" },
-  });
+  const [bankQuestions, folders, camps] = await Promise.all([
+    prisma.mockQuestion.findMany({
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.questionFolder.findMany({
+      include: { _count: { select: { questions: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.campProgram.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <>
@@ -82,6 +86,7 @@ export default async function TeacherMockTestsPage() {
       </div>
       <MockTestClient
         initialCourses={courses}
+        initialCamps={camps}
         isUnlocked={true}
         userRole="TEACHER"
         initialBankQuestions={bankQuestions}

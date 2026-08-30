@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db";
 import { redirect } from "next/navigation";
+import { getHomeworkVisibilityWhereClause } from "@/lib/homeworkScope";
 import StudentCampsClient from "./StudentCampsClient";
 import { Info } from "lucide-react";
 
@@ -110,10 +111,13 @@ export default async function StudentCampsPage() {
   ];
 
   // Fetch quizzes for camps
+  const visibilityWhere = isStaff ? {} : await getHomeworkVisibilityWhereClause(session.user);
   const mockTests = await prisma.mockTest.findMany({
     where: {
-      ...(isStaff ? { campProgramId: { not: null } } : { campProgramId: { in: campIds.length > 0 ? campIds : ["NONE"] } }),
-      ...(isStaff ? {} : { isPublished: true }),
+      AND: [
+        isStaff ? { campProgramId: { not: null } } : { campProgramId: { in: campIds.length > 0 ? campIds : ["NONE"] } },
+        visibilityWhere,
+      ],
     },
     include: {
       questions: true,

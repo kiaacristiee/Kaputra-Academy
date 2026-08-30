@@ -345,6 +345,7 @@ model MockTest {
   isTrial       Boolean  @default(false)
   questionOrder String?  // JSON array string of question IDs e.g. '["id1","id2"]'
   targetedGrade String?  // e.g. "GRADE_5" — targeted student grade level
+  targetedGrades String? // JSON array string of targeted grade levels e.g. '["GRADE_1","GRADE_2"]'
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -361,6 +362,8 @@ model MockQuestion {
   questionText String   
   options      String   // JSON string of options Array
   correctAnswer String  // the correct answer index or text
+  acceptedAnswers String? // JSON array string of additional accepted answers e.g. ["20", "$3.50"]
+  allowAnyOrder Boolean  @default(false)
   explanation           String?  
   explanationImageUrl    String?
   topic                 String?
