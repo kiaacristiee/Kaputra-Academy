@@ -38,30 +38,56 @@ export function normaliseAnswer(input: string): string {
     .replace(/≠/g, "!=")
     .replace(/²/g, "2");
 
-  // 5. Hyphens to spaces, then collapse whitespace
+  // 5. Currency symbols & currency unit words removal
+  str = str.replace(/[$€£¥¢₹]/g, "");
+  str = str.replace(/\b(rp\.?|usd|dollars?|cents?|rupiah)\b/g, "");
+
+  // 6. Hyphens to spaces, then collapse whitespace
   str = str.replace(/-/g, " ").replace(/\s+/g, " ");
 
-  // 6. Drop trailing punctuation (full stop or comma at the very end only)
+  // 7. Drop trailing punctuation (full stop or comma at the very end only)
   str = str.replace(/[.,]+$/, "");
 
-  // 7. Remove thousands separators inside numbers (strictly between digits)
-  // e.g. "6 550" -> "6550", "6,550" -> "6550"
-  str = str.replace(/(\d)[\s,]+(\d)/g, "$1$2");
-  str = str.replace(/(\d)[\s,]+(\d)/g, "$1$2"); // Repeat for 1 000 000 -> 1000000
+  // 8. Remove thousands separators inside numbers (must be 3 digits e.g. 6,550 or 6 550 or 80.000)
+  str = str.replace(/(\d)[,.\s](\d{3})\b/g, "$1$2");
+  str = str.replace(/(\d)[,.\s](\d{3})\b/g, "$1$2"); // Repeat for 1,000,000
 
-  // 8. Normalise the word "and" in number words
-  str = str.replace(/\band\b/g, "").replace(/\s+/g, " ");
+  // 9. Remove trailing .00 or .0 on whole numbers (e.g. 80.00 -> 80)
+  str = str.replace(/(\d+)\.00?\b/g, "$1");
 
-  // 9. Tidy spacing around /, :, . and between digits & unit letters
+  // 10. Normalise the word "and"
+  str = str.replace(/\band\b/g, " ").replace(/\s+/g, " ");
+
+  // 11. Tidy spacing around operators
   str = str.replace(/\s*([/:.])\s*/g, "$1");
-  // Spacing between digit and unit letter (e.g., 4 kg -> 4kg, 20 cm -> 20cm)
-  str = str.replace(/(\d)\s+([a-zA-Z])/g, "$1$2");
 
   return str.trim();
 }
 
 /**
- * Compare two normalised answers (handling multi-part answers split by commas).
+ * Strips common unit and label words from an answer string for flexible comparison.
+ */
+export function stripLabelWords(input: string): string {
+  let str = normaliseAnswer(input);
+  if (!str) return "";
+
+  // Insert space between digits and words (e.g. "8teams" -> "8 teams", "12cm" -> "12 cm")
+  str = str.replace(/(\d)([a-zA-Z])/g, "$1 $2").replace(/([a-zA-Z])(\d)/g, "$1 $2");
+
+  // Common descriptive unit / label / math descriptor words in quiz answers
+  const labelWordsRegex = /\b(greatest|smallest|largest|least|highest|lowest|max|maximum|min|minimum|bigger|smaller|more|less|most|fewest|total|sum|difference|product|quotient|remainder|ans|answer|result|value|first|second|third|fourth|fifth|part|full|teams?|pupils?|students?|children|left|leftover|remaining|over|pieces?|items?|objects?|units?|apples?|oranges?|cars?|boxes?|cm|m|km|mm|g|kg|l|ml|lb|lbs|oz|sec|secs|seconds?|min|mins|minutes?|hr|hrs|hours?|days?|weeks?|months?|years?)\b/gi;
+
+  // Replace label words
+  str = str.replace(labelWordsRegex, "");
+
+  // Clean up punctuation like commas, extra spaces
+  str = str.replace(/[,;:]+/g, " ").replace(/\s+/g, " ").trim();
+
+  return str;
+}
+
+/**
+ * Compare two normalised answers (handling multi-part answers split by commas, label words, etc.).
  */
 export function compareSingleAnswer(
   studentAns: string,
@@ -70,27 +96,53 @@ export function compareSingleAnswer(
 ): boolean {
   if (!targetAns) return false;
 
-  // Check if target is multi-part (contains commas)
-  if (targetAns.includes(",")) {
-    const targetParts = targetAns.split(",").map((p) => normaliseAnswer(p)).filter(Boolean);
-    const studentParts = studentAns.split(",").map((p) => normaliseAnswer(p)).filter(Boolean);
-
-    if (targetParts.length !== studentParts.length) return false;
-
-    if (allowAnyOrder) {
-      const sortedTarget = [...targetParts].sort();
-      const sortedStudent = [...studentParts].sort();
-      return sortedTarget.every((val, idx) => val === sortedStudent[idx]);
-    } else {
-      return targetParts.every((val, idx) => val === studentParts[idx]);
-    }
-  }
-
-  // Single-part answer comparison
   const normStudent = normaliseAnswer(studentAns);
   const normTarget = normaliseAnswer(targetAns);
 
-  return normStudent === normTarget;
+  // 1. Direct normalised match
+  if (normStudent === normTarget) return true;
+
+  // 2. Multi-part match by comma/semicolon splitting
+  if (targetAns.includes(",") || targetAns.includes(";")) {
+    const targetParts = targetAns.split(/[,;]/).map((p) => normaliseAnswer(p)).filter(Boolean);
+    const studentParts = studentAns.split(/[,;]/).map((p) => normaliseAnswer(p)).filter(Boolean);
+
+    if (targetParts.length === studentParts.length) {
+      if (allowAnyOrder) {
+        const sortedTarget = [...targetParts].sort();
+        const sortedStudent = [...studentParts].sort();
+        if (sortedTarget.every((val, idx) => val === sortedStudent[idx])) return true;
+      } else {
+        if (targetParts.every((val, idx) => val === studentParts[idx])) return true;
+      }
+    }
+  }
+
+  // 3. Label-stripped comparison (handles "8 full teams, 2 left" vs "8, 2" or "8 teams" vs "8")
+  const strippedStudent = stripLabelWords(studentAns);
+  const strippedTarget = stripLabelWords(targetAns);
+
+  if (strippedStudent && strippedTarget && strippedStudent === strippedTarget) {
+    return true;
+  }
+
+  // 4. Label-stripped multi-part comparison (handles space/comma separation)
+  if (strippedTarget.includes(" ") || strippedStudent.includes(" ")) {
+    const targetPartsStripped = strippedTarget.split(" ").filter(Boolean);
+    const studentPartsStripped = strippedStudent.split(" ").filter(Boolean);
+
+    if (targetPartsStripped.length > 0 && targetPartsStripped.length === studentPartsStripped.length) {
+      if (allowAnyOrder) {
+        const sortedTarget = [...targetPartsStripped].sort();
+        const sortedStudent = [...studentPartsStripped].sort();
+        if (sortedTarget.every((val, idx) => val === sortedStudent[idx])) return true;
+      } else {
+        if (targetPartsStripped.every((val, idx) => val === studentPartsStripped[idx])) return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 export interface EvaluationResult {

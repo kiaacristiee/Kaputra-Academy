@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import InteractivePlayer from "@/components/InteractivePlayer";
+import { evaluateQuestionAnswer } from "@/lib/quizGrading";
 
 interface TrialItem {
   id: string;
@@ -137,7 +138,7 @@ export default function TrialClient({
 
     let correct = 0;
     activeTest.questions.forEach((q) => {
-      if (testAnswers[q.id]?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim()) {
+      if (evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect) {
         correct++;
       }
     });
@@ -624,18 +625,23 @@ export default function TrialClient({
                            return (
                              <div className="space-y-4 pt-2">
                                {opts.length === 0 ? (
-                                 <>
-                                   <div className={`w-full p-5 rounded-[20px] border ${studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim() ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300" : "bg-[#121827] border-slate-800 text-slate-300"}`}>
-                                      {studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim() && <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Your Answer (Correct)</p>}
-                                      <p className="text-sm font-medium pl-2">{studentAns || "(No answer)"}</p>
-                                   </div>
-                                   {studentAns?.toLowerCase().trim() !== correctAns?.toLowerCase().trim() && (
-                                     <div className="w-full p-5 rounded-[20px] border bg-emerald-950/20 border-emerald-900/40 text-emerald-300">
-                                       <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Correct Answer</p>
-                                       <p className="text-sm font-medium pl-2">{correctAns}</p>
-                                     </div>
-                                   )}
-                                 </>
+                                 (() => {
+                                   const isCorrect = evaluateQuestionAnswer(q, studentAns || "").isCorrect;
+                                   return (
+                                     <>
+                                       <div className={`w-full p-5 rounded-[20px] border ${isCorrect ? "bg-emerald-950/20 border-emerald-900/40 text-emerald-300" : "bg-[#121827] border-slate-800 text-slate-300"}`}>
+                                          {isCorrect && <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Your Answer (Correct)</p>}
+                                          <p className="text-sm font-medium pl-2">{studentAns || "(No answer)"}</p>
+                                       </div>
+                                       {!isCorrect && (
+                                         <div className="w-full p-5 rounded-[20px] border bg-emerald-950/20 border-emerald-900/40 text-emerald-300">
+                                           <p className="text-[10px] uppercase font-bold mb-1 opacity-70">Correct Answer</p>
+                                           <p className="text-sm font-medium pl-2">{correctAns}</p>
+                                         </div>
+                                       )}
+                                     </>
+                                   );
+                                 })()
                                ) : (
                                  <div className="space-y-3">
                                    {opts.map((opt, i) => {
@@ -802,7 +808,7 @@ export default function TrialClient({
                    <div className="space-y-[4px]">
                       {activeTest.questions.map((q, idx) => {
                          const spent = timeSpentPerQuestion[q.id] || 0;
-                         const isCorrect = testAnswers[q.id]?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim();
+                         const isCorrect = evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect;
                          return (
                             <div key={q.id} className="flex items-center justify-between px-4 py-3.5 rounded-2xl hover:bg-[#1A2234] transition-colors bg-[#080d16] border border-slate-800/50">
                                <div className="text-[14px] text-slate-200 truncate pr-6 max-w-sm md:max-w-md font-medium flex items-center gap-3">

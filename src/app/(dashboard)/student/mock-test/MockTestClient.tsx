@@ -1501,9 +1501,7 @@ export default function MockTestClient({
                   let btnStyle = "bg-slate-900 border-slate-800 text-slate-500";
 
                   if (reviewMode) {
-                    const studentAns = testAnswers[q.id]?.toLowerCase().trim() || "";
-                    const correctAns = q.correctAnswer?.toLowerCase().trim() || "";
-                    const isCorrect = studentAns === correctAns;
+                    const isCorrect = evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect;
                     if (isCurrent) {
                       btnStyle = "bg-[#CA8E25] border-[#CA8E25] text-black ring-2 ring-[#CA8E25]/30";
                     } else if (isCorrect) {
@@ -1655,9 +1653,7 @@ export default function MockTestClient({
                     let wrongCount = 0;
                     let totalTimeSpent = 0;
                     activeTest.questions.forEach((q) => {
-                      const studentAns = testAnswers[q.id]?.toLowerCase().trim() || "";
-                      const correctAns = q.correctAnswer?.toLowerCase().trim() || "";
-                      if (studentAns === correctAns) correctCount++;
+                      if (evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect) correctCount++;
                       else wrongCount++;
                       totalTimeSpent += (timeSpentPerQuestion[q.id] || 0);
                     });
@@ -1722,9 +1718,7 @@ export default function MockTestClient({
                     {(() => {
                       const q = activeTest.questions[currentQuestionIdx];
                       if (!q) return null;
-                      const studentAns = testAnswers[q.id]?.toLowerCase().trim() || "";
-                      const correctAns = q.correctAnswer?.toLowerCase().trim() || "";
-                      const isCorrect = studentAns === correctAns;
+                      const isCorrect = evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect;
                       const spent = timeSpentPerQuestion[q.id] || 0;
                       const min = Math.floor(spent / 60);
                       const sec = spent % 60;
@@ -1766,7 +1760,7 @@ export default function MockTestClient({
                     const correctAns = q.correctAnswer;
 
                     if (opts.length === 0) {
-                      const isCorrectChoice = studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim();
+                      const isCorrectChoice = evaluateQuestionAnswer(q, studentAns || "").isCorrect;
                       return (
                         <div className="space-y-2">
                           <div className={`px-4 py-3 rounded-xl border text-[13px] font-medium ${

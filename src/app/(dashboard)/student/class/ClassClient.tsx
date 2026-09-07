@@ -926,7 +926,7 @@ export default function ClassClient({
                       const correctAns = q.correctAnswer;
 
                       if (opts.length === 0) {
-                        const isCorrectChoice = studentAns?.toLowerCase().trim() === correctAns?.toLowerCase().trim();
+                        const isCorrectChoice = evaluateQuestionAnswer(q, studentAns || "").isCorrect;
                         return (
                           <div className="space-y-2">
                             <div className={`px-4 py-3 rounded-xl border text-[13px] font-medium ${
