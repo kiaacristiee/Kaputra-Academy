@@ -187,6 +187,34 @@ export default function MockTestClient({
   const isStaff = ["ADMIN", "TEACHER"].includes(userRole);
   const activeCourse = courses[selectedCourseIdx];
 
+  const [isFetchingBank, setIsFetchingBank] = useState(false);
+
+  // Fetch Bank Questions on demand when switching to Bank Soal or changing folder
+  useEffect(() => {
+    if (activeTab === "bankSoal" && isStaff) {
+      let isMounted = true;
+      setIsFetchingBank(true);
+      const folderParam = activeFolderId === null ? "unfiled" : activeFolderId;
+      const searchParam = encodeURIComponent(bankSearchQuery.trim());
+      
+      fetch(`/api/teacher/question-bank?folderId=${folderParam}&search=${searchParam}&limit=100`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (isMounted && data.success && Array.isArray(data.questions)) {
+            setBankQuestions(data.questions);
+          }
+        })
+        .catch((err) => console.error("Error fetching questions on demand:", err))
+        .finally(() => {
+          if (isMounted) setIsFetchingBank(false);
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [activeTab, activeFolderId, bankSearchQuery, isStaff]);
+
   const filteredBankQuestions = bankQuestions
     .filter((q) => {
       if (activeFolderId === null) {

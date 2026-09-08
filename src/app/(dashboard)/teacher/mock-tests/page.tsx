@@ -6,8 +6,6 @@ import MockTestClient from "../../student/mock-test/MockTestClient";
 import BulkUpload from "./BulkUpload";
 import { getVisibleStudentIds } from "@/lib/permissions";
 
-export const revalidate = 10;
-
 export const metadata = {
   title: "Manage Quizzes | Kaputra Academy",
 };
@@ -18,13 +16,9 @@ export default async function TeacherMockTestsPage() {
     redirect("/login");
   }
 
-  // Fetch initial batch (first 30 questions) to keep initial load lightweight
-  const [visibleStudentIds, bankQuestions, folders, camps] = await Promise.all([
+  // Defer fetching full question bank to client-side on-demand tab clicks
+  const [visibleStudentIds, folders, camps] = await Promise.all([
     getVisibleStudentIds(session.user),
-    prisma.mockQuestion.findMany({
-      take: 30,
-      orderBy: { createdAt: "desc" },
-    }),
     prisma.questionFolder.findMany({
       include: { _count: { select: { questions: true } } },
       orderBy: { name: "asc" },
@@ -93,14 +87,14 @@ export default async function TeacherMockTestsPage() {
     <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Quizzes</h1>
-        <BulkUpload courses={courses} />
+        <BulkUpload courses={courses as any} />
       </div>
       <MockTestClient
-        initialCourses={courses}
-        initialCamps={camps}
+        initialCourses={courses as any}
+        initialCamps={camps as any}
         isUnlocked={true}
         userRole="TEACHER"
-        initialBankQuestions={bankQuestions}
+        initialBankQuestions={[]}
         initialFolders={folders}
       />
     </>
