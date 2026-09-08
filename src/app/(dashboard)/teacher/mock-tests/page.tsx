@@ -16,8 +16,8 @@ export default async function TeacherMockTestsPage() {
     redirect("/login");
   }
 
-  // Defer fetching full question bank to client-side on-demand tab clicks
-  const [visibleStudentIds, folders, camps] = await Promise.all([
+  // Execute permissions, folders, camps, and teacher assignments concurrently in 1 batch
+  const [visibleStudentIds, folders, camps, teacherAssignments] = await Promise.all([
     getVisibleStudentIds(session.user),
     prisma.questionFolder.findMany({
       include: { _count: { select: { questions: true } } },
@@ -27,51 +27,100 @@ export default async function TeacherMockTestsPage() {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-  ]);
-
-  const teacherAssignments = await prisma.teacherAssignment.findMany({
-    where: { teacherId: session.user.id },
-    include: {
-      course: {
-        include: {
-          mockTests: {
-            include: {
-              questions: true,
-              submissions: {
-                where: visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {},
-                include: {
-                  student: {
-                    select: {
-                      id: true,
-                      name: true,
-                      studentIdStr: true,
+    prisma.teacherAssignment.findMany({
+      where: { teacherId: session.user.id },
+      select: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            mockTests: {
+              select: {
+                id: true,
+                title: true,
+                timeLimit: true,
+                passingScore: true,
+                isPublished: true,
+                isTrial: true,
+                targetedGrade: true,
+                updatedAt: true,
+                courseId: true,
+                campProgramId: true,
+                questionOrder: true,
+                questions: {
+                  select: {
+                    id: true,
+                    questionText: true,
+                    options: true,
+                    correctAnswer: true,
+                  },
+                },
+                submissions: {
+                  take: 5,
+                  select: {
+                    id: true,
+                    score: true,
+                    isPassed: true,
+                    answers: true,
+                    submittedAt: true,
+                    student: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
                     },
                   },
                 },
               },
+              orderBy: { updatedAt: "desc" },
             },
-            orderBy: { updatedAt: "desc" },
           },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   let courses = teacherAssignments.map((ta) => ta.course);
   if (courses.length === 0) {
     courses = await prisma.course.findMany({
-      include: {
+      select: {
+        id: true,
+        title: true,
+        type: true,
         mockTests: {
-          include: {
-            questions: true,
+          select: {
+            id: true,
+            title: true,
+            timeLimit: true,
+            passingScore: true,
+            isPublished: true,
+            isTrial: true,
+            targetedGrade: true,
+            updatedAt: true,
+            courseId: true,
+            campProgramId: true,
+            questionOrder: true,
+            questions: {
+              select: {
+                id: true,
+                questionText: true,
+                options: true,
+                correctAnswer: true,
+              },
+            },
             submissions: {
-              where: visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {},
-              include: {
+              take: 5,
+              select: {
+                id: true,
+                score: true,
+                isPassed: true,
+                answers: true,
+                submittedAt: true,
                 student: {
                   select: {
                     id: true,
                     name: true,
-                    studentIdStr: true,
                   },
                 },
               },
