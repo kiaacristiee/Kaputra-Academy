@@ -319,6 +319,31 @@ export async function getMockTests(courseId?: string, isTrial: boolean = false) 
   }
 }
 
+export async function getMockTestDetails(mockTestId: string) {
+  try {
+    const test = await prisma.mockTest.findUnique({
+      where: { id: mockTestId },
+      include: {
+        questions: true,
+        submissions: {
+          take: 50,
+          orderBy: { submittedAt: "desc" },
+          include: {
+            student: {
+              select: { id: true, name: true, studentIdStr: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!test) return { success: false, error: "Mock paper not found" };
+    return { success: true, test };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 export async function createMockTest(data: {
   courseId?: string;
   campProgramId?: string;

@@ -6,7 +6,7 @@ import MockTestClient from "../../student/mock-test/MockTestClient";
 import BulkUpload from "./BulkUpload";
 import { getVisibleStudentIds } from "@/lib/permissions";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 10;
 
 export const metadata = {
   title: "Manage Quizzes | Kaputra Academy",
@@ -18,7 +18,22 @@ export default async function TeacherMockTestsPage() {
     redirect("/login");
   }
 
-  const visibleStudentIds = await getVisibleStudentIds(session.user);
+  // Fetch initial batch (first 30 questions) to keep initial load lightweight
+  const [visibleStudentIds, bankQuestions, folders, camps] = await Promise.all([
+    getVisibleStudentIds(session.user),
+    prisma.mockQuestion.findMany({
+      take: 30,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.questionFolder.findMany({
+      include: { _count: { select: { questions: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.campProgram.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   const teacherAssignments = await prisma.teacherAssignment.findMany({
     where: { teacherId: session.user.id },
@@ -73,22 +88,6 @@ export default async function TeacherMockTestsPage() {
       },
     });
   }
-
-
-  // Fetch all bank questions with folder info
-  const [bankQuestions, folders, camps] = await Promise.all([
-    prisma.mockQuestion.findMany({
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.questionFolder.findMany({
-      include: { _count: { select: { questions: true } } },
-      orderBy: { name: "asc" },
-    }),
-    prisma.campProgram.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
 
   return (
     <>
