@@ -149,6 +149,7 @@ export default async function ClassPage() {
       options: q.options,
       correctAnswer: q.correctAnswer,
       explanation: q.explanation,
+      explanationImageUrl: q.explanationImageUrl,
       imageUrl: q.imageUrl,
     })),
   }));

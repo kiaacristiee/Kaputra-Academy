@@ -123,6 +123,7 @@ model TeacherAssignment {
   course  Course @relation(fields: [courseId], references: [id])
 
   @@unique([teacherId, courseId])
+  @@index([teacherId])
 }
 
 model StudentTeacherAssignment {
@@ -250,6 +251,8 @@ model Invoice {
 
   @@index([studentId])
   @@index([status])
+  @@index([status, learningMethod])
+  @@index([status, paidAt])
 }
 
 model PaymentVerification {
@@ -443,6 +446,8 @@ model PrivateSession {
   teacher     User     @relation("SessionTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
   student     User     @relation("SessionStudent", fields: [studentId], references: [id], onDelete: Cascade)
   course      Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([date, status])
 }
 
 model Attendance {
@@ -477,6 +482,8 @@ model Schedule {
   course      Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   teacher     User     @relation("ScheduleTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
   student     User?    @relation("ScheduleStudent", fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@index([dayOfWeek, type])
 }
 
 model Salary {
@@ -648,6 +655,8 @@ model EmailDraft {
   metadata    String?  // JSON string
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([status])
 }
 
 model LiveChatSession {

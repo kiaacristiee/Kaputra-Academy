@@ -41,7 +41,7 @@ export default async function AdminDashboard() {
 
   const isSuperAdmin = ["SUPER_ADMIN", "OWNER", "CO_OWNER"].includes(session.user.role);
 
-  // Fetch Stats from DB
+  // Fetch Stats and Registrations concurrently in a single batch
   const [
     totalStudents,
     totalTeachers,
@@ -50,7 +50,8 @@ export default async function AdminDashboard() {
     todaysClasses,
     todaysPrivateClasses,
     revenueMonthAgg,
-    unreadChats
+    unreadChats,
+    registrations
   ] = await Promise.all([
     prisma.user.count({ where: { role: "STUDENT" } }),
     prisma.user.count({ where: { role: "TEACHER" } }),
@@ -86,7 +87,31 @@ export default async function AdminDashboard() {
         })
       }
     }),
-    prisma.liveChatSession.count({ where: { status: { in: ["NEW", "WAITING_REPLY"] } } })
+    prisma.liveChatSession.count({ where: { status: { in: ["NEW", "WAITING_REPLY"] } } }),
+    prisma.registration.findMany({
+      where: {
+        ...(!isSuperAdmin && {
+          OR: [
+            { learningMethod: null },
+            { learningMethod: { not: "PRIVATE" } }
+          ]
+        })
+      },
+      include: {
+        course: true,
+        payment: true,
+        placementTest: {
+          select: {
+            studentIdStr: true,
+            testCode: true,
+          }
+        }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 50
+    })
   ]);
 
   const revenueMonth = revenueMonthAgg._sum.amount || 0;
@@ -101,32 +126,6 @@ export default async function AdminDashboard() {
     { name: "Revenue This Month", value: `Rp ${revenueMonth.toLocaleString()}`, icon: DollarSign, color: "from-emerald-600 to-emerald-800" },
     { name: "Unread CS Chats", value: unreadChats.toString(), icon: MessageSquare, color: "from-pink-600 to-rose-800" },
   ];
-
-  // Fetch Registrations
-  const registrations = await prisma.registration.findMany({
-    where: {
-      ...(!isSuperAdmin && {
-        OR: [
-          { learningMethod: null },
-          { learningMethod: { not: "PRIVATE" } }
-        ]
-      })
-    },
-    include: {
-      course: true,
-      payment: true,
-      placementTest: {
-        select: {
-          studentIdStr: true,
-          testCode: true,
-        }
-      }
-    },
-    orderBy: {
-      createdAt: "desc"
-    },
-    take: 50 // Limit to avoid massive DB pull on dashboard
-  });
 
   return (
     <div className="space-y-8">

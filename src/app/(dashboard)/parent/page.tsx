@@ -57,8 +57,8 @@ export default async function ParentDashboardPage() {
   const children = parent.children || [];
   const childIds = children.map((c: any) => c.id);
 
-  // Fetch course mapping, camp programs, and child enrollments concurrently
-  const [allCourses, allCamps, childEnrollments] = await Promise.all([
+  // Fetch all dashboard data (courses, camps, child enrollments, and announcements) in 1 parallel batch
+  const [allCourses, allCamps, childEnrollments, announcements] = await Promise.all([
     prisma.course.findMany({
       select: { id: true, title: true, type: true },
     }),
@@ -69,44 +69,37 @@ export default async function ParentDashboardPage() {
       where: { studentId: { in: childIds }, status: "ACTIVE" },
       select: { itemId: true },
     }),
+    prisma.announcement.findMany({
+      where: {
+        isPublished: true,
+        publishDate: { lte: new Date() },
+        targetAudience: { in: ["PARENTS", "BOTH"] },
+        AND: [
+          {
+            OR: [
+              { targetStudents: { none: {} } },
+              { targetStudents: { some: { id: { in: childIds } } } },
+            ],
+          },
+        ],
+      },
+      include: {
+        teacher: { select: { name: true } },
+        course: { select: { title: true } },
+        targetStudents: {
+          where: { id: { in: childIds } },
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { publishDate: "desc" },
+      take: 20
+    }),
   ]);
 
   const courseMap = new Map<string, { title: string; type: string }>([
     ...allCourses.map((c) => [c.id, { title: c.title, type: c.type === "COMPETITION" ? "COMPETITION" : "REGULAR" }] as [string, { title: string; type: string }]),
     ...allCamps.map((c) => [c.id, { title: c.name, type: (c as any).type || "CAMP" }] as [string, { title: string; type: string }]),
   ]);
-
-  const courseIds = Array.from(new Set(childEnrollments.map((e) => e.itemId)));
-
-  // Fetch announcements (depends on courseIds)
-  const announcements = await prisma.announcement.findMany({
-    where: {
-      isPublished: true,
-      publishDate: { lte: new Date() },
-      targetAudience: { in: ["PARENTS", "BOTH"] },
-      OR: [
-        { courseId: null },
-        { courseId: { in: courseIds } },
-      ],
-      AND: [
-        {
-          OR: [
-            { targetStudents: { none: {} } },
-            { targetStudents: { some: { id: { in: childIds } } } },
-          ],
-        },
-      ],
-    },
-    include: {
-      teacher: { select: { name: true } },
-      course: { select: { title: true } },
-      targetStudents: {
-        where: { id: { in: childIds } },
-        select: { id: true, name: true },
-      },
-    },
-    orderBy: { publishDate: "desc" },
-  });
 
   return (
     <ParentDashboardClient>

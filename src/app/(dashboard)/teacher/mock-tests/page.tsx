@@ -31,7 +31,13 @@ export default async function TeacherMockTestsPage() {
               submissions: {
                 where: visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {},
                 include: {
-                  student: true,
+                  student: {
+                    select: {
+                      id: true,
+                      name: true,
+                      studentIdStr: true,
+                    },
+                  },
                 },
               },
             },
@@ -52,7 +58,13 @@ export default async function TeacherMockTestsPage() {
             submissions: {
               where: visibleStudentIds ? { studentId: { in: visibleStudentIds } } : {},
               include: {
-                student: true,
+                student: {
+                  select: {
+                    id: true,
+                    name: true,
+                    studentIdStr: true,
+                  },
+                },
               },
             },
           },

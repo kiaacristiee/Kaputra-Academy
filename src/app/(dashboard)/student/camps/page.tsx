@@ -143,6 +143,8 @@ export default async function StudentCampsPage() {
       options: q.options,
       correctAnswer: q.correctAnswer,
       explanation: q.explanation,
+      explanationImageUrl: q.explanationImageUrl,
+      imageUrl: q.imageUrl,
     })),
     submissions: t.submissions,
   }));
