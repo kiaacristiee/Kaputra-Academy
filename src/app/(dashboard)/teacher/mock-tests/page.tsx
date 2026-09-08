@@ -54,6 +54,11 @@ export default async function TeacherMockTestsPage() {
                     questionText: true,
                     options: true,
                     correctAnswer: true,
+                    explanation: true,
+                    explanationImageUrl: true,
+                    imageUrl: true,
+                    topic: true,
+                    difficulty: true,
                   },
                 },
                 submissions: {
@@ -107,6 +112,11 @@ export default async function TeacherMockTestsPage() {
                 questionText: true,
                 options: true,
                 correctAnswer: true,
+                explanation: true,
+                explanationImageUrl: true,
+                imageUrl: true,
+                topic: true,
+                difficulty: true,
               },
             },
             submissions: {
