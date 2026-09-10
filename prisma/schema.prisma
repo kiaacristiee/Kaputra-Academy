@@ -1,7 +1,6 @@
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -69,7 +68,7 @@ model Category {
   id          String   @id @default(cuid())
   name        String   @unique
   slug        String   @unique
-  description String?
+  description String?  @db.Text
   courses     Course[]
 }
 
@@ -78,9 +77,9 @@ model Course {
   title            String
   slug             String   @unique
   shortDescription String
-  fullDescription  String   
-  objectives       String   
-  learningOutcomes String   
+  fullDescription  String   @db.Text
+  objectives       String   @db.Text
+  learningOutcomes String   @db.Text
   schedule         String
   price            Float    // Base or "Starting from" price for catalog display
   pricePrivateOnce       Float    @default(0)
@@ -88,7 +87,7 @@ model Course {
   priceSemiPrivateOnce   Float    @default(0)
   priceSemiPrivateTwice  Float    @default(0)
   registrationFee  Float    @default(0)
-  thumbnailUrl     String?
+  thumbnailUrl     String?  @db.Text
   categoryId       String
   isPublished      Boolean  @default(false)
   type             String   @default("REGULAR") // "REGULAR" or "COMPETITION"
@@ -170,11 +169,11 @@ model Payment {
   registrationId       String        @unique
   amount               Float
   paymentMethod        String?
-  receiptUrl           String?       // Support for payment receipt uploads
+  receiptUrl           String?       @db.Text
   status               String        @default("PENDING")
   verifiedById         String?
   verifiedAt           DateTime?
-  adminNotes           String?
+  adminNotes           String?       @db.Text
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
@@ -198,7 +197,7 @@ model PlacementTest {
   startedAt           DateTime?
   submittedAt         DateTime?
   score               Float?
-  answers             String?       // JSON for multiple choice answers
+  answers             String?      @db.Text // JSON for multiple choice answers
   qualificationStatus String?      // "QUALIFIED" or "NOT_QUALIFIED"
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -234,7 +233,7 @@ model Invoice {
   learningMethod       String?   // PRIVATE, SEMI_PRIVATE
   sessionsPerWeek      Int?      // 1 or 2
   settlementAccount    String?   // PERSONAL, COMPANY
-  receiptUrl           String?
+  receiptUrl           String?   @db.Text
   dueDate              DateTime
   paidAt               DateTime?
   createdAt            DateTime  @default(now())
@@ -260,7 +259,7 @@ model PaymentVerification {
   invoiceId       String
   approvedById    String?
   status          String    @default("PENDING") // APPROVED, REJECTED
-  rejectionReason String?
+  rejectionReason String?   @db.Text
   verifiedAt      DateTime?
 
   invoice         Invoice   @relation(fields: [invoiceId], references: [id])
@@ -270,7 +269,7 @@ model PaymentVerification {
 model ContentBlock {
   id        String   @id @default(cuid())
   section   String   @unique // e.g., "hero_slider", "about_us", "contact_info"
-  content   String    // JSON string payload for CMS content
+  content   String   @db.Text // JSON string payload for CMS content
   updatedAt DateTime @updatedAt
 }
 
@@ -278,8 +277,8 @@ model TrialContent {
   id          String   @id @default(cuid())
   type        String   // "VIDEO", "MATERIAL", "MOCK_TEST"
   title       String
-  url         String?  // file or video link
-  description String?  
+  url         String?  @db.Text
+  description String?  @db.Text
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -290,7 +289,7 @@ model Video {
   courseId      String?
   campProgramId String?
   title         String
-  videoUrl      String
+  videoUrl      String   @db.Text
   category      String?
   order         Int      @default(0)
   isPublished   Boolean  @default(false)
@@ -307,13 +306,13 @@ model InteractiveVideoQuiz {
   id             String   @id @default(cuid())
   videoId        String
   timestamp      Int      // Stored in seconds for easy playback comparison
-  question       String
-  optionA        String
-  optionB        String
-  optionC        String
-  optionD        String
-  correctAnswer  String
-  explanation    String?
+  question       String   @db.Text
+  optionA        String   @db.Text
+  optionB        String   @db.Text
+  optionC        String   @db.Text
+  optionD        String   @db.Text
+  correctAnswer  String   @db.Text
+  explanation    String?  @db.Text
   requireCorrect Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -326,8 +325,8 @@ model Material {
   courseId      String?
   campProgramId String?
   title         String
-  fileUrl       String
-  description   String?
+  fileUrl       String       @db.Text
+  description   String?      @db.Text
   isPublished   Boolean  @default(false)
   isTrial       Boolean  @default(false)
   createdAt     DateTime @default(now())
@@ -346,9 +345,9 @@ model MockTest {
   passingScore  Float
   isPublished   Boolean  @default(false)
   isTrial       Boolean  @default(false)
-  questionOrder String?  // JSON array string of question IDs e.g. '["id1","id2"]'
+  questionOrder String?  @db.Text // JSON array string of question IDs e.g. '["id1","id2"]'
   targetedGrade String?  // e.g. "GRADE_5" — targeted student grade level
-  targetedGrades String? // JSON array string of targeted grade levels e.g. '["GRADE_1","GRADE_2"]'
+  targetedGrades String? @db.Text // JSON array string of targeted grade levels e.g. '["GRADE_1","GRADE_2"]'
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -362,16 +361,16 @@ model MockQuestion {
   id           String   @id @default(cuid())
   courseId     String?  // Optional: ties question to a specific course's bank
   folderId     String?
-  questionText String   
-  options      String   // JSON string of options Array
-  correctAnswer String  // the correct answer index or text
-  acceptedAnswers String? // JSON array string of additional accepted answers e.g. ["20", "$3.50"]
+  questionText String   @db.Text
+  options      String   @db.Text // JSON string of options Array
+  correctAnswer String  @db.Text // the correct answer index or text
+  acceptedAnswers String? @db.Text // JSON array string of additional accepted answers e.g. ["20", "$3.50"]
   allowAnyOrder Boolean  @default(false)
-  explanation           String?  
-  explanationImageUrl    String?
+  explanation           String?  @db.Text
+  explanationImageUrl    String?  @db.Text
   topic                 String?
   difficulty   String?
-  imageUrl     String?
+  imageUrl     String?  @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -396,9 +395,9 @@ model MockSubmission {
   mockTestId          String
   studentId           String
   score               Float
-  answers             String    // JSON string of student answers
-  timeSpent           String?   // JSON string of time spent per question in seconds
-  totalCompletionTime Int?      // Overall completion time in seconds
+  answers             String   @db.Text // JSON string of student answers
+  timeSpent           String?  @db.Text // JSON string of time spent per question in seconds
+  totalCompletionTime Int?     // Overall completion time in seconds
   attemptNumber       Int      @default(1)
   isPassed            Boolean
   submittedAt         DateTime @default(now())
@@ -413,15 +412,15 @@ model AcademicReport {
   courseId           String
   grade              String
   progress           Int      @default(0)
-  teacherNotes       String?  
-  skillAssessment    String?  
-  completedModules   String?  
+  teacherNotes       String?  @db.Text
+  skillAssessment    String?  @db.Text
+  completedModules   String?  @db.Text
   status             String   @default("DRAFT") // DRAFT, SUBMITTED
-  performanceSummary String?
-  strengths          String?
-  improvements       String?
-  learningProgress   String?
-  nextSteps          String?
+  performanceSummary String?  @db.Text
+  strengths          String?  @db.Text
+  improvements       String?  @db.Text
+  learningProgress   String?  @db.Text
+  nextSteps          String?  @db.Text
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -456,7 +455,7 @@ model Attendance {
   courseId    String
   date        DateTime
   status      String   // "PRESENT", "LATE", "ABSENT", "EXCUSED"
-  notes       String?  
+  notes       String?  @db.Text
   markedById  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -493,8 +492,8 @@ model Salary {
   baseSalary     Float
   bonus          Float    @default(0)
   status         String   @default("PENDING") // PAID, PENDING
-  receiptUrl     String?
-  paymentDetails String?  
+  receiptUrl     String?  @db.Text
+  paymentDetails String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -504,7 +503,7 @@ model Salary {
 model Announcement {
   id             String             @id @default(cuid())
   title          String
-  description    String             
+  description    String             @db.Text
   targetAudience String             // "STUDENTS", "PARENTS", "BOTH"
   courseId       String?            // Null for general announcements
   isPublished    Boolean            @default(false)
@@ -548,7 +547,7 @@ model TeacherAttendance {
 model Reminder {
   id          String   @id @default(cuid())
   title       String
-  description String?  
+  description String?  @db.Text
   type        String   // "CLASS_START", "HOMEWORK", "MOCK_TEST", "DEADLINE"
   dueDate     DateTime?
   courseId    String?
@@ -564,13 +563,13 @@ model CampProgram {
   id                   String             @id @default(cuid())
   name                 String
   slug                 String             @unique
-  description          String
-  learningObjectives   String?
-  topicsCovered        String?
-  scheduleInfo         String?
+  description          String             @db.Text
+  learningObjectives   String?            @db.Text
+  topicsCovered        String?            @db.Text
+  scheduleInfo         String?            @db.Text
   instructor           String?
   duration             String?
-  thumbnailUrl         String?
+  thumbnailUrl         String?            @db.Text
   startDate            DateTime
   endDate              DateTime
   registrationDeadline DateTime
@@ -650,9 +649,9 @@ model EmailDraft {
   type        String   // "PLACEMENT_TEST_PAYMENT", "CLASS_PAYMENT", "CAMP_PAYMENT", "PLACEMENT_TEST_RESULT", "ENROLLMENT_CONFIRMATION"
   recipient   String
   subject     String
-  bodyHtml    String
+  bodyHtml    String   @db.Text
   status      String   @default("PENDING_APPROVAL") // "PENDING_APPROVAL", "APPROVED", "REJECTED", "SENT"
-  metadata    String?  // JSON string
+  metadata    String?  @db.Text // JSON string
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -681,7 +680,7 @@ model LiveChatMessage {
   id         String          @id @default(cuid())
   sessionId  String
   senderType String          // "USER" or "ADMIN"
-  content    String
+  content    String          @db.Text
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 

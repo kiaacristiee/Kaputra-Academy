@@ -162,6 +162,9 @@ export default function MockTestClient({
   const [editingTest, setEditingTest] = useState<MockTest | null>(null);
   const [selectedFolderForImport, setSelectedFolderForImport] = useState<string>("");
   const [showManualBankPicker, setShowManualBankPicker] = useState(false);
+  const [isLoadingPaper, setIsLoadingPaper] = useState(false);
+  // Track which explanation panels are open (to avoid pre-loading explanation images)
+  const [openExplanations, setOpenExplanations] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -369,29 +372,55 @@ export default function MockTestClient({
   };
 
   // CMS functions
-  const handleOpenCms = (test?: MockTest) => {
+  const handleOpenCms = async (test?: MockTest) => {
     if (!activeCourse && courses.length === 0) return;
     if (test) {
-      setEditingTest(test);
-      let initialOrder: string[] = test.questions.map((q) => q.id);
-      if ((test as any).questionOrder) {
+      // If questions are not loaded yet (empty array), fetch them on demand
+      let fullTest = test;
+      if (test.questions.length === 0 && (test as any)._count?.questions > 0) {
+        setIsLoadingPaper(true);
         try {
-          const orderArr = JSON.parse((test as any).questionOrder);
+          const res = await fetch(`/api/teacher/mock-tests/${test.id}`);
+          const data = await res.json();
+          if (data.success && data.test) {
+            fullTest = data.test;
+            // Update the courses state with the loaded questions
+            setCourses((prev) =>
+              prev.map((c) => ({
+                ...c,
+                mockTests: c.mockTests.map((t) =>
+                  t.id === test.id ? { ...t, questions: data.test.questions, submissions: data.test.submissions } : t
+                ),
+              }))
+            );
+          }
+        } catch (e) {
+          console.error("Failed to load paper details", e);
+        } finally {
+          setIsLoadingPaper(false);
+        }
+      }
+
+      setEditingTest(fullTest);
+      let initialOrder: string[] = fullTest.questions.map((q) => q.id);
+      if ((fullTest as any).questionOrder) {
+        try {
+          const orderArr = JSON.parse((fullTest as any).questionOrder);
           if (Array.isArray(orderArr) && orderArr.length > 0) {
             initialOrder = orderArr;
           }
         } catch (e) {}
       }
       setFormData({
-        title: test.title,
-        description: (test as any).description || "",
-        timeLimit: test.timeLimit,
-        passingScore: test.passingScore,
-        isPublished: test.isPublished,
-        isTrial: test.isTrial,
-        targetedGrade: test.targetedGrade || "ALL",
-        courseId: (test as any).courseId || (activeCourse ? activeCourse.id : courses[0]?.id || ""),
-        campProgramId: (test as any).campProgramId || "",
+        title: fullTest.title,
+        description: (fullTest as any).description || "",
+        timeLimit: fullTest.timeLimit,
+        passingScore: fullTest.passingScore,
+        isPublished: fullTest.isPublished,
+        isTrial: fullTest.isTrial,
+        targetedGrade: fullTest.targetedGrade || "ALL",
+        courseId: (fullTest as any).courseId || (activeCourse ? activeCourse.id : courses[0]?.id || ""),
+        campProgramId: (fullTest as any).campProgramId || "",
         selectedQuestionIds: initialOrder,
       });
     } else {
@@ -1133,7 +1162,7 @@ export default function MockTestClient({
                            <div className={`w-6 h-6 shrink-0 rounded flex items-center justify-center border transition-colors md:mt-0.5 ${isSelected ? "bg-blue-500 border-blue-500 text-white" : "bg-slate-900 border-slate-700 text-transparent group-hover:border-slate-500"}`}><Check className="w-4 h-4 ml-0" /></div>
                            <div className="flex-1">
                              <p className="text-[15px] font-medium text-white leading-relaxed">{q.questionText}</p>
-                             {(q as any).imageUrl && <img src={(q as any).imageUrl} className="max-h-40 rounded-xl border border-slate-800 mt-3 shadow-lg" />}
+                             {(q as any).imageUrl && <img src={(q as any).imageUrl} loading="lazy" className="max-h-40 rounded-xl border border-slate-800 mt-3 shadow-lg" />}
                              <div className="mt-3 flex gap-2">
                                <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold rounded-lg inline-block">ANSWER: {q.correctAnswer}</span>
                              </div>
@@ -1337,7 +1366,7 @@ export default function MockTestClient({
                                 <Clock className="w-3.5 h-3.5 text-[#CA8E25]" /> {test.timeLimit} Minutes
                               </span>
                               <span>•</span>
-                              <span>{test.questions.length} Questions</span>
+                              <span>{(test as any)._count?.questions ?? test.questions.length} Questions</span>
                               <span>•</span>
                               <span>Passing Grade: {test.passingScore}%</span>
                               {isDraft && test.updatedAt && (
@@ -1398,7 +1427,7 @@ export default function MockTestClient({
                                 {isDraft ? (
                                   <Button
                                     onClick={async () => {
-                                      if (test.questions.length === 0) {
+                                      if ((test as any)._count?.questions === 0 && test.questions.length === 0) {
                                         alert("Cannot publish: this paper has no questions. Open the editor to add questions first.");
                                         return;
                                       }
@@ -1772,6 +1801,7 @@ export default function MockTestClient({
                     <img
                       src={(activeTest.questions[currentQuestionIdx] as any).imageUrl}
                       alt="Question"
+                      loading="lazy"
                       className="mt-2 max-h-44 rounded-lg border border-slate-800"
                     />
                   )}
@@ -1842,7 +1872,7 @@ export default function MockTestClient({
                 </div>
 
                 {/* Explanation */}
-                {(activeTest.questions[currentQuestionIdx]?.explanation || activeTest.questions[currentQuestionIdx]?.explanationImageUrl) && (
+                {(activeTest.questions[currentQuestionIdx]?.explanation || (activeTest.questions[currentQuestionIdx] as any)?.explanationImageUrl) && (
                   <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl space-y-2">
                     <h5 className="text-[10px] font-bold text-blue-400 flex items-center gap-1 mb-1">
                       <HelpCircle className="w-3 h-3" /> Explanation
@@ -1852,10 +1882,11 @@ export default function MockTestClient({
                         {activeTest.questions[currentQuestionIdx].explanation}
                       </p>
                     )}
-                    {activeTest.questions[currentQuestionIdx].explanationImageUrl && (
+                    {(activeTest.questions[currentQuestionIdx] as any).explanationImageUrl && (
                       <img
-                        src={activeTest.questions[currentQuestionIdx].explanationImageUrl}
-                        alt={activeTest.questions[currentQuestionIdx].explanation || "Explanation image"}
+                        src={(activeTest.questions[currentQuestionIdx] as any).explanationImageUrl}
+                        alt={(activeTest.questions[currentQuestionIdx].explanation || "Explanation image")}
+                        loading="lazy"
                         className="max-w-full rounded-lg border border-blue-900/30 object-contain max-h-80"
                       />
                     )}

@@ -52,4 +52,6 @@ build.log
 check-db.js
 scratch_courses.js
 seed-new-features.js
+backup_data.json
+
 
