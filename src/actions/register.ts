@@ -104,7 +104,7 @@ export async function submitRegistration(formData: FormData) {
       const existingStudent = await tx.user.findFirst({
         where: {
           parentId: parentUser.id,
-          name: { equals: child.studentName.trim(), mode: "insensitive" },
+          name: child.studentName.trim(),
           dateOfBirth: dateOfBirth,
           role: "STUDENT",
         },
@@ -201,7 +201,7 @@ export async function addChildFromParentDashboard(data: { studentName: string; d
       const existingStudent = await tx.user.findFirst({
         where: {
           parentId: parentUser.id,
-          name: { equals: studentName, mode: "insensitive" },
+          name: studentName,
           dateOfBirth: dateOfBirth,
           role: "STUDENT",
         },
