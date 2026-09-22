@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { evaluateQuestionAnswer } from "@/lib/quizGrading";
+import { resolveImageUrl } from "@/lib/imageUtils";
 import { addAcceptedAnswerToQuestion, overrideSubmissionScore } from "@/actions/dashboard";
 
 interface MockQuestion {
@@ -117,7 +118,11 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
       totalTime += (parsedTimeSpent[q.id] || 0);
     });
 
-    return { parsedAnswers, parsedTimeSpent, correctCount, wrongCount, totalTime };
+    const totalQuestions = test.questions.length;
+    const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    const isPassed = score >= test.passingScore;
+
+    return { parsedAnswers, parsedTimeSpent, correctCount, wrongCount, totalTime, score, isPassed, totalQuestions };
   };
 
   const handleAddAcceptedVariant = async (questionId: string, studentAns: string) => {
@@ -346,23 +351,17 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
             </div>
 
             {/* Explanation */}
-            {(activeQuiz.questions[currentQuestionIdx]?.explanation || activeQuiz.questions[currentQuestionIdx]?.explanationImageUrl) && (
+            {resolveImageUrl(activeQuiz.questions[currentQuestionIdx]?.explanationImageUrl) && (
               <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl mt-4 space-y-2">
                 <h5 className="text-[10px] font-bold text-blue-400 flex items-center gap-1 mb-1">
                   <HelpCircle className="w-3 h-3" /> Explanation
                 </h5>
-                {activeQuiz.questions[currentQuestionIdx].explanation && (
-                  <p className="text-[12px] text-slate-400 leading-relaxed">
-                    {activeQuiz.questions[currentQuestionIdx].explanation}
-                  </p>
-                )}
-                {activeQuiz.questions[currentQuestionIdx].explanationImageUrl && (
-                  <img
-                    src={activeQuiz.questions[currentQuestionIdx].explanationImageUrl}
-                    alt={activeQuiz.questions[currentQuestionIdx].explanation || "Explanation image"}
-                    className="max-w-full rounded-lg border border-blue-900/30 object-contain max-h-80"
-                  />
-                )}
+                <img
+                  src={resolveImageUrl(activeQuiz.questions[currentQuestionIdx].explanationImageUrl)!}
+                  alt="Explanation"
+                  loading="lazy"
+                  className="w-full h-auto max-w-full rounded-lg border border-blue-900/30 object-contain"
+                />
               </div>
             )}
 
@@ -440,17 +439,17 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
             <div className="text-center space-y-3 py-6 bg-slate-900 border border-slate-800 rounded-2xl">
               <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Final Score</p>
               <div className={`w-28 h-28 mx-auto rounded-full flex items-center justify-center border-4 ${
-                activeSubmission.isPassed ? "bg-emerald-500/10 border-emerald-500/30" : "bg-red-500/10 border-red-500/30"
+                stats.isPassed ? "bg-emerald-500/10 border-emerald-500/30" : "bg-red-500/10 border-red-500/30"
               }`}>
-                <span className={`text-4xl font-black ${activeSubmission.isPassed ? "text-emerald-400" : "text-red-400"}`}>
-                  {activeSubmission.score}%
+                <span className={`text-4xl font-black ${stats.isPassed ? "text-emerald-400" : "text-red-400"}`}>
+                  {stats.score}%
                 </span>
               </div>
               <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                activeSubmission.isPassed ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                stats.isPassed ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
               }`}>
-                {activeSubmission.isPassed ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
-                {activeSubmission.isPassed ? "PASSED" : "FAILED"}
+                {stats.isPassed ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                {stats.isPassed ? "PASSED" : "FAILED"}
               </div>
               <p className="text-xs text-slate-500">Passing Grade: {activeQuiz.passingScore}%</p>
             </div>
@@ -523,30 +522,33 @@ export default function QuizResultsClient({ initialCourses }: QuizResultsClientP
               </thead>
               <tbody className="divide-y divide-slate-800/50">
                 {activeQuiz.submissions.length > 0 ? (
-                  activeQuiz.submissions.map(sub => (
-                    <tr key={sub.id} className="hover:bg-slate-900/50 transition duration-150">
-                      <td className="py-4 px-4 font-bold text-white max-w-[200px] truncate">{sub.student?.name}</td>
-                      <td className="py-4 px-4 font-mono text-slate-400">{sub.student?.studentIdStr || "-"}</td>
-                      <td className="py-4 px-4">
-                        <span className={`font-black ${sub.isPassed ? "text-emerald-400" : "text-red-400"}`}>{sub.score}%</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${sub.isPassed ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"}`}>
-                          {sub.isPassed ? "PASSED" : "FAILED"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-slate-400 text-xs">{new Date(sub.submittedAt).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                      <td className="py-4 px-4 text-right">
-                        <Button
-                          variant="ghost"
-                          onClick={() => handleReviewTest(sub)}
-                          className="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg text-xs"
-                        >
-                          View Result
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                  activeQuiz.submissions.map(sub => {
+                    const subStats = getSubmissionStats(sub, activeQuiz);
+                    return (
+                      <tr key={sub.id} className="hover:bg-slate-900/50 transition duration-150">
+                        <td className="py-4 px-4 font-bold text-white max-w-[200px] truncate">{sub.student?.name}</td>
+                        <td className="py-4 px-4 font-mono text-slate-400">{sub.student?.studentIdStr || "-"}</td>
+                        <td className="py-4 px-4">
+                          <span className={`font-black ${subStats.isPassed ? "text-emerald-400" : "text-red-400"}`}>{subStats.score}%</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${subStats.isPassed ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"}`}>
+                            {subStats.isPassed ? "PASSED" : "FAILED"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-slate-400 text-xs">{new Date(sub.submittedAt).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="py-4 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleReviewTest(sub)}
+                            className="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg text-xs"
+                          >
+                            View Result
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-500">

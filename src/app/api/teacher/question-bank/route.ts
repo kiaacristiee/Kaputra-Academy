@@ -26,11 +26,11 @@ export async function GET(req: Request) {
     } else if (folderId && folderId !== "all") {
       whereClause.folderId = folderId;
     }
+    // folderId === "all" or missing → no filter, return all questions
 
     if (search.trim()) {
       whereClause.questionText = {
         contains: search.trim(),
-        mode: "insensitive",
       };
     }
 

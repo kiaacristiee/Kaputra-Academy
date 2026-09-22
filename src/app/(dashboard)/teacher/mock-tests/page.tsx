@@ -48,19 +48,7 @@ export default async function TeacherMockTestsPage() {
                 courseId: true,
                 campProgramId: true,
                 questionOrder: true,
-                questions: {
-                  select: {
-                    id: true,
-                    questionText: true,
-                    options: true,
-                    correctAnswer: true,
-                    explanation: true,
-                    explanationImageUrl: true,
-                    imageUrl: true,
-                    topic: true,
-                    difficulty: true,
-                  },
-                },
+                _count: { select: { questions: true } },
                 submissions: {
                   take: 5,
                   select: {
@@ -106,19 +94,7 @@ export default async function TeacherMockTestsPage() {
             courseId: true,
             campProgramId: true,
             questionOrder: true,
-            questions: {
-              select: {
-                id: true,
-                questionText: true,
-                options: true,
-                correctAnswer: true,
-                explanation: true,
-                explanationImageUrl: true,
-                imageUrl: true,
-                topic: true,
-                difficulty: true,
-              },
-            },
+            _count: { select: { questions: true } },
             submissions: {
               take: 5,
               select: {
@@ -142,14 +118,23 @@ export default async function TeacherMockTestsPage() {
     });
   }
 
+  // Ensure questions property exists as an empty array for lightweight initial render
+  const formattedCourses = courses.map((c) => ({
+    ...c,
+    mockTests: (c.mockTests || []).map((t: any) => ({
+      ...t,
+      questions: [],
+    })),
+  }));
+
   return (
     <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Quizzes</h1>
-        <BulkUpload courses={courses as any} />
+        <BulkUpload courses={formattedCourses as any} />
       </div>
       <MockTestClient
-        initialCourses={courses as any}
+        initialCourses={formattedCourses as any}
         initialCamps={camps as any}
         isUnlocked={true}
         userRole="TEACHER"

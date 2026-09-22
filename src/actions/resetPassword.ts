@@ -12,7 +12,7 @@ export async function requestPasswordReset(email: string) {
     }
 
     const user = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
+      where: { email },
     });
 
     if (!user) {
@@ -64,7 +64,7 @@ export async function requestStudentPasswordReset(studentId: string) {
 
     const student = await prisma.user.findFirst({
       where: { 
-        studentIdStr: { equals: studentId.trim(), mode: "insensitive" },
+        studentIdStr: studentId.trim(),
         role: "STUDENT" 
       },
       include: { parent: true }

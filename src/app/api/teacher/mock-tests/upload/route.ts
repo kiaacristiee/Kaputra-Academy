@@ -52,9 +52,13 @@ export async function POST(req: Request) {
         excelEntries.push(entry);
       } else if (ext === ".png" || ext === ".jpg" || ext === ".jpeg" || ext === ".webp" || ext === ".gif") {
         const originalName = path.basename(filename).trim().toLowerCase();
-        const mimeType = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/gif";
-        const base64Data = entry.getData().toString("base64");
-        imageMap[originalName] = `data:${mimeType};base64,${base64Data}`;
+        const cleanOriginal = path.basename(filename).trim();
+        const savedName = `${uuidv4()}_${path.basename(filename, ext).replace(/[^a-zA-Z0-9_-]/g, "_")}${ext}`;
+        const filePath = path.join(uploadsDir, savedName);
+        await fs.writeFile(filePath, entry.getData());
+        const savedUrl = `/uploads/questions/${savedName}`;
+        imageMap[originalName] = savedUrl;
+        imageMap[cleanOriginal] = savedUrl;
       }
     }
 

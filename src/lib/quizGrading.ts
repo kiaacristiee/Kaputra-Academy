@@ -80,14 +80,37 @@ export function stripLabelWords(input: string): string {
   // Replace label words
   str = str.replace(labelWordsRegex, "");
 
-  // Clean up punctuation like commas, extra spaces
-  str = str.replace(/[,;:]+/g, " ").replace(/\s+/g, " ").trim();
+  // Clean up punctuation like commas, ampersands, extra spaces
+  str = str.replace(/[,;&:]+/g, " ").replace(/\s+/g, " ").trim();
 
   return str;
 }
 
 /**
- * Compare two normalised answers (handling multi-part answers split by commas, label words, etc.).
+ * Split an answer string on any recognized multi-value separator:
+ *   comma ,   semicolon ;   ampersand &
+ *   (the word "and" is already converted to a space by normaliseAnswer)
+ *
+ * Each part is individually normalised before being returned.
+ */
+function splitOnMultiSeparators(raw: string): string[] {
+  // Split on & ; or , optionally surrounded by whitespace
+  return raw
+    .split(/\s*[,;&]\s*/)
+    .map((p) => normaliseAnswer(p))
+    .filter(Boolean);
+}
+
+/**
+ * Compare two normalised answers (handling multi-part answers split by commas,
+ * semicolons, ampersands, or label words).
+ *
+ * Separator equivalence rule (order-sensitive by default):
+ *   "9752 & 2579"  ≡  "9752, 2579"  ≡  "9752; 2579"  ≡  "9752 and 2579"
+ * because all represent the same ordered pair ["9752", "2579"].
+ *
+ * Pass allowAnyOrder = true only when the question explicitly marks the answer
+ * as unordered (e.g. a set of values where position does not matter).
  */
 export function compareSingleAnswer(
   studentAns: string,
@@ -102,23 +125,55 @@ export function compareSingleAnswer(
   // 1. Direct normalised match
   if (normStudent === normTarget) return true;
 
-  // 2. Multi-part match by comma/semicolon splitting
-  if (targetAns.includes(",") || targetAns.includes(";")) {
-    const targetParts = targetAns.split(/[,;]/).map((p) => normaliseAnswer(p)).filter(Boolean);
-    const studentParts = studentAns.split(/[,;]/).map((p) => normaliseAnswer(p)).filter(Boolean);
+  // 2. Multi-part match — split BOTH sides on any recognised separator
+  //    This handles:  "9752 & 2579" (target)  vs  "9752, 2579" (student)
+  //    and all other separator combinations.
+  const targetHasMultiSep = /[,;&]/.test(targetAns);
+  const studentHasMultiSep = /[,;&]/.test(studentAns);
 
-    if (targetParts.length === studentParts.length) {
-      if (allowAnyOrder) {
-        const sortedTarget = [...targetParts].sort();
-        const sortedStudent = [...studentParts].sort();
-        if (sortedTarget.every((val, idx) => val === sortedStudent[idx])) return true;
-      } else {
-        if (targetParts.every((val, idx) => val === studentParts[idx])) return true;
+  // Also check whether normalised forms differ only by whitespace (post "and" → space)
+  // e.g. target normalises to "9752 2579" (from "9752 and 2579") and student is the same
+  // — this is already caught by the direct match above.
+
+  if (targetHasMultiSep || studentHasMultiSep) {
+    const targetParts  = splitOnMultiSeparators(targetAns);
+    const studentParts = splitOnMultiSeparators(studentAns);
+
+    if (targetParts.length > 1 || studentParts.length > 1) {
+      if (targetParts.length === studentParts.length) {
+        if (allowAnyOrder) {
+          const sortedT = [...targetParts].sort();
+          const sortedS = [...studentParts].sort();
+          if (sortedT.every((val, idx) => val === sortedS[idx])) return true;
+        } else {
+          if (targetParts.every((val, idx) => val === studentParts[idx])) return true;
+        }
       }
     }
   }
 
-  // 3. Label-stripped comparison (handles "8 full teams, 2 left" vs "8, 2" or "8 teams" vs "8")
+  // 3. Also compare normalised strings that may have had "and" stripped
+  //    (e.g. target="9752 and 2579" → norm="9752  2579" → after collapse="9752 2579"
+  //     student="9752 2579" → norm="9752 2579" — already caught by step 1)
+  //    Try normalised multi-part split on spaces when one side has no explicit separator
+  if (!targetHasMultiSep && !studentHasMultiSep) {
+    const targetSpaceParts  = normTarget.split(/\s+/).filter(Boolean);
+    const studentSpaceParts = normStudent.split(/\s+/).filter(Boolean);
+    if (
+      targetSpaceParts.length > 1 &&
+      targetSpaceParts.length === studentSpaceParts.length
+    ) {
+      if (allowAnyOrder) {
+        const sortedT = [...targetSpaceParts].sort();
+        const sortedS = [...studentSpaceParts].sort();
+        if (sortedT.every((val, idx) => val === sortedS[idx])) return true;
+      } else {
+        if (targetSpaceParts.every((val, idx) => val === studentSpaceParts[idx])) return true;
+      }
+    }
+  }
+
+  // 4. Label-stripped comparison (handles "8 full teams, 2 left" vs "8, 2" or "8 teams" vs "8")
   const strippedStudent = stripLabelWords(studentAns);
   const strippedTarget = stripLabelWords(targetAns);
 
@@ -126,14 +181,14 @@ export function compareSingleAnswer(
     return true;
   }
 
-  // 4. Label-stripped multi-part comparison (handles space/comma separation)
+  // 5. Label-stripped multi-part comparison (handles space/comma separation)
   if (strippedTarget.includes(" ") || strippedStudent.includes(" ")) {
-    const targetPartsStripped = strippedTarget.split(" ").filter(Boolean);
+    const targetPartsStripped  = strippedTarget.split(" ").filter(Boolean);
     const studentPartsStripped = strippedStudent.split(" ").filter(Boolean);
 
     if (targetPartsStripped.length > 0 && targetPartsStripped.length === studentPartsStripped.length) {
       if (allowAnyOrder) {
-        const sortedTarget = [...targetPartsStripped].sort();
+        const sortedTarget  = [...targetPartsStripped].sort();
         const sortedStudent = [...studentPartsStripped].sort();
         if (sortedTarget.every((val, idx) => val === sortedStudent[idx])) return true;
       } else {

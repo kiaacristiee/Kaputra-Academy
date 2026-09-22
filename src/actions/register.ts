@@ -10,7 +10,14 @@ import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function submitRegistration(formData: FormData) {
-  const parentName = (formData.get("parentName") as string || "").trim();
+  const parentFirstName = (formData.get("parentFirstName") as string || "").trim();
+  const parentLastName = (formData.get("parentLastName") as string || "").trim();
+  let parentName = (formData.get("parentName") as string || "").trim();
+
+  if (!parentName) {
+    parentName = [parentFirstName, parentLastName].filter(Boolean).join(" ");
+  }
+
   const parentPhone = (formData.get("parentPhone") as string || "").trim();
   const parentEmail = (formData.get("parentEmail") as string || "").trim().toLowerCase();
 

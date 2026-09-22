@@ -34,15 +34,19 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Save to public/uploads directory
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    // Save to public/uploads/questions — same directory as ZIP-imported images
+    // so all question/explanation images share one consistent location.
+    // NOTE: Existing DB records storing /uploads/quiz-img-* (old path) are still
+    // served correctly because resolveImageUrl() accepts any /uploads/* path,
+    // and Next.js serves ALL of public/ including /uploads/*.
+    const uploadsDir = path.join(process.cwd(), "public", "uploads", "questions");
     await fs.mkdir(uploadsDir, { recursive: true });
     
     const filePath = path.join(uploadsDir, uniqueFileName);
     await fs.writeFile(filePath, buffer);
 
-    // Serve clean URL instead of heavy Base64
-    const url = `/uploads/${uniqueFileName}`;
+    // Return the canonical /uploads/questions/ URL
+    const url = `/uploads/questions/${uniqueFileName}`;
 
     return NextResponse.json({ success: true, url });
 

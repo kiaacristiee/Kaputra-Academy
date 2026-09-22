@@ -24,6 +24,7 @@ import Link from "next/link";
 import InteractivePlayer from "@/components/InteractivePlayer";
 import { submitMockTest } from "@/actions/dashboard";
 import { evaluateQuestionAnswer } from "@/lib/quizGrading";
+import { resolveImageUrl } from "@/lib/imageUtils";
 
 interface ClassItem {
   id: string;
@@ -178,7 +179,7 @@ export default function ClassClient({
     
     let correct = 0;
     activeTest.questions.forEach((q) => {
-      if (testAnswers[q.id]?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim()) {
+      if (evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect) {
         correct++;
       }
     });
@@ -232,13 +233,16 @@ export default function ClassClient({
 
     let correctCount = 0;
     test.questions.forEach((q) => {
-      const studentAns = (parsedAnswers as Record<string, string>)[q.id];
-      if (studentAns?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim()) {
+      const studentAns = (parsedAnswers as Record<string, string>)[q.id] || "";
+      if (evaluateQuestionAnswer(q, studentAns).isCorrect) {
         correctCount++;
       }
     });
 
     const calculatedTotal = Object.values(parsedTimeSpent as Record<string, number>).reduce((sum, val) => sum + val, 0);
+    const totalQuestions = test.questions.length;
+    const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    const isPassed = score >= test.passingScore;
 
     setActiveTest(test);
     setCurrentQuestionIdx(0);
@@ -246,8 +250,8 @@ export default function ClassClient({
     setTimeSpentPerQuestion(parsedTimeSpent as Record<string, number>);
     setTotalTimeSpent(calculatedTotal || submission.totalCompletionTime || 0);
     setTestResult({
-      score: submission.score,
-      isPassed: submission.isPassed,
+      score,
+      isPassed,
       id: submission.id,
       correctCount: correctCount,
       totalQuestions: test.questions.length
@@ -981,23 +985,16 @@ export default function ClassClient({
                   </div>
 
                   {/* Explanation */}
-                  {(activeTest.questions[currentQuestionIdx]?.explanation || activeTest.questions[currentQuestionIdx]?.explanationImageUrl) && (
+                  {resolveImageUrl(activeTest.questions[currentQuestionIdx]?.explanationImageUrl) && (
                     <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl space-y-2">
                       <h5 className="text-[10px] font-bold text-blue-400 flex items-center gap-1 mb-1">
                         <BookOpen className="w-3 h-3" /> Explanation
                       </h5>
-                      {activeTest.questions[currentQuestionIdx].explanation && (
-                        <p className="text-[12px] text-slate-400 leading-relaxed">
-                          {activeTest.questions[currentQuestionIdx].explanation}
-                        </p>
-                      )}
-                      {activeTest.questions[currentQuestionIdx].explanationImageUrl && (
-                        <img
-                          src={activeTest.questions[currentQuestionIdx].explanationImageUrl}
-                          alt={activeTest.questions[currentQuestionIdx].explanation || "Explanation image"}
-                          className="max-w-full rounded-lg border border-blue-900/30 object-contain max-h-80"
-                        />
-                      )}
+                      <img
+                        src={resolveImageUrl(activeTest.questions[currentQuestionIdx].explanationImageUrl)!}
+                        alt="Explanation" loading="lazy"
+                        className="w-full h-auto max-w-full rounded-lg border border-blue-900/30 object-contain"
+                      />
                     </div>
                   )}
 

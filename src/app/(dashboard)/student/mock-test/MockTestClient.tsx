@@ -46,6 +46,7 @@ import {
   toggleMockTestPublished
 } from "@/actions/dashboard";
 import { evaluateQuestionAnswer } from "@/lib/quizGrading";
+import { resolveImageUrl } from "@/lib/imageUtils";
 import Link from "next/link";
 import { STUDENT_GRADES, getGradeLabel } from "@/lib/grades";
 
@@ -254,16 +255,32 @@ export default function MockTestClient({
     }
   };
 
-  const handleReviewTest = (test: MockTest) => {
-    const submission = test.submissions[0];
+  const handleReviewTest = async (test: MockTest) => {
+    const submission = test.submissions && test.submissions[0];
     if (!submission) return;
+
+    let fullTest = test;
+    if (!test.questions || test.questions.length === 0) {
+      setIsLoadingPaper(true);
+      try {
+        const res = await fetch(`/api/teacher/mock-tests/${test.id}`);
+        const data = await res.json();
+        if (data.success && data.test) {
+          fullTest = data.test;
+        }
+      } catch (e) {
+        console.error("Failed to load quiz details for review:", e);
+      } finally {
+        setIsLoadingPaper(false);
+      }
+    }
 
     let parsedAnswers = {};
     let parsedTimeSpent = {};
     try { parsedAnswers = JSON.parse(submission.answers || "{}"); } catch (e) {}
     try { (submission as any).timeSpent && (parsedTimeSpent = JSON.parse((submission as any).timeSpent || "{}")); } catch (e) {}
 
-    const orderedQuestions = getOrderedQuestions(test);
+    const orderedQuestions = getOrderedQuestions(fullTest);
 
     let correctCount = 0;
     orderedQuestions.forEach((q) => {
@@ -273,7 +290,7 @@ export default function MockTestClient({
       }
     });
 
-    setActiveTest({ ...test, questions: orderedQuestions });
+    setActiveTest({ ...fullTest, questions: orderedQuestions });
     setCurrentQuestionIdx(0);
     setTestAnswers(parsedAnswers as Record<string, string>);
     setTimeSpentPerQuestion(parsedTimeSpent as Record<string, number>);
@@ -312,13 +329,29 @@ export default function MockTestClient({
     };
   }, [activeTest, timeLeft, testResult, reviewMode, currentQuestionIdx]);
 
-  const handleStartTest = (test: MockTest) => {
-    const orderedQuestions = getOrderedQuestions(test);
-    setActiveTest({ ...test, questions: orderedQuestions });
+  const handleStartTest = async (test: MockTest) => {
+    let fullTest = test;
+    if (!test.questions || test.questions.length === 0) {
+      setIsLoadingPaper(true);
+      try {
+        const res = await fetch(`/api/teacher/mock-tests/${test.id}`);
+        const data = await res.json();
+        if (data.success && data.test) {
+          fullTest = data.test;
+        }
+      } catch (e) {
+        console.error("Failed to load quiz details for test:", e);
+      } finally {
+        setIsLoadingPaper(false);
+      }
+    }
+
+    const orderedQuestions = getOrderedQuestions(fullTest);
+    setActiveTest({ ...fullTest, questions: orderedQuestions });
     setCurrentQuestionIdx(0);
     setTestAnswers({});
     setTimeSpentPerQuestion({});
-    setTimeLeft(test.timeLimit * 60);
+    setTimeLeft(fullTest.timeLimit * 60);
     setTestResult(null);
     setReviewMode(false);
   };
@@ -441,6 +474,21 @@ export default function MockTestClient({
     setSelectedFolderForImport("");
     setShowManualBankPicker(false);
     setIsCmsOpen(true);
+
+    // Fetch ALL bank questions so the folder selector has counts even if
+    // the user never visited the Question Bank tab in this session.
+    if (bankQuestions.length === 0) {
+      setIsFetchingBank(true);
+      fetch(`/api/teacher/question-bank?folderId=all&limit=9999`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.questions)) {
+            setBankQuestions(data.questions);
+          }
+        })
+        .catch((err) => console.error("Error preloading bank questions for CMS:", err))
+        .finally(() => setIsFetchingBank(false));
+    }
   };
 
   const handleAddCmsQuestion = () => {
@@ -1163,6 +1211,15 @@ export default function MockTestClient({
                            <div className="flex-1">
                              <p className="text-[15px] font-medium text-white leading-relaxed">{q.questionText}</p>
                              {(q as any).imageUrl && <img src={(q as any).imageUrl} loading="lazy" className="max-h-40 rounded-xl border border-slate-800 mt-3 shadow-lg" />}
+                             {(q.explanation || resolveImageUrl((q as any).explanationImageUrl)) && (
+                               <div className="mt-3 p-3 bg-blue-950/30 border border-blue-900/40 rounded-xl space-y-1.5">
+                                 <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">Explanation:</span>
+                                 {q.explanation && <p className="text-xs text-slate-300 leading-relaxed">{q.explanation}</p>}
+                                 {resolveImageUrl((q as any).explanationImageUrl) && (
+                                   <img src={resolveImageUrl((q as any).explanationImageUrl)!} alt="Explanation" loading="lazy" className="w-full h-auto max-w-full rounded-lg border border-blue-900/50 mt-1 shadow-md object-contain" />
+                                 )}
+                               </div>
+                             )}
                              <div className="mt-3 flex gap-2">
                                <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold rounded-lg inline-block">ANSWER: {q.correctAnswer}</span>
                              </div>
@@ -1602,6 +1659,7 @@ export default function MockTestClient({
                     <img
                       src={(activeTest.questions[currentQuestionIdx] as any).imageUrl}
                       alt="Question"
+                      loading="lazy"
                       className="mt-3 max-h-48 rounded-lg border border-slate-800"
                     />
                   )}
@@ -1682,44 +1740,47 @@ export default function MockTestClient({
             ) : testResult && !reviewMode ? (
               /* ── Result Summary ── */
               <div className="p-5 space-y-5">
-                {/* Score Circle */}
-                <div className="text-center space-y-3 py-2">
-                  <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto border-2 ${
-                    testResult.isPassed
-                      ? "bg-emerald-500/10 border-emerald-500/30"
-                      : "bg-red-500/10 border-red-500/30"
-                  }`}>
-                    <span className={`text-2xl font-black ${testResult.isPassed ? "text-emerald-400" : "text-red-400"}`}>
-                      {testResult.score}%
-                    </span>
-                  </div>
-                  <div>
-                    <p className={`text-sm font-bold ${testResult.isPassed ? "text-emerald-400" : "text-red-400"}`}>
-                      {testResult.isPassed ? "EXAM PASSED" : "EXAM FAILED"}
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Passing Score: {activeTest.passingScore}%
-                    </p>
-                  </div>
-                </div>
+                {(() => {
+                  let correctCount = 0;
+                  let wrongCount = 0;
+                  let totalTimeSpent = 0;
+                  activeTest.questions.forEach((q) => {
+                    if (evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect) correctCount++;
+                    else wrongCount++;
+                    totalTimeSpent += (timeSpentPerQuestion[q.id] || 0);
+                  });
+                  const totalQuestions = activeTest.questions.length;
+                  const derivedScore = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+                  const derivedIsPassed = derivedScore >= activeTest.passingScore;
+                  const avgTime = totalQuestions > 0 ? Math.round(totalTimeSpent / totalQuestions) : 0;
+                  const totalMin = Math.floor(totalTimeSpent / 60);
+                  const totalSec = totalTimeSpent % 60;
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {(() => {
-                    let correctCount = 0;
-                    let wrongCount = 0;
-                    let totalTimeSpent = 0;
-                    activeTest.questions.forEach((q) => {
-                      if (evaluateQuestionAnswer(q, testAnswers[q.id] || "").isCorrect) correctCount++;
-                      else wrongCount++;
-                      totalTimeSpent += (timeSpentPerQuestion[q.id] || 0);
-                    });
-                    const avgTime = activeTest.questions.length > 0 ? Math.round(totalTimeSpent / activeTest.questions.length) : 0;
-                    const totalMin = Math.floor(totalTimeSpent / 60);
-                    const totalSec = totalTimeSpent % 60;
+                  return (
+                    <>
+                      {/* Score Circle */}
+                      <div className="text-center space-y-3 py-2">
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto border-2 ${
+                          derivedIsPassed
+                            ? "bg-emerald-500/10 border-emerald-500/30"
+                            : "bg-red-500/10 border-red-500/30"
+                        }`}>
+                          <span className={`text-2xl font-black ${derivedIsPassed ? "text-emerald-400" : "text-red-400"}`}>
+                            {derivedScore}%
+                          </span>
+                        </div>
+                        <div>
+                          <p className={`text-sm font-bold ${derivedIsPassed ? "text-emerald-400" : "text-red-400"}`}>
+                            {derivedIsPassed ? "EXAM PASSED" : "EXAM FAILED"}
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Passing Score: {activeTest.passingScore}%
+                          </p>
+                        </div>
+                      </div>
 
-                    return (
-                      <>
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <div className="bg-emerald-500/8 border border-emerald-500/15 rounded-xl p-3 text-center">
                           <p className="text-lg font-black text-emerald-400">{correctCount}</p>
                           <p className="text-[10px] text-emerald-400/70 font-semibold uppercase tracking-wider">Correct</p>
@@ -1736,10 +1797,10 @@ export default function MockTestClient({
                           <p className="text-lg font-black text-blue-400">{avgTime}s</p>
                           <p className="text-[10px] text-blue-400/70 font-semibold uppercase tracking-wider">Avg/Q</p>
                         </div>
-                      </>
-                    );
-                  })()}
-                </div>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 justify-center pt-3 border-t border-slate-800/60">
@@ -1872,24 +1933,17 @@ export default function MockTestClient({
                 </div>
 
                 {/* Explanation */}
-                {(activeTest.questions[currentQuestionIdx]?.explanation || (activeTest.questions[currentQuestionIdx] as any)?.explanationImageUrl) && (
+                {resolveImageUrl((activeTest.questions[currentQuestionIdx] as any)?.explanationImageUrl) && (
                   <div className="px-4 py-3 bg-blue-950/10 border border-blue-900/20 rounded-xl space-y-2">
                     <h5 className="text-[10px] font-bold text-blue-400 flex items-center gap-1 mb-1">
                       <HelpCircle className="w-3 h-3" /> Explanation
                     </h5>
-                    {activeTest.questions[currentQuestionIdx].explanation && (
-                      <p className="text-[12px] text-slate-400 leading-relaxed">
-                        {activeTest.questions[currentQuestionIdx].explanation}
-                      </p>
-                    )}
-                    {(activeTest.questions[currentQuestionIdx] as any).explanationImageUrl && (
-                      <img
-                        src={(activeTest.questions[currentQuestionIdx] as any).explanationImageUrl}
-                        alt={(activeTest.questions[currentQuestionIdx].explanation || "Explanation image")}
-                        loading="lazy"
-                        className="max-w-full rounded-lg border border-blue-900/30 object-contain max-h-80"
-                      />
-                    )}
+                    <img
+                      src={resolveImageUrl((activeTest.questions[currentQuestionIdx] as any).explanationImageUrl)!}
+                      alt="Explanation"
+                      loading="lazy"
+                      className="w-full h-auto max-w-full rounded-lg border border-blue-900/30 object-contain"
+                    />
                   </div>
                 )}
 

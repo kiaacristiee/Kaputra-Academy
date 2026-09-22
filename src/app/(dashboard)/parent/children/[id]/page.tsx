@@ -7,7 +7,8 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChildDetailPage({ params }: { params: { id: string } }) {
+export default async function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session || !session.user || session.user.role !== "PARENT") {
     redirect("/login");
@@ -15,7 +16,7 @@ export default async function ChildDetailPage({ params }: { params: { id: string
 
   // Verify child belongs to parent
   const child = await prisma.user.findFirst({
-    where: { id: params.id, parentId: session.user.id },
+    where: { id, parentId: session.user.id },
     include: {
       enrollments: { where: { status: "ACTIVE" } },
       academicReports: {

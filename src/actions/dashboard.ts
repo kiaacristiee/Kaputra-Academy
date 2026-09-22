@@ -781,7 +781,17 @@ export async function submitMockTest(testId: string, answers: Record<string, str
       },
     });
 
-    return { success: true, submission, score, isPassed };
+    const wrongCount = test.questions.length - correctCount;
+
+    return { 
+      success: true, 
+      submission, 
+      score, 
+      isPassed, 
+      correctCount, 
+      wrongCount, 
+      totalQuestions: test.questions.length 
+    };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

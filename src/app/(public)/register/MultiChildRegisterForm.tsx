@@ -10,13 +10,14 @@ import Link from "next/link";
 
 interface ChildInput {
   id: string;
-  studentName: string;
+  firstName: string;
+  lastName: string;
   dateOfBirth: string;
 }
 
 export function MultiChildRegisterForm() {
   const [children, setChildren] = useState<ChildInput[]>([
-    { id: "1", studentName: "", dateOfBirth: "" },
+    { id: "1", firstName: "", lastName: "", dateOfBirth: "" },
   ]);
   const [submitting, setSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
@@ -24,7 +25,7 @@ export function MultiChildRegisterForm() {
   const handleAddChild = () => {
     setChildren((prev) => [
       ...prev,
-      { id: Date.now().toString(), studentName: "", dateOfBirth: "" },
+      { id: Date.now().toString(), firstName: "", lastName: "", dateOfBirth: "" },
     ]);
   };
 
@@ -33,7 +34,11 @@ export function MultiChildRegisterForm() {
     setChildren((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const handleChildChange = (id: string, field: "studentName" | "dateOfBirth", value: string) => {
+  const handleChildChange = (
+    id: string,
+    field: "firstName" | "lastName" | "dateOfBirth",
+    value: string
+  ) => {
     setChildren((prev) =>
       prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
     );
@@ -60,7 +65,9 @@ export function MultiChildRegisterForm() {
         name="childrenJson"
         value={JSON.stringify(
           children.map((c) => ({
-            studentName: c.studentName,
+            studentName: `${c.firstName.trim()} ${c.lastName.trim()}`.trim(),
+            firstName: c.firstName,
+            lastName: c.lastName,
             dateOfBirth: c.dateOfBirth,
           }))
         )}
@@ -79,13 +86,24 @@ export function MultiChildRegisterForm() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="parentName">Parent Full Name</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="parentFirstName">Parent First Name</Label>
             <Input
-              id="parentName"
-              name="parentName"
+              id="parentFirstName"
+              name="parentFirstName"
               required
-              placeholder="e.g. John Doe"
+              placeholder="First Name"
+              className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25]"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="parentLastName">Parent Last Name</Label>
+            <Input
+              id="parentLastName"
+              name="parentLastName"
+              required
+              placeholder="Last Name"
               className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25]"
             />
           </div>
@@ -96,7 +114,7 @@ export function MultiChildRegisterForm() {
               id="parentPhone"
               name="parentPhone"
               required
-              placeholder="e.g. +628123456789"
+              placeholder="Phone Number"
               className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25]"
             />
           </div>
@@ -108,7 +126,7 @@ export function MultiChildRegisterForm() {
               name="parentEmail"
               type="email"
               required
-              placeholder="e.g. john@example.com"
+              placeholder="Email Address"
               className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25]"
             />
           </div>
@@ -157,18 +175,30 @@ export function MultiChildRegisterForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor={`child-name-${child.id}`}>Full Name</Label>
+                <Label htmlFor={`child-first-name-${child.id}`}>Child First Name</Label>
                 <Input
-                  id={`child-name-${child.id}`}
+                  id={`child-first-name-${child.id}`}
                   required
-                  value={child.studentName}
-                  onChange={(e) => handleChildChange(child.id, "studentName", e.target.value)}
-                  placeholder="e.g. Bryan Doe"
+                  value={child.firstName}
+                  onChange={(e) => handleChildChange(child.id, "firstName", e.target.value)}
+                  placeholder="First Name"
                   className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25]"
                 />
               </div>
 
               <div className="space-y-1.5">
+                <Label htmlFor={`child-last-name-${child.id}`}>Child Last Name</Label>
+                <Input
+                  id={`child-last-name-${child.id}`}
+                  required
+                  value={child.lastName}
+                  onChange={(e) => handleChildChange(child.id, "lastName", e.target.value)}
+                  placeholder="Last Name"
+                  className="w-full bg-white rounded-xl focus-visible:ring-[#CA8E25]"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor={`child-dob-${child.id}`}>Date of Birth</Label>
                 <Input
                   id={`child-dob-${child.id}`}

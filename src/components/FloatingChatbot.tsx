@@ -420,11 +420,11 @@ export default function FloatingChatbot() {
                     </div>
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">Name</label>
-                      <input required type="text" value={guestForm.name} onChange={e => setGuestForm({...guestForm, name: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm focus:border-[#CA8E25] outline-none" placeholder="Jordan" />
+                      <input required type="text" value={guestForm.name} onChange={e => setGuestForm({...guestForm, name: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm focus:border-[#CA8E25] outline-none" placeholder="Your name" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">Email</label>
-                      <input required type="email" value={guestForm.email} onChange={e => setGuestForm({...guestForm, email: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm focus:border-[#CA8E25] outline-none" placeholder="jordan@example.com" />
+                      <input required type="email" value={guestForm.email} onChange={e => setGuestForm({...guestForm, email: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm focus:border-[#CA8E25] outline-none" placeholder="your.email@example.com" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">How can we help?</label>

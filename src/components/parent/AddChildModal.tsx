@@ -9,14 +9,16 @@ import { UserPlus, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 export function AddChildModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [studentName, setStudentName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const handleOpen = () => {
-    setStudentName("");
+    setFirstName("");
+    setLastName("");
     setDateOfBirth("");
     setError("");
     setSuccessMessage("");
@@ -34,21 +36,24 @@ export function AddChildModal() {
     setError("");
     setSuccessMessage("");
 
-    if (!studentName.trim() || !dateOfBirth.trim()) {
-      setError("Full Name and Date of Birth are required.");
+    const studentName = `${firstName.trim()} ${lastName.trim()}`.trim();
+
+    if (!studentName || !dateOfBirth.trim()) {
+      setError("First Name, Last Name, and Date of Birth are required.");
       setLoading(false);
       return;
     }
 
     try {
       const res = await addChildFromParentDashboard({
-        studentName: studentName.trim(),
+        studentName,
         dateOfBirth: dateOfBirth.trim(),
       });
 
       if (res.success) {
         setSuccessMessage(res.message || "Child added successfully!");
-        setStudentName("");
+        setFirstName("");
+        setLastName("");
         setDateOfBirth("");
         setTimeout(() => {
           setIsOpen(false);
@@ -115,18 +120,33 @@ export function AddChildModal() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="studentName" className="text-slate-300 font-semibold text-xs">
-                  Full Name
-                </Label>
-                <Input
-                  id="studentName"
-                  required
-                  value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
-                  placeholder="Child's Full Name"
-                  className="bg-slate-950 border-slate-800 text-white rounded-xl focus-visible:ring-[#CA8E25] placeholder:text-slate-600"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="childFirstName" className="text-slate-300 font-semibold text-xs">
+                    First Name
+                  </Label>
+                  <Input
+                    id="childFirstName"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First Name"
+                    className="bg-slate-950 border-slate-800 text-white rounded-xl focus-visible:ring-[#CA8E25] placeholder:text-slate-600"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="childLastName" className="text-slate-300 font-semibold text-xs">
+                    Last Name
+                  </Label>
+                  <Input
+                    id="childLastName"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last Name"
+                    className="bg-slate-950 border-slate-800 text-white rounded-xl focus-visible:ring-[#CA8E25] placeholder:text-slate-600"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import InteractivePlayer from "@/components/InteractivePlayer";
 import { evaluateQuestionAnswer } from "@/lib/quizGrading";
+import { resolveImageUrl } from "@/lib/imageUtils";
 
 interface TrialItem {
   id: string;
@@ -666,23 +667,16 @@ export default function TrialClient({
                                  </div>
                                )}
 
-                               {(q.explanation || q.explanationImageUrl) && (
+                               {resolveImageUrl(q.explanationImageUrl) && (
                                   <div className="mt-4 p-4 bg-amber-950/20 border border-amber-500/20 rounded-[16px] space-y-2">
                                     <h5 className="text-[11px] font-bold text-[#CA8E25] uppercase tracking-wider flex items-center gap-1.5 mb-1">
                                       <BookOpen className="w-3.5 h-3.5" /> Explanation
                                     </h5>
-                                    {q.explanation && (
-                                      <p className="text-xs text-slate-300 leading-relaxed">
-                                        {q.explanation}
-                                      </p>
-                                    )}
-                                    {q.explanationImageUrl && (
-                                      <img
-                                        src={q.explanationImageUrl}
-                                        alt={q.explanation || "Explanation image"}
-                                        className="max-w-full rounded-lg border border-amber-500/30 object-contain max-h-80"
-                                      />
-                                    )}
+                                    <img
+                                      src={resolveImageUrl(q.explanationImageUrl)!} loading="lazy"
+                                      alt="Explanation"
+                                      className="w-full h-auto max-w-full rounded-lg border border-amber-500/30 object-contain"
+                                    />
                                   </div>
                                 )}
                              </div>

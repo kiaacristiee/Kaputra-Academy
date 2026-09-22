@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import path from "path";
+import fs from "fs/promises";
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -26,9 +28,14 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(arrayBuffer);
 
     const ext = path.extname(file.name).toLowerCase() || ".png";
-    const mimeType = file.type || (ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/gif");
-    const base64Data = buffer.toString("base64");
-    const imageUrl = `data:${mimeType};base64,${base64Data}`;
+    const filename = `${uuidv4()}_${path.basename(file.name, ext).replace(/[^a-zA-Z0-9_-]/g, "_")}${ext}`;
+    const uploadsDir = path.join(process.cwd(), "public", "uploads", "questions");
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    const filePath = path.join(uploadsDir, filename);
+    await fs.writeFile(filePath, buffer);
+
+    const imageUrl = `/uploads/questions/${filename}`;
 
     return NextResponse.json({ success: true, url: imageUrl });
   } catch (error: any) {

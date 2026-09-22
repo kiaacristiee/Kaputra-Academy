@@ -31,20 +31,40 @@ export default async function MockTestPage() {
 
   const isUnlocked = activeEnrollments.length > 0 || ["ADMIN", "TEACHER"].includes(role);
 
-  // Fetch courses with quizzes
+  // Fetch courses with quizzes (lightweight for initial page render)
   let courses: any[] = [];
   if (role === "TEACHER") {
     const teacherAssignments = await prisma.teacherAssignment.findMany({
       where: { teacherId: userId },
-      include: {
+      select: {
         course: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
             mockTests: {
-              include: {
-                questions: true,
+              select: {
+                id: true,
+                title: true,
+                timeLimit: true,
+                passingScore: true,
+                isPublished: true,
+                isTrial: true,
+                targetedGrade: true,
+                updatedAt: true,
+                courseId: true,
+                campProgramId: true,
+                questionOrder: true,
+                _count: { select: { questions: true } },
                 submissions: {
-                  include: {
-                    student: true,
+                  take: 5,
+                  select: {
+                    id: true,
+                    score: true,
+                    isPassed: true,
+                    answers: true,
+                    submittedAt: true,
+                    student: { select: { id: true, name: true } },
                   },
                 },
               },
@@ -57,13 +77,33 @@ export default async function MockTestPage() {
     courses = teacherAssignments.map((ta) => ta.course);
   } else if (role === "ADMIN") {
     courses = await prisma.course.findMany({
-      include: {
+      select: {
+        id: true,
+        title: true,
+        type: true,
         mockTests: {
-          include: {
-            questions: true,
+          select: {
+            id: true,
+            title: true,
+            timeLimit: true,
+            passingScore: true,
+            isPublished: true,
+            isTrial: true,
+            targetedGrade: true,
+            updatedAt: true,
+            courseId: true,
+            campProgramId: true,
+            questionOrder: true,
+            _count: { select: { questions: true } },
             submissions: {
-              include: {
-                student: true,
+              take: 5,
+              select: {
+                id: true,
+                score: true,
+                isPassed: true,
+                answers: true,
+                submittedAt: true,
+                student: { select: { id: true, name: true } },
               },
             },
           },
@@ -79,30 +119,59 @@ export default async function MockTestPage() {
       where: {
         id: { in: courseIds },
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        type: true,
         mockTests: {
           where: {
             isTrial: false,
             ...visibilityWhere,
           },
-          include: {
-            questions: true,
+          select: {
+            id: true,
+            title: true,
+            timeLimit: true,
+            passingScore: true,
+            isPublished: true,
+            isTrial: true,
+            targetedGrade: true,
+            updatedAt: true,
+            courseId: true,
+            campProgramId: true,
+            questionOrder: true,
+            _count: { select: { questions: true } },
             submissions: {
               where: { studentId: userId },
               orderBy: { submittedAt: "desc" },
+              take: 5,
+              select: {
+                id: true,
+                score: true,
+                isPassed: true,
+                answers: true,
+                submittedAt: true,
+              },
             },
           },
+          orderBy: { createdAt: "desc" },
         },
       },
     });
   }
 
-  let bankQuestions: any[] = [];
+  // Ensure questions array exists on mockTests for client compatibility
+  const formattedCourses = courses.map((c) => ({
+    ...c,
+    mockTests: (c.mockTests || []).map((t: any) => ({
+      ...t,
+      questions: t.questions || [],
+    })),
+  }));
+
   let folders: any[] = [];
   if (role === "ADMIN" || role === "TEACHER") {
-    bankQuestions = await prisma.mockQuestion.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    // Bank questions are loaded on-demand per folder via /api/teacher/question-bank to avoid heavy page payloads
     folders = await prisma.questionFolder.findMany({
       include: { _count: { select: { questions: true } } },
       orderBy: { name: "asc" },
@@ -111,10 +180,10 @@ export default async function MockTestPage() {
 
   return (
     <MockTestClient
-      initialCourses={courses}
+      initialCourses={formattedCourses}
       isUnlocked={isUnlocked}
       userRole={role}
-      initialBankQuestions={bankQuestions}
+      initialBankQuestions={[]}
       initialFolders={folders}
     />
   );
